@@ -56,6 +56,11 @@ Books in the corpus should be:
 2. **Calibrated** — already analyzed in the published literature so we have ground-truth properties to test against.
 3. **Diverse** — across age bands (board through chapter book), across structural tropes (cumulative, transformation, home-away-home, etc.), across linguistic register.
 
+## In the repo
+
+- `synthetic-board-book` — high-repetition opposites pattern, 100% sight-word coverage. Exercises the board-band path.
+- `peter-rabbit` — public-domain opening of Beatrix Potter's *The Tale of Peter Rabbit* (1902, Project Gutenberg #14838). Real Tier-2 vocabulary gives an honest reach-word profile for the picture band.
+
 ## Starter corpus (Milestone 1)
 
 To be added:
@@ -65,6 +70,8 @@ To be added:
 - *Where the Wild Things Are* (Sendak) — home-away-home, Tier-2-rich vocabulary. Caldecott.
 - *The Very Hungry Caterpillar* (Carle) — transformation, counting/days. F&P J.
 - *Frog and Toad Are Friends* (Lobel) — early reader, episodic.
+
+In-copyright entries above will likely live as private fixtures; public-domain stand-ins (additional traditional tales, more Potter) get checked in.
 
 ## Copyright
 

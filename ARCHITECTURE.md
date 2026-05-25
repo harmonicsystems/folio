@@ -83,7 +83,7 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Reach word identification (initial: structural — anything outside Dolch + Fry)
 - [x] CLI emits JSON for a single text file
 - [x] Synthetic board-book fixture passes constraint-based integration tests
-- [ ] Tests against 3 canonical books in `corpora/` (1 synthetic in place; add Peter Rabbit + one more synthetic in next pass)
+- [ ] Tests against 3 canonical books in `corpora/` (2 in place — synthetic board-book + Peter Rabbit; one more for the early-reader or chapter band still needed)
 - [ ] Extend Fry to groups 2–10 (mechanical transcription from primary source)
 
 ### Milestone 2: Phonology engine
@@ -99,8 +99,8 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 
 - [x] Astro scaffold at `packages/web/` with placeholder page
 - [x] Deploy pipeline (GitHub Actions → Pages) live at `folio.harmonic-systems.org`
-- [ ] Paste-and-analyze UI (gated on Milestone 1)
-- [ ] Visual report (no auth, no persistence v1)
+- [x] Paste-and-analyze UI consuming `analyze()` in the browser
+- [x] Visual report (no auth, no persistence v1) — word count vs. target, sight-word coverage, TTR, reach words by spread, warnings
 
 ### Milestone 4: Prosody
 
