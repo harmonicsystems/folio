@@ -20,7 +20,15 @@ export {
   sightWordCoverage,
 } from './vocabulary/index.js';
 
+export {
+  analyzePhonology,
+  analyzePhonologyBySpread,
+  estimatePronunciation,
+  getPronunciation,
+  syllabify,
+  syllableCount,
+} from './phonology/index.js';
+
 // Module re-exports — uncomment as implementations land.
-// export { analyzePhonology } from './phonology/index.js';
 // export { analyzeSyntax } from './syntax/index.js';
 // export { analyzeProsody } from './prosody/index.js';

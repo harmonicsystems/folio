@@ -3,16 +3,14 @@
  * ReadabilityProfile by composing the vocabulary, phonology, syntax,
  * and prosody modules.
  *
- * Status: vocabulary is implemented (partial — see vocabulary/index.ts
- * scope note on tier classification). Phonology, syntax, and prosody
- * return empty profiles for now and will be implemented in Milestones
- * 2 and 4 respectively. See ARCHITECTURE.md.
+ * Status: vocabulary (partial — see vocabulary/index.ts scope note on
+ * tier classification) and phonology are implemented. Syntax and prosody
+ * return empty profiles and will be implemented later. See ARCHITECTURE.md.
  */
 
 import type {
   AgeBand,
   Manuscript,
-  PhonologyProfile,
   ProsodyProfile,
   ReadabilityProfile,
   SyntaxProfile,
@@ -23,6 +21,7 @@ import {
   analyzeVocabulary,
   identifyReachWordsBySpread,
 } from '../vocabulary/index.js';
+import { analyzePhonologyBySpread } from '../phonology/index.js';
 
 /** Word-count targets per age band, from SCBWI / Mary Kole guidance. */
 const WORD_COUNT_TARGETS: Record<AgeBand, { min: number; max: number }> = {
@@ -39,6 +38,7 @@ export function analyze(manuscript: Manuscript): ReadabilityProfile {
   const sentences = splitSentences(fullText);
 
   const vocabulary = analyzeVocabulary(fullText);
+  const phonology = analyzePhonologyBySpread(manuscript.spreads);
   const reachWords = identifyReachWordsBySpread(manuscript.spreads);
   const wordCountTarget = WORD_COUNT_TARGETS[manuscript.ageBand];
 
@@ -50,7 +50,7 @@ export function analyze(manuscript: Manuscript): ReadabilityProfile {
     averageSentenceLength:
       sentences.length === 0 ? 0 : tokens.length / sentences.length,
     vocabulary,
-    phonology: emptyPhonologyProfile(),
+    phonology,
     syntax: emptySyntaxProfile(),
     prosody: emptyProsodyProfile(),
     reachWords,
@@ -88,15 +88,6 @@ function buildWarnings(
     });
   }
   return warnings;
-}
-
-function emptyPhonologyProfile(): PhonologyProfile {
-  return {
-    phonemeInventory: [],
-    syllableTypes: { CV: 0, VC: 0, CVC: 0, CCVC: 0, CVCC: 0, V: 0, other: 0 },
-    averageSyllablesPerWord: 0,
-    decodabilityScore: 0,
-  };
 }
 
 function emptySyntaxProfile(): SyntaxProfile {
