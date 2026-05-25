@@ -1,0 +1,50 @@
+{
+  "name": "@harmonic-systems/early-literacy",
+  "version": "0.0.1",
+  "description": "Developmental linguistic analysis for children's literature (ages 0-10)",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./readability": {
+      "types": "./dist/readability/index.d.ts",
+      "import": "./dist/readability/index.js"
+    },
+    "./phonology": {
+      "types": "./dist/phonology/index.d.ts",
+      "import": "./dist/phonology/index.js"
+    },
+    "./vocabulary": {
+      "types": "./dist/vocabulary/index.d.ts",
+      "import": "./dist/vocabulary/index.js"
+    },
+    "./syntax": {
+      "types": "./dist/syntax/index.d.ts",
+      "import": "./dist/syntax/index.js"
+    },
+    "./prosody": {
+      "types": "./dist/prosody/index.d.ts",
+      "import": "./dist/prosody/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

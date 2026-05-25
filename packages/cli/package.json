@@ -1,0 +1,28 @@
+{
+  "name": "@harmonic-systems/folio-cli",
+  "version": "0.0.1",
+  "description": "CLI for analyzing children's book manuscripts",
+  "license": "UNLICENSED",
+  "type": "module",
+  "bin": {
+    "folio": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@harmonic-systems/early-literacy": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
