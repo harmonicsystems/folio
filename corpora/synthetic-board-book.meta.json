@@ -1,0 +1,11 @@
+{
+  "title": "Synthetic board-book stand-in",
+  "ageBand": "board",
+  "trope": "opposites",
+  "note": "Synthetic fixture. Designed to exercise high repetition + 100% sight-word coverage at the board-book scale (<100 words).",
+  "expected": {
+    "wordCount": { "min": 20, "max": 100 },
+    "vocabulary.sightWordCoverage": { "min": 1.0 },
+    "vocabulary.typeTokenRatio": { "max": 0.55 }
+  }
+}

@@ -76,13 +76,15 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 
 ### Milestone 1: Word-level engine
 
-- [ ] Word tokenization (handles contractions, possessives, hyphenation)
-- [ ] Sight word coverage (Dolch + Fry)
-- [ ] Type-token ratio
-- [ ] Vocabulary tier classification (Tier 1 vs 2 — Tier 3 detection later)
-- [ ] Reach word identification
-- [ ] CLI emits JSON for a single text file
-- [ ] Tests against 3 canonical books in `corpora/`
+- [x] Word tokenization (contractions, possessives whole; hyphens split)
+- [x] Sight word coverage (Dolch 220 service + 95 nouns; Fry first 100)
+- [x] Type-token ratio
+- [ ] Vocabulary tier classification (Tier 1 vs 2 — Tier 3 detection later) — **blocked on tier sourcing decision; see Open Questions**
+- [x] Reach word identification (initial: structural — anything outside Dolch + Fry)
+- [x] CLI emits JSON for a single text file
+- [x] Synthetic board-book fixture passes constraint-based integration tests
+- [ ] Tests against 3 canonical books in `corpora/` (1 synthetic in place; add Peter Rabbit + one more synthetic in next pass)
+- [ ] Extend Fry to groups 2–10 (mechanical transcription from primary source)
 
 ### Milestone 2: Phonology engine
 
@@ -121,3 +123,4 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - Should we publish the data files (phoneme inventory, etc.) as separate versioned packages for reuse outside this project? *Leaning: yes, eventually.*
 - How do we handle copyright for the corpus? *Initial approach: synthetic stand-ins plus public-domain texts; full canonical works only as private fixtures.*
 - LLM integration boundary: where in the stack does Claude API live? *Leaning: a `packages/llm-assist/` package separate from the engine, so the engine has no network deps.*
+- **Tier 1 word list sourcing.** Beck/McKeown/Kucan do not publish a canonical Tier 1 list — Tier 1 is conceptually "basic everyday words." Until we choose a sourced proxy, the engine returns `tier1Coverage: 0` and empty `tier2Words`/`tier3Words`. Candidates: (a) General Service List (West 1953) — well-established but old; (b) Children's Printed Word Database (Masterson, Stuart, Dixon & Lovejoy 2010) — UK; (c) derive our own from a children's-books corpus and document the methodology. This decision blocks the `tier1Coverage` field of `VocabularyProfile` from doing real work.
