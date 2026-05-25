@@ -1,0 +1,21 @@
+{
+  "name": "@harmonic-systems/folio-corpus-tests",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Validates corpora/ fixtures against the constraints declared in each .meta.json",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@harmonic-systems/early-literacy": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
