@@ -58,9 +58,15 @@ Books in the corpus should be:
 
 ## In the repo
 
-- `synthetic-board-book` — high-repetition opposites pattern, 100% sight-word coverage. Exercises the board-band path.
-- `peter-rabbit` — public-domain opening of Beatrix Potter's *The Tale of Peter Rabbit* (1902, Project Gutenberg #14838). Real Tier-2 vocabulary gives an honest reach-word profile for the picture band.
-- `aesop-selected` — eight verbatim fables from Vernon Jones's 1912 translation (Project Gutenberg #11339), one per spread. Exercises the early-reader band and the longer-text length path.
+| Slug | Age band | Words | Source |
+|---|---|---|---|
+| `synthetic-board-book` | board | 20–100 | Synthetic stand-in (opposites, max repetition). |
+| `owl-and-pussycat` | early-picture | ~210 | Edward Lear (1871) — Project Gutenberg #13650. |
+| `peter-rabbit` | picture | ~155 | Beatrix Potter (1902) — Project Gutenberg #14838. |
+| `aesop-selected` | early-reader | ~1,100 | Vernon Jones's translation of Aesop (1912) — Project Gutenberg #11339. |
+| `wizard-of-oz-opening` | chapter | ~5,100 | L. Frank Baum (1900) — Project Gutenberg #55. |
+
+All five age bands have at least one fixture. The constraint-validator in `packages/corpus-tests/` reads every `.meta.json` here and asserts the engine's output against the declared `expected` block.
 
 ## Starter corpus (Milestone 1)
 

@@ -1,0 +1,15 @@
+{
+  "title": "The Wonderful Wizard of Oz (chapters I–III)",
+  "author": "L. Frank Baum",
+  "year": 1900,
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #55",
+  "ageBand": "chapter",
+  "trope": "home-away",
+  "note": "Verbatim opening: 'The Cyclone' + 'The Council with the Munchkins' + 'How Dorothy Saved the Scarecrow'. One chapter per spread, paragraph blanks collapsed within each chapter so spread-level reach-word attribution is by chapter. Sits cleanly inside the 5,000–10,000 chapter-band target.",
+  "expected": {
+    "wordCount": { "min": 5000, "max": 5300 },
+    "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.7 },
+    "vocabulary.typeTokenRatio": { "min": 0.18, "max": 0.25 }
+  }
+}
