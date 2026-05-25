@@ -1,0 +1,128 @@
+---
+// Type-only import — proves the workspace + types pipeline resolves
+// through `@harmonic-systems/early-literacy/dist/index.d.ts`. When the
+// engine ships runtime functions, swap this for a real call.
+import type { AgeBand } from '@harmonic-systems/early-literacy';
+
+const ageBands: { id: AgeBand; label: string; range: string }[] = [
+  { id: 'board', label: 'Board book', range: '0–3' },
+  { id: 'early-picture', label: 'Early picture book', range: '0–3' },
+  { id: 'picture', label: 'Picture book', range: '3–7' },
+  { id: 'early-reader', label: 'Early reader', range: '5–9' },
+  { id: 'chapter', label: 'Chapter book', range: '7–10' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Folio — a constraint-engine and authoring tool for picture books and early-reader literature."
+    />
+    <title>Folio — pre-alpha</title>
+    <style>
+      :root {
+        --cream: #f7f1e6;
+        --beige: #ece2cf;
+        --taupe: #8a7c66;
+        --ink: #2c2620;
+        --rule: #d9cdb4;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: ui-serif, Georgia, 'Times New Roman', serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 6rem 1.5rem 4rem;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 500;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.01em;
+      }
+      .tagline {
+        color: var(--taupe);
+        font-style: italic;
+        margin: 0 0 3rem;
+      }
+      p { margin: 0 0 1.25rem; }
+      h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        margin: 3rem 0 1rem;
+      }
+      ul.bands {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border-top: 1px solid var(--rule);
+      }
+      ul.bands li {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--rule);
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.9rem;
+      }
+      ul.bands .age {
+        color: var(--taupe);
+      }
+      footer {
+        margin-top: 4rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.85rem;
+        color: var(--taupe);
+      }
+      footer a { color: var(--taupe); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Folio</h1>
+      <p class="tagline">Restraint → creative flow.</p>
+
+      <p>
+        A constraint-engine and authoring tool for picture books and
+        early-reader literature. The engine measures developmental fit
+        across phonology, vocabulary, syntax, and prosody. Authors
+        bring the water; the tool reads the gauges.
+      </p>
+
+      <p>
+        Pre-alpha. The engine is being built first. This page exists
+        so the deploy pipes are plumbed for the day there's something
+        to paste in.
+      </p>
+
+      <h2>Supported age bands</h2>
+      <ul class="bands">
+        {ageBands.map((b) => (
+          <li>
+            <span>{b.label}</span>
+            <span class="age">ages {b.range}</span>
+          </li>
+        ))}
+      </ul>
+
+      <footer>
+        Harmonic Systems · <a href="https://harmonic-systems.org">harmonic-systems.org</a>
+      </footer>
+    </main>
+  </body>
+</html>

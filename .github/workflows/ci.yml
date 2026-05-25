@@ -26,6 +26,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      # Build first so the engine's dist/ exists before downstream
+      # packages (web, future) try to resolve it during typecheck.
+      - name: Build
+        run: pnpm -r build
+
       - name: Typecheck
         run: pnpm typecheck
 

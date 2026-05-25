@@ -6,6 +6,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Astro
+.astro/
+
 # Logs
 *.log
 npm-debug.log*

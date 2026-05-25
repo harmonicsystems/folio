@@ -95,9 +95,10 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 
 ### Milestone 3: Web alpha
 
-- [ ] Astro app: paste-and-analyze
+- [x] Astro scaffold at `packages/web/` with placeholder page
+- [x] Deploy pipeline (GitHub Actions → Pages) live at `folio.harmonic-systems.org`
+- [ ] Paste-and-analyze UI (gated on Milestone 1)
 - [ ] Visual report (no auth, no persistence v1)
-- [ ] Deploy under slpio.org subdomain
 
 ### Milestone 4: Prosody
 
