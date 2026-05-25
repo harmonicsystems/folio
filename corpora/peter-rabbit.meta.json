@@ -1,0 +1,15 @@
+{
+  "title": "The Tale of Peter Rabbit (excerpt)",
+  "author": "Beatrix Potter",
+  "year": 1902,
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #14838",
+  "ageBand": "picture",
+  "trope": "transgression",
+  "note": "Public-domain opening (through Peter squeezing under the gate). Tier-2-rich vocabulary (mischief, naughty, currant, umbrella) gives a realistic picture-book reach-word profile — contrast with the synthetic board-book fixture.",
+  "expected": {
+    "wordCount": { "min": 140, "max": 180 },
+    "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.75 },
+    "vocabulary.typeTokenRatio": { "min": 0.6, "max": 0.75 }
+  }
+}
