@@ -60,6 +60,7 @@ Books in the corpus should be:
 
 - `synthetic-board-book` — high-repetition opposites pattern, 100% sight-word coverage. Exercises the board-band path.
 - `peter-rabbit` — public-domain opening of Beatrix Potter's *The Tale of Peter Rabbit* (1902, Project Gutenberg #14838). Real Tier-2 vocabulary gives an honest reach-word profile for the picture band.
+- `aesop-selected` — eight verbatim fables from Vernon Jones's 1912 translation (Project Gutenberg #11339), one per spread. Exercises the early-reader band and the longer-text length path.
 
 ## Starter corpus (Milestone 1)
 

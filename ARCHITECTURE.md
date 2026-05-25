@@ -83,7 +83,7 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Reach word identification (initial: structural — anything outside Dolch + Fry)
 - [x] CLI emits JSON for a single text file
 - [x] Synthetic board-book fixture passes constraint-based integration tests
-- [ ] Tests against 3 canonical books in `corpora/` (2 in place — synthetic board-book + Peter Rabbit; one more for the early-reader or chapter band still needed)
+- [x] Tests against 3 canonical books in `corpora/` (synthetic board-book, Peter Rabbit, Aesop's Fables selection — board / picture / early-reader bands)
 - [ ] Extend Fry to groups 2–10 (mechanical transcription from primary source)
 
 ### Milestone 2: Phonology engine
