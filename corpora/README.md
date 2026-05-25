@@ -56,6 +56,18 @@ Books in the corpus should be:
 2. **Calibrated** — already analyzed in the published literature so we have ground-truth properties to test against.
 3. **Diverse** — across age bands (board through chapter book), across structural tropes (cumulative, transformation, home-away-home, etc.), across linguistic register.
 
+## In the repo
+
+| Slug | Age band | Words | Source |
+|---|---|---|---|
+| `synthetic-board-book` | board | 20–100 | Synthetic stand-in (opposites, max repetition). |
+| `owl-and-pussycat` | early-picture | ~210 | Edward Lear (1871) — Project Gutenberg #13650. |
+| `peter-rabbit` | picture | ~155 | Beatrix Potter (1902) — Project Gutenberg #14838. |
+| `aesop-selected` | early-reader | ~1,100 | Vernon Jones's translation of Aesop (1912) — Project Gutenberg #11339. |
+| `wizard-of-oz-opening` | chapter | ~5,100 | L. Frank Baum (1900) — Project Gutenberg #55. |
+
+All five age bands have at least one fixture. The constraint-validator in `packages/corpus-tests/` reads every `.meta.json` here and asserts the engine's output against the declared `expected` block.
+
 ## Starter corpus (Milestone 1)
 
 To be added:
@@ -65,6 +77,8 @@ To be added:
 - *Where the Wild Things Are* (Sendak) — home-away-home, Tier-2-rich vocabulary. Caldecott.
 - *The Very Hungry Caterpillar* (Carle) — transformation, counting/days. F&P J.
 - *Frog and Toad Are Friends* (Lobel) — early reader, episodic.
+
+In-copyright entries above will likely live as private fixtures; public-domain stand-ins (additional traditional tales, more Potter) get checked in.
 
 ## Copyright
 

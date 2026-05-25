@@ -1,7 +1,4 @@
 ---
-// Type-only import — proves the workspace + types pipeline resolves
-// through `@harmonic-systems/early-literacy/dist/index.d.ts`. When the
-// engine ships runtime functions, swap this for a real call.
 import type { AgeBand } from '@harmonic-systems/early-literacy';
 
 const ageBands: { id: AgeBand; label: string; range: string }[] = [
@@ -30,6 +27,8 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         --taupe: #8a7c66;
         --ink: #2c2620;
         --rule: #d9cdb4;
+        --ochre: #a37828;
+        --rust: #9a4a2a;
       }
       * { box-sizing: border-box; }
       html, body {
@@ -65,23 +64,146 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         color: var(--taupe);
         margin: 3rem 0 1rem;
       }
-      ul.bands {
+
+      /* form */
+      form { margin: 0; }
+      label.field {
+        display: block;
+        margin: 0 0 1.5rem;
+      }
+      label.field .label-text {
+        display: block;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        margin-bottom: 0.5rem;
+      }
+      textarea, select {
+        width: 100%;
+        background: #fff;
+        border: 1px solid var(--rule);
+        border-radius: 2px;
+        padding: 0.75rem;
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.9rem;
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      textarea {
+        min-height: 14rem;
+        resize: vertical;
+      }
+      textarea:focus, select:focus {
+        outline: none;
+        border-color: var(--taupe);
+      }
+      .form-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+      }
+      button {
+        background: var(--ink);
+        color: var(--cream);
+        border: none;
+        padding: 0.65rem 1.25rem;
+        font-family: inherit;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        border-radius: 2px;
+      }
+      button:hover { background: #1a1612; }
+      button.secondary {
+        background: transparent;
+        color: var(--taupe);
+        padding: 0.65rem 0;
+        font-size: 0.85rem;
+        text-decoration: underline;
+        text-decoration-color: var(--rule);
+        text-underline-offset: 0.25rem;
+      }
+      button.secondary:hover { color: var(--ink); background: transparent; }
+
+      /* results */
+      .results { display: none; }
+      .results.visible { display: block; }
+      ul.rows {
         list-style: none;
         padding: 0;
         margin: 0;
         border-top: 1px solid var(--rule);
       }
-      ul.bands li {
+      ul.rows li {
         display: flex;
         justify-content: space-between;
-        padding: 0.75rem 0;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.65rem 0;
         border-bottom: 1px solid var(--rule);
+      }
+      ul.rows .label { color: var(--taupe); font-size: 0.9rem; }
+      ul.rows .value {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.9rem;
+        text-align: right;
+      }
+      ul.rows .value .qualifier {
+        color: var(--taupe);
+        margin-left: 0.5rem;
+      }
+      ul.rows .value.over { color: var(--rust); }
+      ul.rows .value.under { color: var(--ochre); }
+
+      /* warnings */
+      ul.warnings {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      ul.warnings li {
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        background: #fff;
+        border-left: 3px solid var(--rule);
+        font-size: 0.9rem;
+      }
+      ul.warnings li.warning { border-left-color: var(--ochre); }
+      ul.warnings li.error { border-left-color: var(--rust); }
+      ul.warnings .code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.75rem;
+        color: var(--taupe);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-right: 0.5rem;
+      }
+      .empty {
+        color: var(--taupe);
+        font-style: italic;
+        font-size: 0.9rem;
+        margin: 0;
+      }
+
+      /* reach words */
+      .spread-group {
+        padding: 0.65rem 0;
+        border-bottom: 1px solid var(--rule);
+      }
+      .spread-group:first-child { border-top: 1px solid var(--rule); }
+      .spread-label {
+        color: var(--taupe);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+      }
+      .spread-words {
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
         font-size: 0.9rem;
       }
-      ul.bands .age {
-        color: var(--taupe);
-      }
+
       footer {
         margin-top: 4rem;
         padding-top: 1.5rem;
@@ -98,31 +220,335 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
       <p class="tagline">Restraint → creative flow.</p>
 
       <p>
-        A constraint-engine and authoring tool for picture books and
-        early-reader literature. The engine measures developmental fit
-        across phonology, vocabulary, syntax, and prosody. Authors
-        bring the water; the tool reads the gauges.
+        Paste a manuscript below. One spread per blank-line block. Pick
+        the age band you're writing for. The engine reads the gauges —
+        word count, sight-word coverage, lexical diversity, the words
+        sitting beyond a typical reader of that age.
       </p>
 
-      <p>
-        Pre-alpha. The engine is being built first. This page exists
-        so the deploy pipes are plumbed for the day there's something
-        to paste in.
-      </p>
+      <form id="analyze-form">
+        <label class="field">
+          <span class="label-text">Age band</span>
+          <select id="age-band" name="age-band">
+            {ageBands.map((b) => (
+              <option value={b.id} selected={b.id === 'picture'}>
+                {b.label} · ages {b.range}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <h2>Supported age bands</h2>
-      <ul class="bands">
-        {ageBands.map((b) => (
+        <label class="field">
+          <span class="label-text">Manuscript</span>
+          <textarea
+            id="manuscript"
+            name="manuscript"
+            placeholder="In the great green room&#10;&#10;There was a telephone&#10;And a red balloon"
+            spellcheck="false"
+          ></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit">Analyze</button>
+          <button type="button" class="secondary" data-sample="board">
+            Load board-book sample
+          </button>
+          <button type="button" class="secondary" data-sample="picture">
+            Load Peter Rabbit
+          </button>
+          <button type="button" class="secondary" data-sample="early-picture">
+            Load Owl &amp; Pussycat
+          </button>
+          <button type="button" class="secondary" data-sample="early-reader">
+            Load Aesop selection
+          </button>
+        </div>
+      </form>
+
+      <section class="results" id="results" aria-live="polite">
+        <h2>Length</h2>
+        <ul class="rows">
           <li>
-            <span>{b.label}</span>
-            <span class="age">ages {b.range}</span>
+            <span class="label">Word count</span>
+            <span class="value" id="word-count"></span>
           </li>
-        ))}
-      </ul>
+          <li>
+            <span class="label">Sentences</span>
+            <span class="value" id="sentence-count"></span>
+          </li>
+          <li>
+            <span class="label">Average sentence length</span>
+            <span class="value" id="avg-sentence"></span>
+          </li>
+        </ul>
+
+        <h2>Vocabulary</h2>
+        <ul class="rows">
+          <li>
+            <span class="label">Sight-word coverage</span>
+            <span class="value" id="sight-coverage"></span>
+          </li>
+          <li>
+            <span class="label">Type-token ratio</span>
+            <span class="value" id="ttr"></span>
+          </li>
+          <li>
+            <span class="label">Unique words</span>
+            <span class="value" id="unique-words"></span>
+          </li>
+        </ul>
+
+        <h2>Warnings</h2>
+        <div id="warnings-container"></div>
+
+        <h2>Reach words by spread</h2>
+        <p class="empty" id="reach-help">
+          Tokens outside the Dolch + Fry sight-word lists. Each word is
+          shown on the spread it first appears.
+        </p>
+        <div id="reach-container"></div>
+      </section>
 
       <footer>
         Harmonic Systems · <a href="https://harmonic-systems.org">harmonic-systems.org</a>
       </footer>
     </main>
+
+    <script>
+      import { analyze } from '@harmonic-systems/early-literacy';
+      import type {
+        AgeBand,
+        Manuscript,
+        ReadabilityProfile,
+        ReachWord,
+        Warning,
+      } from '@harmonic-systems/early-literacy';
+
+      const SAMPLES: Record<string, { ageBand: AgeBand; text: string }> = {
+        board: {
+          ageBand: 'board',
+          text:
+            'Where is the cat?\n\n' +
+            'The cat is up. The cat is down.\n\n' +
+            'The cat is in. The cat is out.\n\n' +
+            'The cat is here. The cat is there.\n\n' +
+            'The cat is big. The cat is small.\n\n' +
+            'Where is the cat now?\n\n' +
+            'Good night, cat.',
+        },
+        picture: {
+          ageBand: 'picture',
+          text:
+            'Once upon a time there were four little Rabbits, and their names were—Flopsy, Mopsy, Cotton-tail, and Peter.\n\n' +
+            'They lived with their Mother in a sand-bank, underneath the root of a very big fir-tree.\n\n' +
+            '"Now my dears," said old Mrs. Rabbit one morning, "you may go into the fields or down the lane, but don\'t go into Mr. McGregor\'s garden: your Father had an accident there; he was put in a pie by Mrs. McGregor."\n\n' +
+            '"Now run along, and don\'t get into mischief. I am going out."\n\n' +
+            'Then old Mrs. Rabbit took a basket and her umbrella, and went through the wood to the baker\'s. She bought a loaf of brown bread and five currant buns.\n\n' +
+            'Flopsy, Mopsy, and Cotton-tail, who were good little bunnies, went down the lane to gather blackberries.\n\n' +
+            'But Peter, who was very naughty, ran straight away to Mr. McGregor\'s garden, and squeezed under the gate!',
+        },
+        'early-picture': {
+          ageBand: 'early-picture',
+          text: `The Owl and the Pussy-Cat went to sea
+In a beautiful pea-green boat:
+They took some honey, and plenty of money
+Wrapped up in a five-pound note.
+The Owl looked up to the stars above,
+And sang to a small guitar,
+"O lovely Pussy, O Pussy, my love,
+What a beautiful Pussy you are,
+You are,
+You are!
+What a beautiful Pussy you are!"
+
+Pussy said to the Owl, "You elegant fowl,
+How charmingly sweet you sing!
+Oh! let us be married; too long we have tarried:
+But what shall we do for a ring?"
+They sailed away, for a year and a day,
+To the land where the bong-tree grows;
+And there in a wood a Piggy-wig stood,
+With a ring at the end of his nose,
+His nose,
+His nose,
+With a ring at the end of his nose.
+
+"Dear Pig, are you willing to sell for one shilling
+Your ring?" Said the Piggy, "I will."
+So they took it away, and were married next day
+By the Turkey who lives on the hill.
+They dined on mince and slices of quince,
+Which they ate with a runcible spoon;
+And hand in hand, on the edge of the sand,
+They danced by the light of the moon,
+The moon,
+The moon,
+They danced by the light of the moon.`,
+        },
+        'early-reader': {
+          ageBand: 'early-reader',
+          text: `A thirsty Crow found a Pitcher with some water in it, but so little was there that, try as she might, she could not reach it with her beak, and it seemed as though she would die of thirst within sight of the remedy. At last she hit upon a clever plan. She began dropping pebbles into the Pitcher, and with each pebble the water rose a little higher until at last it reached the brim, and the knowing bird was enabled to quench her thirst.
+Necessity is the mother of invention.
+
+A hungry Fox saw some fine bunches of Grapes hanging from a vine that was trained along a high trellis, and did his best to reach them by jumping as high as he could into the air. But it was all in vain, for they were just out of reach: so he gave up trying, and walked away with an air of dignity and unconcern, remarking, "I thought those Grapes were ripe, but I see now they are quite sour."
+
+A Dog was lying in a Manger on the hay which had been put there for the cattle, and when they came and tried to eat, he growled and snapped at them and wouldn't let them get at their food. "What a selfish beast," said one of them to his companions; "he can't eat himself and yet he won't let those eat who can."
+
+A Shepherd's Boy was tending his flock near a village, and thought it would be great fun to hoax the villagers by pretending that a Wolf was attacking the sheep: so he shouted out, "Wolf! wolf!" and when the people came running up he laughed at them for their pains. He did this more than once, and every time the villagers found they had been hoaxed, for there was no Wolf at all. At last a Wolf really did come, and the Boy cried, "Wolf! wolf!" as loud as he could: but the people were so used to hearing him call that they took no notice of his cries for help. And so the Wolf had it all his own way, and killed off sheep after sheep at his leisure.
+You cannot believe a liar even when he tells the truth.
+
+A Lion asleep in his lair was waked up by a Mouse running over his face. Losing his temper he seized it with his paw and was about to kill it. The Mouse, terrified, piteously entreated him to spare its life. "Please let me go," it cried, "and one day I will repay you for your kindness." The idea of so insignificant a creature ever being able to do anything for him amused the Lion so much that he laughed aloud, and good-humouredly let it go. But the Mouse's chance came, after all. One day the Lion got entangled in a net which had been spread for game by some hunters, and the Mouse heard and recognised his roars of anger and ran to the spot. Without more ado it set to work to gnaw the ropes with its teeth, and succeeded before long in setting the Lion free. "There!" said the Mouse, "you laughed at me when I promised I would repay you: but now you see, even a Mouse can help a Lion."
+
+A Hare was one day making fun of a Tortoise, and laughing at him because of the slowness of his pace. "What a sluggard you are!" said he; "I don't wonder that you lose every race you run. Come, I'll run a race with you, and I'll soon show you what speed is!" The Tortoise smiled quietly and said, "All right: I accept your challenge, and I'll run you a race from here to the cornfield. But as you are so very sure of winning, suppose we ask the Fox to act as umpire." The Hare agreed, and off they started. The Hare, of course, shot ahead, and as the Tortoise plodded on at his steady pace, the Hare thought to himself, "The fellow hasn't a chance, so I may as well have a nap in the sun while I'm waiting for him to come up." So he lay down under a bush and fell asleep. Meanwhile the Tortoise went slowly and steadily on his way, and presently he passed the sleeping Hare, and continued on till he reached the cornfield, and won the race. The Hare woke up with a start, and seeing that the Tortoise had passed him, he set off at full speed, but it was too late, and he could not overtake him.
+Slow and steady wins the race.
+
+A Wolf came upon a Lamb straying from the flock, and felt some compunction about taking the life of so helpless a creature without some plausible excuse; so he cast about for a grievance and said at last, "Last year, sirrah, you grossly insulted me." "That is impossible, sir," bleated the Lamb, "for I wasn't born then." "Well," retorted the Wolf, "you feed in my pastures." "That cannot be," replied the Lamb, "for I have never yet tasted grass." "You drink from my spring, then," continued the Wolf. "Indeed, sir," said the poor Lamb, "I have never yet drunk anything but my mother's milk." "Well, anyhow," said the Wolf, "I'm not going without my dinner": and he sprang upon the Lamb and devoured it without more ado.
+
+A Town Mouse and a Country Mouse were cousins, and very good friends, and the Country Mouse invited the Town Mouse to come and stay with her. So the Town Mouse came, and they sat down to dinner; but the Country Mouse had nothing to offer but hay and barley and other such homely fare. The Town Mouse turned up her nose at it and said, "Cousin, how can you endure the boredom of this stupid country life? Come with me to the town, and I'll show you how to live." So the Country Mouse went to the town, and the Town Mouse showed her into a grand house, and they went into the dining-room, where there was a fine feast laid out on the table. But just as they were about to begin, in came the servants with the dogs; and the mice had to run away, and hide themselves in a hole in the wall. Presently all was quiet, and out they came again; but the Country Mouse said, "No, cousin, this is no life for me. You may have your fine feasts and your life in constant fear of cats and dogs and men; I prefer my simple food and my peaceful life in the country."`,
+        },
+      };
+
+      function buildManuscript(text: string, ageBand: AgeBand): Manuscript {
+        const spreads = text
+          .split(/\n\s*\n/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0)
+          .map((text, i) => ({ index: i + 1, text }));
+        return { ageBand, spreads };
+      }
+
+      function fmtPercent(n: number): string {
+        return `${(n * 100).toFixed(1)}%`;
+      }
+
+      function fmtNumber(n: number, digits = 2): string {
+        return Number.isFinite(n) ? n.toFixed(digits) : '—';
+      }
+
+      function setText(id: string, value: string, cls = ''): void {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = value;
+        el.className = `value ${cls}`.trim();
+      }
+
+      function renderWarnings(warnings: Warning[]): void {
+        const container = document.getElementById('warnings-container');
+        if (!container) return;
+        if (warnings.length === 0) {
+          container.innerHTML = '<p class="empty">None.</p>';
+          return;
+        }
+        const list = document.createElement('ul');
+        list.className = 'warnings';
+        for (const w of warnings) {
+          const li = document.createElement('li');
+          li.className = w.severity;
+          const code = document.createElement('span');
+          code.className = 'code';
+          code.textContent = w.code;
+          const msg = document.createElement('span');
+          msg.textContent = w.message;
+          li.append(code, msg);
+          list.appendChild(li);
+        }
+        container.replaceChildren(list);
+      }
+
+      function renderReachWords(reach: ReachWord[]): void {
+        const container = document.getElementById('reach-container');
+        const help = document.getElementById('reach-help');
+        if (!container || !help) return;
+        if (reach.length === 0) {
+          container.innerHTML = '';
+          help.textContent = 'No reach words — every token is in Dolch or Fry.';
+          return;
+        }
+        help.textContent =
+          'Tokens outside the Dolch + Fry sight-word lists. Each word is shown on the spread it first appears.';
+        const bySpread = new Map<number, string[]>();
+        for (const r of reach) {
+          const list = bySpread.get(r.spread) ?? [];
+          list.push(r.word);
+          bySpread.set(r.spread, list);
+        }
+        const frag = document.createDocumentFragment();
+        for (const spread of [...bySpread.keys()].sort((a, b) => a - b)) {
+          const words = bySpread.get(spread)!;
+          const group = document.createElement('div');
+          group.className = 'spread-group';
+          const label = document.createElement('div');
+          label.className = 'spread-label';
+          label.textContent = `Spread ${spread} · ${words.length} word${words.length === 1 ? '' : 's'}`;
+          const wordsEl = document.createElement('div');
+          wordsEl.className = 'spread-words';
+          wordsEl.textContent = words.join(', ');
+          group.append(label, wordsEl);
+          frag.appendChild(group);
+        }
+        container.replaceChildren(frag);
+      }
+
+      function render(profile: ReadabilityProfile): void {
+        const { wordCount, wordCountTarget } = profile;
+        let countClass = '';
+        let qualifier = `target ≤${wordCountTarget.max}`;
+        if (wordCountTarget.min > 0) {
+          qualifier = `target ${wordCountTarget.min}–${wordCountTarget.max}`;
+        }
+        if (wordCount > wordCountTarget.max) countClass = 'over';
+        else if (wordCountTarget.min > 0 && wordCount < wordCountTarget.min) {
+          countClass = 'under';
+        }
+        const wcEl = document.getElementById('word-count');
+        if (wcEl) {
+          wcEl.className = `value ${countClass}`.trim();
+          wcEl.innerHTML = `${wordCount}<span class="qualifier">${qualifier}</span>`;
+        }
+
+        setText('sentence-count', String(profile.sentenceCount));
+        setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
+        setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
+        setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
+        setText('unique-words', String(profile.vocabulary.uniqueWords));
+
+        renderWarnings(profile.warnings);
+        renderReachWords(profile.reachWords);
+
+        document.getElementById('results')?.classList.add('visible');
+      }
+
+      function runAnalysis(): void {
+        const textarea = document.getElementById('manuscript') as HTMLTextAreaElement | null;
+        const select = document.getElementById('age-band') as HTMLSelectElement | null;
+        if (!textarea || !select) return;
+        const text = textarea.value;
+        if (text.trim().length === 0) return;
+        const ageBand = select.value as AgeBand;
+        const manuscript = buildManuscript(text, ageBand);
+        const profile = analyze(manuscript);
+        render(profile);
+      }
+
+      document.getElementById('analyze-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        runAnalysis();
+      });
+
+      for (const btn of document.querySelectorAll<HTMLButtonElement>('button[data-sample]')) {
+        btn.addEventListener('click', () => {
+          const key = btn.dataset.sample;
+          if (!key) return;
+          const sample = SAMPLES[key];
+          if (!sample) return;
+          const textarea = document.getElementById('manuscript') as HTMLTextAreaElement | null;
+          const select = document.getElementById('age-band') as HTMLSelectElement | null;
+          if (!textarea || !select) return;
+          textarea.value = sample.text;
+          select.value = sample.ageBand;
+          runAnalysis();
+        });
+      }
+    </script>
   </body>
 </html>

@@ -29,6 +29,10 @@ Command-line interface that takes a manuscript file and emits a `ReadabilityProf
 
 Astro-based alpha. ZPD filter for LLM-generated content: paste a manuscript, see a readability profile and developmental warnings. The slpio.org-adjacent alpha for clinicians and educators.
 
+### `packages/corpus-tests`
+
+Regression gate for `corpora/`. Reads every `<slug>.meta.json`, runs the engine against the sibling `<slug>.txt`, and asserts the declared `expected` bounds. Lives in its own package so corpus health is independent of the engine's own unit tests and so Track 2 work doesn't reach into the engine package.
+
 ## Data model
 
 Three core types drive the engine:
@@ -83,7 +87,7 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Reach word identification (initial: structural — anything outside Dolch + Fry)
 - [x] CLI emits JSON for a single text file
 - [x] Synthetic board-book fixture passes constraint-based integration tests
-- [ ] Tests against 3 canonical books in `corpora/` (1 synthetic in place; add Peter Rabbit + one more synthetic in next pass)
+- [x] Tests against 3 canonical books in `corpora/` (5 fixtures cover all five age bands; gated by the constraint-validator in `packages/corpus-tests/`)
 - [ ] Extend Fry to groups 2–10 (mechanical transcription from primary source)
 
 ### Milestone 2: Phonology engine
@@ -99,8 +103,8 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 
 - [x] Astro scaffold at `packages/web/` with placeholder page
 - [x] Deploy pipeline (GitHub Actions → Pages) live at `folio.harmonic-systems.org`
-- [ ] Paste-and-analyze UI (gated on Milestone 1)
-- [ ] Visual report (no auth, no persistence v1)
+- [x] Paste-and-analyze UI consuming `analyze()` in the browser
+- [x] Visual report (no auth, no persistence v1) — word count vs. target, sight-word coverage, TTR, reach words by spread, warnings
 
 ### Milestone 4: Prosody
 
