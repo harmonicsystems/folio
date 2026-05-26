@@ -90,14 +90,16 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Tests against 3 canonical books in `corpora/` (5 fixtures cover all five age bands; gated by the constraint-validator in `packages/corpus-tests/`)
 - [ ] Extend Fry to groups 2–10 (mechanical transcription from primary source)
 
-### Milestone 2: Phonology engine
+### Milestone 2: Phonology engine ✓ (first cut)
 
-- [ ] CMU dict integration
-- [ ] Syllabification (Liang–Knuth)
-- [ ] Phoneme inventory per manuscript
-- [ ] Acquisition-age weighting
-- [ ] Place / manner / voicing breakdown
-- [ ] Decodability scoring
+- [x] CMU dict integration (curated ~320-word subset covering Dolch service + picture nouns; OOV words fall through to a grapheme-based heuristic)
+- [x] Syllabification (max-onset from ARPABET phoneme arrays, with legal English 2-phoneme onset clusters; Liang–Knuth retained as the eventual fallback for fully unknown words)
+- [x] Phoneme inventory per manuscript (with first-spread attribution)
+- [x] Acquisition-age weighting (Crowe & McLeod 2020 for consonants; vowels default to 3.0 as an engine convention pending a vowel-norm citation)
+- [x] Place / manner / voicing breakdown
+- [x] Decodability scoring (engine-choice formula: `0.7 * phoneme_ease + 0.3 * syllable_ease`)
+- [ ] Expand CMU dict subset beyond Dolch coverage (mechanical, ~2k common children's words next)
+- [ ] Decodability calibration pass against the full corpus (see Open Questions)
 
 ### Milestone 3: Web alpha
 
@@ -128,3 +130,5 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - How do we handle copyright for the corpus? *Initial approach: synthetic stand-ins plus public-domain texts; full canonical works only as private fixtures.*
 - LLM integration boundary: where in the stack does Claude API live? *Leaning: a `packages/llm-assist/` package separate from the engine, so the engine has no network deps.*
 - **Tier 1 word list sourcing.** Beck/McKeown/Kucan do not publish a canonical Tier 1 list — Tier 1 is conceptually "basic everyday words." Until we choose a sourced proxy, the engine returns `tier1Coverage: 0` and empty `tier2Words`/`tier3Words`. Candidates: (a) General Service List (West 1953) — well-established but old; (b) Children's Printed Word Database (Masterson, Stuart, Dixon & Lovejoy 2010) — UK; (c) derive our own from a children's-books corpus and document the methodology. This decision blocks the `tier1Coverage` field of `VocabularyProfile` from doing real work.
+- **Decodability calibration.** The current formula (`0.7 * phoneme_ease + 0.3 * syllable_ease`) is an engine choice, not a published norm. On the first-cut corpus it produces a mild inversion — Peter Rabbit (picture, real prose) scores ~0.866 vs. the synthetic board book at ~0.854 — because the 30% syllable weight under-counts complex shapes (`other` is 9% of PR's syllables but only contributes 0.5 ease). Worth revisiting the weights and the syllable-ease table once more corpora across age bands give us calibration signal. Independent of this, a vowel-acquisition citation would let us drop the "all vowels = 3.0" convention.
+- **Vowel acquisition norms.** Crowe & McLeod (2020) covers consonants only. The phonology engine currently uses 3.0 for all 15 vowels as an explicit engine convention. Candidates for sourcing: Otomo & Stoel-Gammon (1992), Donegan (2013), or deriving from a longitudinal infant-speech corpus. Cheap to add once chosen — the value lives in one row of `packages/engine/src/data/cmu-phonemes.ts`.
