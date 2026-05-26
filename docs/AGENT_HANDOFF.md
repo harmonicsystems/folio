@@ -6,52 +6,53 @@ If you are starting a fresh session in a worktree, read this first.
 
 ## Current parallel session
 
-Two tracks are in flight. Decide which you are before doing anything else — your branch name tells you (`phonology-engine` → Track 1, `web-and-corpus` → Track 2).
+One track is in flight. Confirm by branch name (`spread-editor`) before doing anything else.
 
-### Track 1 — Engine: Phonology
+Earlier tracks — phonology (Track 1) and web alpha + corpus (Track 2) — landed on `main` as commits `b5c67fe..23cfc22`. Their sections have been removed per the lifecycle convention below; consult `git log` for the history.
 
-**Goal:** complete enough of Milestone 2 to expose phoneme inventory, syllable type breakdown, average syllables per word, and a first-cut decodability score for English children's text.
+### Track 3 — Spread-First Editor
 
-**Owns:**
-- `packages/engine/src/phonology/` — all files, new and existing
-- `packages/engine/src/data/cmu-*.ts` — vendored CMU Pronouncing Dictionary subset and any phoneme-norm tables (Crowe & McLeod 2020)
-- May extend `PhonologyProfile` in `packages/engine/src/types.ts` if needed — and only `PhonologyProfile`. No other type changes.
-- May add tests under `packages/engine/tests/phonology*.test.ts` and `packages/engine/tests/cmu*.test.ts`
-- Wires the new module into `packages/engine/src/readability/index.ts` as the **last** step of the track, after phonology is internally complete.
+**Status:** In flight, pre-work only. A throwaway visual prototype exists at `prototypes/spread-editor/` and can be iterated on freely. Production work in `packages/web/` is gated on the open questions below — the spec proposes engine-API changes that need ADRs ratified before code lands.
 
-**Cannot touch:** `packages/web/`, `corpora/`, `packages/engine/src/vocabulary|syntax|prosody/`, the engine barrel beyond adding a `analyzePhonology` export.
-
-### Track 2 — Web alpha + Corpus
-
-**Goal:** ship a working web prototype users can paste a manuscript into and see a real readability profile, using the vocabulary engine that already exists.
+**Goal:** ship the spread-first editor — 16 spread tiles with per-spread placement zones, in-context reach-word decoration, and a live readability sidebar driven by `analyze()`. Replaces the paste-and-analyze UI in `packages/web/src/pages/index.astro` as the primary editor surface once it reaches parity.
 
 **Owns:**
-- `packages/web/` — replace the placeholder with a real paste-and-analyze UI. Calls into `@harmonic-systems/early-literacy` via the engine's existing public API. Renders word count vs. target, sight-word coverage, TTR, reach words, and warnings.
-- `corpora/` — add 1–2 new fixtures (e.g., a public-domain excerpt of Beatrix Potter, *The Tale of Peter Rabbit*, 1902; one more synthetic fixture for a different age band). Each new `.txt` ships with a sibling `.meta.json` per the format in `corpora/README.md`.
-- May add docs in `docs/` related to the web UI or corpus methodology.
+- `packages/web/` — sole owner.
+- `prototypes/spread-editor/` — delete when the production editor reaches feature parity.
+- `docs/decisions/0002-spread-first-editing.md` and `docs/decisions/0003-spread-native-engine-api.md` — to be written.
+- `packages/engine/src/types.ts` — only the extensions ratified by ADR 0003 (e.g., `SpreadProfile`, optional `perSpread` on `ReadabilityProfile`). No other type changes.
+- Engine module signatures changed per ADR 0003.
 
-**Cannot touch:** `packages/engine/src/`, `packages/engine/src/data/`, `packages/cli/`, `packages/engine/src/types.ts`. Track 2 consumes the engine; it does not modify it.
+**Cannot touch:** `packages/engine/src/phonology|vocabulary|syntax|prosody/`, `packages/engine/src/data/`, `packages/cli/`, `packages/corpus-tests/`, `corpora/`.
+
+**Open questions blocking production start (need human decisions):**
+1. Do `TrimSize` and `SpreadPlacement` live on the engine's `Manuscript`/`Spread`, or on a web-side wrapper type? (Recommendation: wrapper — the engine measures, composition is the UI's job.)
+2. Does `analyze()` return `perSpread: SpreadProfile[]`, or does the web filter the manuscript-level profile? (Recommendation: engine returns; filtering on the web duplicates internal engine logic.)
+3. Are per-spread word-count targets a cited norm or a descriptive heuristic? (Recommendation: heuristic — picture books distribute words unevenly by design.)
+4. Editor library for caret-safe reach-word decoration: Lexical, TipTap, ProseMirror, or roll our own controlled `contentEditable`? (Recommendation: Lexical.)
 
 ## Hard boundaries
 
-| Path | Track 1 | Track 2 |
-|---|---|---|
-| `packages/engine/src/phonology/` | owns | off-limits |
-| `packages/engine/src/data/` | adds CMU & phoneme files | off-limits |
-| `packages/engine/src/types.ts` | `PhonologyProfile` only | off-limits |
-| `packages/engine/src/readability/index.ts` | wires in phonology last | off-limits |
-| `packages/engine/src/index.ts` (barrel) | adds `analyzePhonology` export | off-limits |
-| `packages/engine/src/vocabulary|syntax|prosody/` | off-limits | off-limits |
-| `packages/web/` | off-limits | owns |
-| `corpora/` | off-limits | owns |
-| `package.json` (root), `pnpm-workspace.yaml`, `.github/workflows/` | coordinate via main thread | coordinate via main thread |
+| Path | Track 3 |
+|---|---|
+| `packages/web/` | owns |
+| `prototypes/` | owns |
+| `docs/decisions/0002-*.md`, `0003-*.md` | owns (to be written) |
+| `packages/engine/src/types.ts` | extends per ADR 0003 only |
+| `packages/engine/src/readability/index.ts` | may change `analyze()` signature per ADR 0003 |
+| `packages/engine/src/phonology|vocabulary|syntax|prosody/` | off-limits |
+| `packages/engine/src/data/` | off-limits |
+| `packages/engine/src/index.ts` (barrel) | coordinate via main thread |
+| `packages/cli/`, `packages/corpus-tests/` | off-limits |
+| `corpora/` | off-limits |
+| `package.json` (root), `pnpm-workspace.yaml`, `.github/workflows/` | coordinate via main thread |
 
-"Coordinate via main thread" means: do not edit without checking with the human running the main Claude Code session. These files affect both tracks.
+"Coordinate via main thread" means: do not edit without checking with the human running the main Claude Code session. These files affect downstream consumers.
 
 ## Shared contracts — do not break these
 
-- **`types.ts` is the integration point.** Track 1 may extend `PhonologyProfile`. No other type changes by either track. If a change here would help your track, propose it in your commit message and stop short of merging — flag the human.
-- **Citation discipline.** Every linguistic claim must trace to an entry in `docs/linguistics/SOURCES.md`, or be removed. No new norms, thresholds, or word lists without a corresponding citation. This applies equally to Track 1's phoneme-acquisition norms and Track 2's corpus fixture meta.json constraints (a constraint like "F&P level X" needs a source).
+- **`types.ts` is the integration point.** Track 3 may extend it only with changes ratified by ADR 0003. Any other type change needs a new ADR and human sign-off — propose it, do not merge it. Downstream consumers (`packages/cli/`, `packages/web/`, `packages/corpus-tests/`) all depend on the surface staying stable.
+- **Citation discipline.** Every linguistic claim must trace to an entry in `docs/linguistics/SOURCES.md`, or be removed. No new norms, thresholds, or word lists without a corresponding citation. Phoneme-acquisition norms, vocabulary tiers, prosody templates, corpus fixture constraints — all the same rule.
 - **Engine portability.** No Node-only APIs in `packages/engine/src/`. File IO lives in CLI, tests, or web. Data files are TypeScript modules under `src/data/`, not JSON read from disk.
 - **No LLM-generated manuscript text.** Per `CLAUDE.md`. The engine measures; it does not author. This applies to corpus fixtures too — synthetic fixtures are *human-authored test stand-ins*, written deliberately, not generated.
 
@@ -64,13 +65,19 @@ Two tracks are in flight. Decide which you are before doing anything else — yo
 5. **When the track is done**, open a PR (`gh pr create`) and wait for review. Do not auto-merge.
 6. **Run `pnpm typecheck` and `pnpm test` from the repo root before each commit.** A green tree is a soft contract.
 
+## Track lifecycle
+
+Tracks are **queued**, **in flight**, or **landed**. When a track lands on `main`, remove its section *and* its boundaries-table column in the same commit — this doc is for current parallel work, not history. Use git for history.
+
+A queued track stays queued until its blockers clear. The first agent to start work flips the status to in-flight in the same commit as their first real change.
+
 ## If you have to leave your lane
 
 If completing your track *requires* touching a file outside your ownership column, **stop and ask the human**. Do not silently expand scope. Lane expansion is exactly the cause of merge pain that worktrees are supposed to prevent. The human will either grant a one-time exception, re-scope the track, or coordinate with the other agent.
 
 ## Voice and style
 
-Keep the existing aesthetic — readers should not be able to tell the two tracks were written by different agents.
+Keep the existing aesthetic — readers should not be able to tell which agent wrote which file.
 
 - **TypeScript:** ESM, strict mode, JSDoc on exported functions, no `any` without a `// TODO: type` comment.
 - **Comments:** only when the WHY is non-obvious. Never write self-referential comments (`// added in track 1`, `// see PR #42`). Code rots, and so do those.
