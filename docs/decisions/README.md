@@ -41,4 +41,6 @@ What else did we look at? Why didn't we pick those?
 
 ## Existing ADRs
 
-(none yet — first one will likely be the TypeScript-over-Rust decision for the engine core)
+- 0001 — *reserved* for the TypeScript-over-Rust decision for the engine core (not yet written).
+- [0002 — Spread-first editing](0002-spread-first-editing.md) — *proposed*
+- [0003 — Spread-native engine API](0003-spread-native-engine-api.md) — *proposed*
