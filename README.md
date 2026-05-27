@@ -12,7 +12,7 @@ This monorepo holds two related products that share one engine:
 
 2. **Folio** — a future syncing iPad/macOS authoring app for writer-illustrator teams, built on the engine. Not in this repo yet.
 
-In between, there's a CLI (`packages/cli/`) and a web alpha (`packages/web/`) — the engine's first usable interfaces. The web alpha is a paste-and-analyze page that runs `analyze()` in the browser; run it with `pnpm --filter @harmonic-systems/folio-web dev`.
+In between, there's a CLI (`packages/cli/`) and a web alpha (`packages/web/`) — the engine's first usable interfaces. The web alpha runs `analyze()` in the browser and ships two surfaces: a paste-and-analyze page at `/` and a spread-first editor at `/editor` (16 tiles, per-spread analysis, live updates). Run with `pnpm --filter @harmonic-systems/folio-web dev`.
 
 ## Status
 
@@ -22,6 +22,7 @@ Pre-alpha. The engine and CLI are the first deliverables.
 
 - `CLAUDE.md` — persistent brief for Claude Code sessions
 - `ARCHITECTURE.md` — design rationale and module structure
+- `docs/decisions/` — architectural decision records (spread editor: ADRs 0002 + 0003)
 - `docs/linguistics/SOURCES.md` — the research base behind every metric
 - `corpora/README.md` — how to add test fixtures (canonical books)
 
