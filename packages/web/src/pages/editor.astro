@@ -73,6 +73,12 @@ const SAMPLES: Record<string, Sample> = {
       content="Folio — spread-first manuscript editor for picture books and early-reader literature."
     />
     <title>Folio — spread editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+    />
     <style is:global>
       :root {
         --cream: #f7f1e6;
@@ -172,7 +178,8 @@ const SAMPLES: Record<string, Sample> = {
       .page-text {
         flex: 1; resize: none;
         border: none; outline: none; background: transparent;
-        font-family: ui-serif, Georgia, serif;
+        font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+        font-weight: var(--body-font-weight, 400);
         font-size: 0.9rem; line-height: 1.5; color: var(--ink);
         padding: 0; min-width: 0;
       }
@@ -366,6 +373,26 @@ const SAMPLES: Record<string, Sample> = {
                 {t.label}
               </option>
             ))}
+          </select>
+        </label>
+        <label class="control">
+          <span class="control-label">Body font</span>
+          <select id="body-font">
+            <option value="caslon" selected>Libre Caslon</option>
+            <option value="futura">Futura</option>
+            <option value="futura-bold">Futura Bold</option>
+            <option value="atkinson">Atkinson Hyperlegible</option>
+            <option value="bricolage">Bricolage Grotesque</option>
+          </select>
+        </label>
+        <label class="control">
+          <span class="control-label">Layout</span>
+          <select id="layout-preset">
+            <option value="">— preset —</option>
+            <option value="classic">Classic facing</option>
+            <option value="mirror">Mirror</option>
+            <option value="text-top">Text top</option>
+            <option value="full-text">Full text</option>
           </select>
         </label>
         <label class="control">
@@ -794,6 +821,16 @@ const SAMPLES: Record<string, Sample> = {
         }
       });
 
+      byId('body-font')?.addEventListener('change', applyBodyFont);
+
+      byId('layout-preset')?.addEventListener('change', (e) => {
+        const sel = e.target as HTMLSelectElement;
+        if (sel.value) {
+          applyLayoutPreset(sel.value);
+          sel.value = '';
+        }
+      });
+
       byId('reset-btn')?.addEventListener('click', () => {
         for (let i = 1; i <= SPREAD_COUNT; i++) {
           setPage(i, 'left', '', 'text-only');
@@ -816,6 +853,81 @@ const SAMPLES: Record<string, Sample> = {
           '--spread-aspect',
           String(ASPECT_BY_TRIM[key] ?? 1.6),
         );
+      }
+
+      // ---- body font ----
+      const FONTS: Record<string, { family: string; weight: number }> = {
+        caslon: {
+          family: '"Libre Caslon Text", Georgia, serif',
+          weight: 400,
+        },
+        futura: {
+          family: '"Futura", "Futura PT", "Trebuchet MS", system-ui, sans-serif',
+          weight: 400,
+        },
+        'futura-bold': {
+          family: '"Futura", "Futura PT", "Trebuchet MS", system-ui, sans-serif',
+          weight: 700,
+        },
+        atkinson: {
+          family: '"Atkinson Hyperlegible", system-ui, sans-serif',
+          weight: 400,
+        },
+        bricolage: {
+          family: '"Bricolage Grotesque", system-ui, sans-serif',
+          weight: 400,
+        },
+      };
+
+      function applyBodyFont(): void {
+        const sel = byId('body-font') as HTMLSelectElement | null;
+        const key = sel?.value ?? 'caslon';
+        const font = FONTS[key] ?? FONTS.caslon;
+        document.documentElement.style.setProperty(
+          '--body-font-family',
+          font.family,
+        );
+        document.documentElement.style.setProperty(
+          '--body-font-weight',
+          String(font.weight),
+        );
+      }
+
+      // ---- layout presets ----
+      // Presets only touch placements, never text content.
+      type Placements = { left: PagePlacement; right: PagePlacement };
+      const LAYOUT_PRESETS: Record<string, (idx: number) => Placements> = {
+        classic: () => ({ left: 'text-only', right: 'illustration-only' }),
+        mirror: (i) =>
+          i % 2 === 1
+            ? { left: 'text-only', right: 'illustration-only' }
+            : { left: 'illustration-only', right: 'text-only' },
+        'text-top': () => ({ left: 'text-top', right: 'text-top' }),
+        'full-text': () => ({ left: 'text-only', right: 'text-only' }),
+      };
+
+      function setPlacement(
+        spread: number,
+        side: 'left' | 'right',
+        placement: PagePlacement,
+      ): void {
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        const page = document.querySelector(`[data-page="${spread}-${side}"]`);
+        if (sel) sel.value = placement;
+        page?.setAttribute('data-placement', placement);
+      }
+
+      function applyLayoutPreset(key: string): void {
+        const fn = LAYOUT_PRESETS[key];
+        if (!fn) return;
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const { left, right } = fn(i);
+          setPlacement(i, 'left', left);
+          setPlacement(i, 'right', right);
+        }
+        runAnalysis();
       }
 
       function currentSpreadIndex(): number {
@@ -913,6 +1025,7 @@ const SAMPLES: Record<string, Sample> = {
       });
 
       applyTrimAspect();
+      applyBodyFont();
       runAnalysis();
     </script>
   </body>
