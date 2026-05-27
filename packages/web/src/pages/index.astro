@@ -561,6 +561,160 @@ const SAMPLES: Record<string, Sample> = {
         background-color: rgba(154, 178, 100, 0.65);
         border-radius: 2px;
       }
+
+      /* ---- onboarding card ---- */
+      .onboarding-card {
+        grid-column: 1 / -1;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-left: 3px solid var(--ochre);
+        border-radius: 4px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .onboarding-card[hidden] { display: none; }
+      .onboarding-card h2 {
+        font-size: 1.1rem;
+        margin: 0;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      .onboarding-card p {
+        margin: 0;
+        color: var(--ink);
+        font-size: 0.95rem;
+        line-height: 1.55;
+      }
+      .onboarding-actions {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .onboarding-card button {
+        padding: 0.45rem 0.95rem;
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 2px;
+      }
+      .onboarding-card button.primary {
+        background: var(--ink);
+        color: var(--cream);
+        border: 1px solid var(--ink);
+      }
+      .onboarding-card button.primary:hover { background: #1a1612; }
+      .onboarding-card button.secondary {
+        background: transparent;
+        color: var(--taupe);
+        border: 1px solid var(--rule);
+      }
+      .onboarding-card button.secondary:hover {
+        background: var(--cream); color: var(--ink);
+      }
+
+      /* ---- about button + dialog ---- */
+      .about-btn {
+        width: 1.75rem; height: 1.75rem;
+        border-radius: 50%;
+        border: 1px solid var(--rule);
+        background: var(--surface);
+        color: var(--taupe);
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+      }
+      .about-btn:hover {
+        background: var(--cream);
+        color: var(--ink);
+      }
+      .about-dialog {
+        border: 1px solid var(--rule);
+        border-radius: 6px;
+        padding: 0;
+        background: var(--surface);
+        color: var(--ink);
+        max-width: 42rem;
+        width: 90vw;
+        max-height: 85vh;
+        position: relative;
+      }
+      .about-dialog::backdrop {
+        background: rgba(44, 38, 32, 0.4);
+      }
+      .about-content {
+        padding: 2rem 2.25rem;
+        overflow-y: auto;
+        max-height: 85vh;
+      }
+      .about-content h2 {
+        margin: 0 0 1rem;
+        font-size: 1.4rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+      }
+      .about-content h3 {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        margin: 1.5rem 0 0.5rem;
+        font-weight: 600;
+      }
+      .about-content p {
+        margin: 0 0 0.9rem;
+        line-height: 1.6;
+        font-size: 0.95rem;
+      }
+      .about-content > ul {
+        margin: 0 0 1rem;
+        padding-left: 1.25rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+      .about-content ul.shortcuts {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .about-content ul.shortcuts li {
+        display: grid;
+        grid-template-columns: 12rem 1fr;
+        gap: 1rem;
+        padding: 0.35rem 0;
+        font-size: 0.9rem;
+        border-bottom: 1px dashed var(--rule);
+      }
+      .about-content ul.shortcuts li:last-child { border-bottom: none; }
+      .about-content code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        background: var(--cream);
+        padding: 0.15rem 0.4rem;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        color: var(--ink);
+      }
+      .about-content a { color: var(--ink); }
+      .dialog-close {
+        position: absolute;
+        top: 0.6rem; right: 0.6rem;
+        background: transparent;
+        border: none;
+        font-size: 1.4rem;
+        cursor: pointer;
+        color: var(--taupe);
+        width: 2rem; height: 2rem;
+        line-height: 1;
+        border-radius: 4px;
+        padding: 0;
+        z-index: 2;
+      }
+      .dialog-close:hover { background: var(--cream); color: var(--ink); }
       .phon-source {
         font-size: 0.7rem;
         color: var(--taupe);
@@ -808,6 +962,13 @@ const SAMPLES: Record<string, Sample> = {
           <span class="control-label">Sidebar</span>
           <button id="sidebar-toggle" type="button">Hide</button>
         </div>
+        <button
+          class="about-btn"
+          id="about-btn"
+          type="button"
+          title="About Folio"
+          aria-label="About Folio"
+        >?</button>
       </div>
     </header>
 
@@ -837,6 +998,28 @@ const SAMPLES: Record<string, Sample> = {
     </div>
 
     <main class="workspace">
+      <section
+        class="onboarding-card"
+        id="onboarding-card"
+        aria-labelledby="onboarding-title"
+        hidden
+      >
+        <h2 id="onboarding-title">Welcome to Folio</h2>
+        <p>
+          A constraint-aware authoring tool for picture books and early-reader literature.
+          Click into any spread and start writing — the sidebar shows how your text lands
+          developmentally as you go. Or load a sample to see it in action.
+        </p>
+        <div class="onboarding-actions">
+          <button type="button" class="primary" id="onboarding-sample">
+            Load Peter Rabbit sample
+          </button>
+          <button type="button" class="secondary" id="onboarding-dismiss">
+            Got it — let me write
+          </button>
+        </div>
+      </section>
+
       <section
         class="editor-surface"
         id="editor-surface"
@@ -984,6 +1167,62 @@ const SAMPLES: Record<string, Sample> = {
     <footer class="footnote">
       <a href="/paste">paste-and-analyze</a> · Harmonic Systems
     </footer>
+
+    <dialog class="about-dialog" id="about-dialog">
+      <button
+        type="button"
+        class="dialog-close"
+        id="about-close"
+        aria-label="Close"
+      >×</button>
+      <div class="about-content">
+        <h2>About Folio</h2>
+        <p>
+          Folio is a constraint-aware authoring tool for picture books and
+          early-reader literature. It helps you see — as you write — how your
+          manuscript lands developmentally: word count vs. age-band target,
+          sight-word coverage, reach words in context, phoneme inventory, and
+          decodability.
+        </p>
+        <p>It's built for two audiences:</p>
+        <ul>
+          <li>Picture-book authors writing toward a specific age band.</li>
+          <li>
+            Speech-language pathologists creating or evaluating texts with
+            controlled phoneme load — click any phoneme in the sidebar to
+            highlight every word containing it.
+          </li>
+        </ul>
+
+        <h3>Keyboard shortcuts</h3>
+        <ul class="shortcuts">
+          <li><code>Cmd+B / I / U</code><span>Bold / italic / underline</span></li>
+          <li><code>Cmd+Shift+X</code><span>Strikethrough</span></li>
+          <li><code>Cmd+Shift+-</code><span>Soft hyphen (controls line break)</span></li>
+          <li><code>Cmd+Shift+Space</code><span>Non-breaking space</span></li>
+          <li><code>Cmd+F</code><span>Find &amp; replace</span></li>
+          <li><code>Enter / Shift+Enter</code><span>(in Find) next / previous match</span></li>
+          <li><code>← / →</code><span>(in Book view) previous / next spread</span></li>
+        </ul>
+
+        <h3>Markdown shortcuts as you type</h3>
+        <ul class="shortcuts">
+          <li><code>**bold**</code><span>becomes <strong>bold</strong></span></li>
+          <li><code>*italic*</code><span>becomes <em>italic</em></span></li>
+          <li><code>~~strike~~</code><span>becomes <s>strikethrough</s></span></li>
+        </ul>
+
+        <h3>Your privacy</h3>
+        <p>
+          Folio runs entirely in your browser. Your manuscript content never
+          leaves your device — no server, no account, no analytics about what
+          you write. Your draft autosaves to this browser's local storage and
+          can be cleared at any time with the Reset button. A simpler
+          paste-and-analyze surface is also available at
+          <a href="/paste">/paste</a>.
+        </p>
+      </div>
+    </dialog>
 
     <div class="status-bar" id="status-bar" aria-live="polite">
       <span class="status-item">
@@ -2109,6 +2348,52 @@ const SAMPLES: Record<string, Sample> = {
 
       // Initial indicator paint (in case there's a restored draft).
       updateSavedIndicator();
+
+      // ---- onboarding ----
+      const ONBOARDED_KEY = 'folio.onboarded.v1';
+      function showOnboardingIfFirstVisit(): void {
+        const card = byId('onboarding-card');
+        if (!card) return;
+        // Show only when there's no existing content AND user hasn't
+        // dismissed it before. Either signal is enough to hide it.
+        const dismissed = (() => {
+          try {
+            return !!localStorage.getItem(ONBOARDED_KEY);
+          } catch {
+            return false;
+          }
+        })();
+        card.hidden = restoredDraft !== null || dismissed;
+      }
+      function dismissOnboarding(): void {
+        const card = byId('onboarding-card');
+        if (card) card.hidden = true;
+        try {
+          localStorage.setItem(ONBOARDED_KEY, '1');
+        } catch {
+          /* ignore */
+        }
+      }
+      byId('onboarding-dismiss')?.addEventListener('click', dismissOnboarding);
+      byId('onboarding-sample')?.addEventListener('click', () => {
+        loadSample('picture');
+        dismissOnboarding();
+      });
+      showOnboardingIfFirstVisit();
+
+      // ---- about dialog ----
+      const aboutDialog = byId('about-dialog') as HTMLDialogElement | null;
+      byId('about-btn')?.addEventListener('click', () => {
+        aboutDialog?.showModal();
+      });
+      byId('about-close')?.addEventListener('click', () => {
+        aboutDialog?.close();
+      });
+      // Click outside the dialog content to close (native <dialog>
+      // doesn't do this by default; backdrop click via target check).
+      aboutDialog?.addEventListener('click', (e) => {
+        if (e.target === aboutDialog) aboutDialog.close();
+      });
 
       // ---- view mode (grid / book) ----
       const ASPECT_BY_TRIM: Record<string, number> = {
