@@ -492,6 +492,67 @@ const SAMPLES: Record<string, Sample> = {
         background-color: rgba(163, 120, 40, 0.22);
         border-radius: 2px;
       }
+
+      /* ---- find & replace bar ---- */
+      .find-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.5rem;
+        background: var(--surface);
+        border-bottom: 1px solid var(--rule);
+        flex-wrap: wrap;
+      }
+      .find-bar[hidden] { display: none; }
+      .find-bar input[type="text"] {
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.5rem;
+        border: 1px solid var(--rule);
+        border-radius: 2px;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: ui-serif, Georgia, serif;
+        min-width: 10rem;
+      }
+      .find-bar input[type="text"]:focus {
+        outline: none;
+        border-color: var(--taupe);
+      }
+      .find-count {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.75rem;
+        color: var(--taupe);
+        min-width: 4.5rem;
+      }
+      .find-bar button {
+        font: inherit;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.6rem;
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: 2px;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .find-bar button:hover:not(:disabled) { background: var(--beige); }
+      .find-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+      .find-bar-close {
+        margin-left: auto;
+        font-size: 1.1rem;
+        line-height: 1;
+        padding: 0.2rem 0.55rem;
+        border: none !important;
+      }
+
+      ::highlight(find-match) {
+        background-color: rgba(154, 178, 100, 0.32);
+        border-radius: 2px;
+      }
+      ::highlight(find-current) {
+        background-color: rgba(154, 178, 100, 0.65);
+        border-radius: 2px;
+      }
       .phon-source {
         font-size: 0.7rem;
         color: var(--taupe);
@@ -740,6 +801,31 @@ const SAMPLES: Record<string, Sample> = {
         </div>
       </div>
     </header>
+
+    <div class="find-bar" id="find-bar" hidden>
+      <input
+        type="text"
+        id="find-input"
+        placeholder="Find"
+        aria-label="Find text"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <input
+        type="text"
+        id="replace-input"
+        placeholder="Replace"
+        aria-label="Replace with"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span class="find-count" id="find-count">—</span>
+      <button type="button" id="find-prev" title="Previous (Shift+Enter)" aria-label="Previous match">↑</button>
+      <button type="button" id="find-next" title="Next (Enter)" aria-label="Next match">↓</button>
+      <button type="button" id="find-replace">Replace</button>
+      <button type="button" id="find-replace-all">All</button>
+      <button type="button" id="find-close" class="find-bar-close" title="Close (Esc)" aria-label="Close">×</button>
+    </div>
 
     <main class="workspace">
       <section
@@ -1601,6 +1687,281 @@ const SAMPLES: Record<string, Sample> = {
         if (clearBtn) clearBtn.hidden = true;
         applyPhonemeHighlights();
       });
+
+      // ---- find & replace ----
+      interface FindMatch {
+        spread: number;
+        side: 'left' | 'right';
+        index: number;
+        length: number;
+      }
+      let findMatches: FindMatch[] = [];
+      let findCurrent = -1;
+
+      function getFindHighlightAPIs() {
+        const HighlightCtor = (window as unknown as {
+          Highlight?: new (...ranges: Range[]) => unknown;
+        }).Highlight;
+        const highlights = (CSS as unknown as {
+          highlights?: Map<string, unknown>;
+        }).highlights;
+        return { HighlightCtor, highlights };
+      }
+
+      function rangeForMatch(m: FindMatch): Range | null {
+        const pageEl = document.querySelector(
+          `[data-page="${m.spread}-${m.side}"] .page-editor-editable`,
+        );
+        if (!pageEl) return null;
+        const walker = document.createTreeWalker(pageEl, NodeFilter.SHOW_TEXT);
+        let offset = 0;
+        let startNode: Node | null = null;
+        let startOff = 0;
+        let endNode: Node | null = null;
+        let endOff = 0;
+        let node: Node | null;
+        const target = m.index;
+        const endTarget = m.index + m.length;
+        while ((node = walker.nextNode())) {
+          const len = node.textContent?.length ?? 0;
+          if (!startNode && offset + len > target) {
+            startNode = node;
+            startOff = target - offset;
+          }
+          if (offset + len >= endTarget) {
+            endNode = node;
+            endOff = endTarget - offset;
+            break;
+          }
+          offset += len;
+        }
+        if (!startNode || !endNode) return null;
+        const range = new Range();
+        range.setStart(startNode, startOff);
+        range.setEnd(endNode, endOff);
+        return range;
+      }
+
+      function computeFindMatches(query: string): FindMatch[] {
+        if (!query) return [];
+        const editors = (window as unknown as {
+          __pageEditors?: Record<string, { getText: () => string }>;
+        }).__pageEditors;
+        if (!editors) return [];
+        const re = new RegExp(escapeRegex(query), 'gi');
+        const out: FindMatch[] = [];
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          for (const side of ['left', 'right'] as const) {
+            const text = editors[`${i}-${side}`]?.getText() ?? '';
+            if (!text) continue;
+            re.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = re.exec(text)) !== null) {
+              out.push({ spread: i, side, index: m.index, length: m[0].length });
+            }
+          }
+        }
+        return out;
+      }
+
+      function renderFindHighlights(): void {
+        const { HighlightCtor, highlights } = getFindHighlightAPIs();
+        if (!HighlightCtor || !highlights) return;
+        highlights.delete('find-match');
+        highlights.delete('find-current');
+        if (findMatches.length === 0) return;
+        const allRanges: Range[] = [];
+        let currentRange: Range | null = null;
+        findMatches.forEach((m, i) => {
+          const r = rangeForMatch(m);
+          if (!r) return;
+          if (i === findCurrent) currentRange = r;
+          else allRanges.push(r);
+        });
+        if (allRanges.length > 0) {
+          highlights.set('find-match', new HighlightCtor(...allRanges));
+        }
+        if (currentRange) {
+          highlights.set('find-current', new HighlightCtor(currentRange));
+        }
+      }
+
+      function updateFindCount(): void {
+        const el = byId('find-count');
+        if (!el) return;
+        if (findMatches.length === 0) {
+          el.textContent = byId('find-input') instanceof HTMLInputElement && (byId('find-input') as HTMLInputElement).value
+            ? 'no matches'
+            : '—';
+        } else {
+          el.textContent = `${findCurrent + 1} of ${findMatches.length}`;
+        }
+        const prev = byId('find-prev') as HTMLButtonElement | null;
+        const next = byId('find-next') as HTMLButtonElement | null;
+        const repl = byId('find-replace') as HTMLButtonElement | null;
+        const replAll = byId('find-replace-all') as HTMLButtonElement | null;
+        const disable = findMatches.length === 0;
+        [prev, next, repl, replAll].forEach((b) => {
+          if (b) b.disabled = disable;
+        });
+      }
+
+      function scrollToCurrent(): void {
+        if (findCurrent < 0) return;
+        const r = rangeForMatch(findMatches[findCurrent]);
+        if (!r) return;
+        const rect = r.getBoundingClientRect();
+        const el = r.startContainer.parentElement;
+        // scrollIntoView on a Range isn't standard; ride on the parent.
+        if (el && rect) {
+          el.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+            behavior: 'smooth',
+          });
+        }
+      }
+
+      function refreshFind(): void {
+        const input = byId('find-input') as HTMLInputElement | null;
+        const query = input?.value ?? '';
+        const prev = findCurrent >= 0 ? findMatches[findCurrent] : null;
+        findMatches = computeFindMatches(query);
+        if (findMatches.length === 0) {
+          findCurrent = -1;
+        } else if (prev) {
+          // Try to keep the cursor near where it was.
+          const idx = findMatches.findIndex(
+            (m) =>
+              m.spread > prev.spread ||
+              (m.spread === prev.spread &&
+                (m.side === 'right' && prev.side === 'left' ? true : m.index >= prev.index)),
+          );
+          findCurrent = idx === -1 ? 0 : idx;
+        } else {
+          findCurrent = 0;
+        }
+        renderFindHighlights();
+        updateFindCount();
+      }
+
+      function findStep(delta: number): void {
+        if (findMatches.length === 0) return;
+        findCurrent =
+          (findCurrent + delta + findMatches.length) % findMatches.length;
+        renderFindHighlights();
+        updateFindCount();
+        scrollToCurrent();
+      }
+
+      function replaceCurrent(): void {
+        if (findCurrent < 0 || findMatches.length === 0) return;
+        const m = findMatches[findCurrent];
+        const replInput = byId('replace-input') as HTMLInputElement | null;
+        const replacement = replInput?.value ?? '';
+        const handle = (window as unknown as {
+          __pageEditors?: Record<string, { getText: () => string; setText: (t: string) => void }>;
+        }).__pageEditors?.[`${m.spread}-${m.side}`];
+        if (!handle) return;
+        const text = handle.getText();
+        const next = text.slice(0, m.index) + replacement + text.slice(m.index + m.length);
+        handle.setText(next);
+        // refreshFind will fire after Lexical's OnChangePlugin + the
+        // debounced analyze pass; do an immediate pass too so the
+        // count is accurate right after the click.
+        setTimeout(() => {
+          refreshFind();
+          // Stay at the same logical position (current may now point at
+          // the next match in the same spot since we just consumed one).
+        }, 0);
+      }
+
+      function replaceAll(): void {
+        if (findMatches.length === 0) return;
+        const replInput = byId('replace-input') as HTMLInputElement | null;
+        const replacement = replInput?.value ?? '';
+        const editors = (window as unknown as {
+          __pageEditors?: Record<string, { getText: () => string; setText: (t: string) => void }>;
+        }).__pageEditors;
+        if (!editors) return;
+        // Group matches by page so we can rebuild each page's text once.
+        const byPage = new Map<string, FindMatch[]>();
+        for (const m of findMatches) {
+          const key = `${m.spread}-${m.side}`;
+          const arr = byPage.get(key) ?? [];
+          arr.push(m);
+          byPage.set(key, arr);
+        }
+        for (const [key, matches] of byPage) {
+          const handle = editors[key];
+          if (!handle) continue;
+          let text = handle.getText();
+          // Iterate matches in reverse so earlier offsets stay valid.
+          for (let i = matches.length - 1; i >= 0; i--) {
+            const m = matches[i];
+            text = text.slice(0, m.index) + replacement + text.slice(m.index + m.length);
+          }
+          handle.setText(text);
+        }
+        setTimeout(() => {
+          refreshFind();
+        }, 0);
+      }
+
+      function openFindBar(): void {
+        const bar = byId('find-bar');
+        if (!bar) return;
+        bar.hidden = false;
+        const input = byId('find-input') as HTMLInputElement | null;
+        input?.focus();
+        input?.select();
+      }
+
+      function closeFindBar(): void {
+        const bar = byId('find-bar');
+        if (!bar) return;
+        bar.hidden = true;
+        findMatches = [];
+        findCurrent = -1;
+        const { highlights } = getFindHighlightAPIs();
+        if (highlights) {
+          highlights.delete('find-match');
+          highlights.delete('find-current');
+        }
+      }
+
+      document.addEventListener('keydown', (e) => {
+        // Cmd/Ctrl+F → open find bar (suppress browser default).
+        if ((e.metaKey || e.ctrlKey) && e.key === 'f' && !e.shiftKey) {
+          e.preventDefault();
+          openFindBar();
+        }
+      });
+
+      byId('find-input')?.addEventListener('input', refreshFind);
+      byId('find-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          findStep(e.shiftKey ? -1 : 1);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeFindBar();
+        }
+      });
+      byId('replace-input')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          closeFindBar();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          replaceCurrent();
+        }
+      });
+      byId('find-prev')?.addEventListener('click', () => findStep(-1));
+      byId('find-next')?.addEventListener('click', () => findStep(1));
+      byId('find-replace')?.addEventListener('click', replaceCurrent);
+      byId('find-replace-all')?.addEventListener('click', replaceAll);
+      byId('find-close')?.addEventListener('click', closeFindBar);
 
       byId('reset-btn')?.addEventListener('click', () => {
         for (let i = 1; i <= SPREAD_COUNT; i++) {
