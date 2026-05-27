@@ -245,6 +245,89 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.8rem; margin: 0.25rem 0;
       }
 
+      /* ---- view toggle (segmented control) ---- */
+      .view-toggle { display: flex; }
+      .view-toggle button {
+        padding: 0.4rem 0.75rem; font: inherit; font-size: 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        color: var(--taupe); cursor: pointer;
+      }
+      .view-toggle button:first-child {
+        border-radius: 2px 0 0 2px; border-right-width: 0;
+      }
+      .view-toggle button:last-child { border-radius: 0 2px 2px 0; }
+      .view-toggle button.active { background: var(--ink); color: var(--cream); }
+      .view-toggle button:hover:not(.active) { background: var(--beige); }
+
+      /* ---- book view: spread-by-spread, scroll-snap ---- */
+      .editor-surface[data-view="book"] {
+        display: flex; flex-direction: row;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        gap: 1.5rem;
+        padding-bottom: 0.5rem;
+      }
+      .editor-surface[data-view="book"] .spread {
+        flex: 0 0 100%;
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+        aspect-ratio: var(--spread-aspect, 1.6);
+        max-height: calc(100vh - 10rem);
+        padding: 1.25rem;
+        gap: 0.75rem;
+        /* hairline at the gutter — sells the "open book" feel */
+        background-image: linear-gradient(
+          to right,
+          transparent calc(50% - 1px),
+          var(--rule) calc(50% - 0.5px),
+          var(--rule) calc(50% + 0.5px),
+          transparent calc(50% + 1px)
+        );
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+      .editor-surface[data-view="book"] .spread-body { gap: 1rem; }
+      .editor-surface[data-view="book"] .spread-text {
+        font-size: 1.05rem; line-height: 1.6;
+      }
+      .editor-surface[data-view="book"] .spread-illustration {
+        font-size: 0.75rem;
+      }
+
+      /* ---- floating prev/next + spread counter (book mode only) ---- */
+      .nav-prev, .nav-next, .spread-counter { display: none; }
+      body.book-mode .nav-prev,
+      body.book-mode .nav-next,
+      body.book-mode .spread-counter { display: flex; }
+      .nav-prev, .nav-next {
+        position: fixed; top: 50%; transform: translateY(-50%);
+        align-items: center; justify-content: center;
+        width: 2.75rem; height: 2.75rem;
+        background: var(--surface); color: var(--ink);
+        border: 1px solid var(--rule); border-radius: 50%;
+        font-size: 1.4rem; line-height: 1; cursor: pointer;
+        z-index: 5;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      .nav-prev { left: 1rem; }
+      .nav-next { right: 1rem; }
+      .nav-prev:hover, .nav-next:hover { background: var(--beige); }
+      .nav-prev:disabled, .nav-next:disabled {
+        opacity: 0.35; cursor: not-allowed;
+      }
+      .spread-counter {
+        position: fixed; bottom: 1.25rem; left: 50%;
+        transform: translateX(-50%);
+        align-items: center; justify-content: center;
+        padding: 0.35rem 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 999px;
+        font-family: ui-monospace, monospace; font-size: 0.8rem;
+        color: var(--taupe);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        z-index: 5;
+      }
+
       footer.footnote {
         padding: 1.5rem; text-align: center;
         color: var(--taupe); font-size: 0.8rem;
@@ -293,6 +376,13 @@ const SAMPLES: Record<string, Sample> = {
         <div class="control">
           <span class="control-label">Reset</span>
           <button id="reset-btn" type="button">Clear all spreads</button>
+        </div>
+        <div class="control">
+          <span class="control-label">View</span>
+          <div class="view-toggle">
+            <button data-view-set="grid" class="active" type="button">Grid</button>
+            <button data-view-set="book" type="button">Book</button>
+          </div>
         </div>
       </div>
     </header>
@@ -384,6 +474,10 @@ const SAMPLES: Record<string, Sample> = {
     <footer class="footnote">
       <a href="/">paste-and-analyze</a> · Harmonic Systems
     </footer>
+
+    <button class="nav-prev" id="nav-prev" type="button" aria-label="Previous spread">‹</button>
+    <button class="nav-next" id="nav-next" type="button" aria-label="Next spread">›</button>
+    <div class="spread-counter" id="spread-counter" aria-live="polite"></div>
 
     <script
       id="samples-data"
@@ -620,6 +714,7 @@ const SAMPLES: Record<string, Sample> = {
           }
           runAnalysis();
         } else if (t.id === 'age-band' || t.id === 'trim-size') {
+          if (t.id === 'trim-size') applyTrimAspect();
           runAnalysis();
         }
       });
@@ -674,6 +769,117 @@ const SAMPLES: Record<string, Sample> = {
         runAnalysis();
       });
 
+      // ---- view mode (grid / book) ----
+      const ASPECT_BY_TRIM: Record<string, number> = {
+        STANDARD_PORTRAIT: 1.6,
+        STANDARD_LANDSCAPE: 2.5,
+        SQUARE: 2.0,
+      };
+
+      function applyTrimAspect(): void {
+        const trimSel = byId('trim-size') as HTMLSelectElement | null;
+        const key = trimSel?.value ?? 'STANDARD_PORTRAIT';
+        document.documentElement.style.setProperty(
+          '--spread-aspect',
+          String(ASPECT_BY_TRIM[key] ?? 1.6),
+        );
+      }
+
+      function currentSpreadIndex(): number {
+        const surface = byId('editor-surface');
+        if (!surface || surface.getAttribute('data-view') !== 'book') return 0;
+        const tiles = surface.querySelectorAll<HTMLElement>('.spread');
+        const surfRect = surface.getBoundingClientRect();
+        let bestIdx = 0;
+        let bestVisible = 0;
+        tiles.forEach((tile, i) => {
+          const r = tile.getBoundingClientRect();
+          const v = Math.max(
+            0,
+            Math.min(r.right, surfRect.right) - Math.max(r.left, surfRect.left),
+          );
+          if (v > bestVisible) {
+            bestVisible = v;
+            bestIdx = i;
+          }
+        });
+        return bestIdx;
+      }
+
+      function updateSpreadCounter(): void {
+        const counter = byId('spread-counter');
+        const prevBtn = byId('nav-prev') as HTMLButtonElement | null;
+        const nextBtn = byId('nav-next') as HTMLButtonElement | null;
+        if (!counter) return;
+        const idx = currentSpreadIndex();
+        counter.textContent = `Spread ${idx + 1} of ${SPREAD_COUNT}`;
+        if (prevBtn) prevBtn.disabled = idx <= 0;
+        if (nextBtn) nextBtn.disabled = idx >= SPREAD_COUNT - 1;
+      }
+
+      function scrollToSpread(idx: number): void {
+        const clamped = Math.max(0, Math.min(SPREAD_COUNT - 1, idx));
+        const tile = document.querySelector(`[data-spread="${clamped + 1}"]`);
+        tile?.scrollIntoView({
+          block: 'nearest',
+          inline: 'center',
+          behavior: 'smooth',
+        });
+      }
+
+      function setViewMode(mode: 'grid' | 'book'): void {
+        const surface = byId('editor-surface');
+        if (!surface) return;
+        surface.setAttribute('data-view', mode);
+        document.body.classList.toggle('book-mode', mode === 'book');
+        for (const btn of document.querySelectorAll<HTMLButtonElement>(
+          '[data-view-set]',
+        )) {
+          btn.classList.toggle('active', btn.dataset.viewSet === mode);
+        }
+        if (mode === 'book') {
+          requestAnimationFrame(() => {
+            const first = document.querySelector('[data-spread="1"]');
+            first?.scrollIntoView({ block: 'nearest', inline: 'center' });
+            updateSpreadCounter();
+          });
+        }
+      }
+
+      for (const btn of document.querySelectorAll<HTMLButtonElement>(
+        '[data-view-set]',
+      )) {
+        btn.addEventListener('click', () => {
+          setViewMode(btn.dataset.viewSet as 'grid' | 'book');
+        });
+      }
+
+      byId('nav-prev')?.addEventListener('click', () => {
+        scrollToSpread(currentSpreadIndex() - 1);
+      });
+      byId('nav-next')?.addEventListener('click', () => {
+        scrollToSpread(currentSpreadIndex() + 1);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (!document.body.classList.contains('book-mode')) return;
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+        if (e.key === 'ArrowLeft') {
+          scrollToSpread(currentSpreadIndex() - 1);
+          e.preventDefault();
+        } else if (e.key === 'ArrowRight') {
+          scrollToSpread(currentSpreadIndex() + 1);
+          e.preventDefault();
+        }
+      });
+
+      byId('editor-surface')?.addEventListener('scroll', () => {
+        if (document.body.classList.contains('book-mode')) updateSpreadCounter();
+      });
+
+      applyTrimAspect();
       runAnalysis();
     </script>
   </body>
