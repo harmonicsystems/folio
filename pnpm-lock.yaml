@@ -64,6 +64,9 @@ importers:
       '@harmonic-systems/early-literacy':
         specifier: workspace:*
         version: link:../engine
+      '@lexical/markdown':
+        specifier: ^0.44.0
+        version: 0.44.0
       '@lexical/react':
         specifier: ^0.44.0
         version: 0.44.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30)

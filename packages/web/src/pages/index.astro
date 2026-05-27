@@ -240,6 +240,16 @@ const SAMPLES: Record<string, Sample> = {
         text-decoration-color: var(--taupe);
         text-underline-offset: 0.15em;
       }
+      .page-editor-text-strikethrough {
+        text-decoration: line-through;
+        text-decoration-color: var(--rust);
+        text-decoration-thickness: 1.5px;
+      }
+      /* Combine underline + strikethrough cleanly when both apply. */
+      .page-editor-text-underline.page-editor-text-strikethrough {
+        text-decoration: underline line-through;
+        text-decoration-color: var(--taupe);
+      }
 
       /* ---- Lexical floating selection toolbar ---- */
       .lex-toolbar {
@@ -268,6 +278,7 @@ const SAMPLES: Record<string, Sample> = {
       .lex-tool-bold { font-weight: 700; }
       .lex-tool-italic { font-style: italic; }
       .lex-tool-underline { text-decoration: underline; }
+      .lex-tool-strike { text-decoration: line-through; }
 
       /* ---- in-line reach-word highlighting (CSS Custom Highlight API) ---- */
       ::highlight(reach-word) {

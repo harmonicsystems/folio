@@ -27,7 +27,17 @@ import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
+import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import {
+  BOLD_ITALIC_STAR,
+  BOLD_ITALIC_UNDERSCORE,
+  BOLD_STAR,
+  BOLD_UNDERSCORE,
+  ITALIC_STAR,
+  ITALIC_UNDERSCORE,
+  STRIKETHROUGH,
+} from '@lexical/markdown';
 import {
   $getRoot,
   $getSelection,
@@ -38,6 +48,19 @@ import {
   SELECTION_CHANGE_COMMAND,
   COMMAND_PRIORITY_LOW,
 } from 'lexical';
+
+// Curated transformer list. We deliberately omit headings, lists,
+// links, code, and quote — none of those belong inside picture-book
+// page text, and exposing them as shortcuts would invite drift.
+const PAGE_TRANSFORMERS = [
+  BOLD_ITALIC_STAR,
+  BOLD_ITALIC_UNDERSCORE,
+  BOLD_STAR,
+  BOLD_UNDERSCORE,
+  ITALIC_STAR,
+  ITALIC_UNDERSCORE,
+  STRIKETHROUGH,
+];
 
 type Side = 'left' | 'right';
 
@@ -64,6 +87,7 @@ const initialConfig = {
       bold: 'page-editor-text-bold',
       italic: 'page-editor-text-italic',
       underline: 'page-editor-text-underline',
+      strikethrough: 'page-editor-text-strikethrough',
     },
   },
 };
@@ -75,6 +99,7 @@ function FloatingToolbar() {
     bold: false,
     italic: false,
     underline: false,
+    strikethrough: false,
   });
 
   const updateToolbar = useCallback(() => {
@@ -99,6 +124,7 @@ function FloatingToolbar() {
         bold: sel.hasFormat('bold'),
         italic: sel.hasFormat('italic'),
         underline: sel.hasFormat('underline'),
+        strikethrough: sel.hasFormat('strikethrough'),
       });
     });
   }, [editor]);
@@ -116,10 +142,12 @@ function FloatingToolbar() {
 
   if (!pos) return null;
 
-  const dispatch = (fmt: 'bold' | 'italic' | 'underline') => (e: React.MouseEvent) => {
-    e.preventDefault();
-    editor.dispatchCommand(FORMAT_TEXT_COMMAND, fmt);
-  };
+  const dispatch =
+    (fmt: 'bold' | 'italic' | 'underline' | 'strikethrough') =>
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      editor.dispatchCommand(FORMAT_TEXT_COMMAND, fmt);
+    };
 
   return (
     <div
@@ -149,6 +177,14 @@ function FloatingToolbar() {
         aria-label="Underline"
       >
         U
+      </button>
+      <button
+        type="button"
+        className={`lex-tool lex-tool-strike${active.strikethrough ? ' active' : ''}`}
+        onMouseDown={dispatch('strikethrough')}
+        aria-label="Strikethrough"
+      >
+        S
       </button>
     </div>
   );
@@ -219,6 +255,7 @@ export default function PageEditor({ spread, side, placeholder }: Props) {
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
+        <MarkdownShortcutPlugin transformers={PAGE_TRANSFORMERS} />
         <OnChangePlugin
           onChange={(state) => {
             state.read(() => {

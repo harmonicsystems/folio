@@ -15,6 +15,7 @@
   "dependencies": {
     "@astrojs/react": "^5.0.5",
     "@harmonic-systems/early-literacy": "workspace:*",
+    "@lexical/markdown": "^0.44.0",
     "@lexical/react": "^0.44.0",
     "astro": "^5.0.0",
     "lexical": "^0.44.0",
