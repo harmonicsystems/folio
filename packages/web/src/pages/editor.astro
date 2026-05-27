@@ -268,6 +268,14 @@ const SAMPLES: Record<string, Sample> = {
       .lex-tool-bold { font-weight: 700; }
       .lex-tool-italic { font-style: italic; }
       .lex-tool-underline { text-decoration: underline; }
+
+      /* ---- in-line reach-word highlighting (CSS Custom Highlight API) ---- */
+      ::highlight(reach-word) {
+        text-decoration: underline wavy;
+        text-decoration-color: var(--rust);
+        text-underline-offset: 0.18em;
+        text-decoration-thickness: 1.5px;
+      }
       .page-illustration {
         flex: 1;
         background: var(--cream);
@@ -1008,6 +1016,67 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      function escapeRegex(s: string): string {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+
+      /**
+       * Paint reach-word highlights inside every page editor using the
+       * CSS Custom Highlight API. No DOM modification — the highlight
+       * is a separate paint layer the browser draws over arbitrary
+       * Range objects. Re-applied after every analyze() pass.
+       *
+       * Falls back silently in browsers without the API.
+       */
+      function applyReachWordHighlights(profile: ReadabilityProfile): void {
+        const HighlightCtor = (window as unknown as {
+          Highlight?: new (...ranges: Range[]) => unknown;
+        }).Highlight;
+        const highlights = (CSS as unknown as {
+          highlights?: Map<string, unknown>;
+        }).highlights;
+        if (!HighlightCtor || !highlights) return;
+
+        if (profile.reachWords.length === 0) {
+          highlights.delete('reach-word');
+          return;
+        }
+
+        const reachWords = Array.from(
+          new Set(profile.reachWords.map((r) => r.word.toLowerCase())),
+        );
+        const pattern = new RegExp(
+          `\\b(?:${reachWords.map(escapeRegex).join('|')})\\b`,
+          'gi',
+        );
+
+        const ranges: Range[] = [];
+        const surface = byId('editor-surface');
+        if (!surface) return;
+        const editors = surface.querySelectorAll('.page-editor-editable');
+        for (const editor of editors) {
+          const walker = document.createTreeWalker(
+            editor,
+            NodeFilter.SHOW_TEXT,
+          );
+          let node: Node | null;
+          while ((node = walker.nextNode())) {
+            const text = node.textContent ?? '';
+            pattern.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = pattern.exec(text)) !== null) {
+              const range = new Range();
+              range.setStart(node, m.index);
+              range.setEnd(node, m.index + m[0].length);
+              ranges.push(range);
+            }
+          }
+        }
+
+        const highlight = new HighlightCtor(...ranges);
+        highlights.set('reach-word', highlight);
+      }
+
       function runAnalysis(): void {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
@@ -1020,6 +1089,7 @@ const SAMPLES: Record<string, Sample> = {
         renderReachWords(profile.reachWords);
         renderWarnings(profile);
         updateStatusBar(profile);
+        applyReachWordHighlights(profile);
       }
 
       let debounceTimer: number | null = null;
