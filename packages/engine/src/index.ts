@@ -25,6 +25,7 @@ export {
   analyzePhonologyBySpread,
   estimatePronunciation,
   getPronunciation,
+  getWordPhonemes,
   syllabify,
   syllableCount,
 } from './phonology/index.js';

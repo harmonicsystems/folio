@@ -4,6 +4,7 @@ import {
   analyzePhonologyBySpread,
   estimatePronunciation,
   getPronunciation,
+  getWordPhonemes,
   syllabify,
   syllableCount,
 } from '../src/phonology/index.js';
@@ -24,6 +25,42 @@ describe('getPronunciation', () => {
     // The function is total — any non-empty input yields phonemes.
     const result = getPronunciation('blorf');
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+describe('getWordPhonemes', () => {
+  it('returns IPA phonemes for an in-vocab word', () => {
+    // "cat" → K AE1 T → IPA k æ t. Engine maps ARPABET stripped of
+    // stress markers to IPA via ARPABET_TO_PHONEME.
+    const phonemes = getWordPhonemes('cat');
+    expect(phonemes).toEqual(expect.arrayContaining(['k', 'æ', 't']));
+    expect(phonemes).toHaveLength(3);
+  });
+
+  it('deduplicates within a single word', () => {
+    // "papa" has /p/ twice — should appear once in the set.
+    const phonemes = getWordPhonemes('papa');
+    const pCount = phonemes.filter((p) => p === 'p').length;
+    expect(pCount).toBe(1);
+  });
+
+  it('preserves first-occurrence order', () => {
+    // "stop" → S T AA1 P → /s/ /t/ /ɑ/ /p/, order preserved.
+    const phonemes = getWordPhonemes('stop');
+    expect(phonemes.indexOf('s')).toBeLessThan(phonemes.indexOf('t'));
+    expect(phonemes.indexOf('t')).toBeLessThan(phonemes.indexOf('p'));
+  });
+
+  it('returns empty for empty input', () => {
+    expect(getWordPhonemes('')).toEqual([]);
+  });
+
+  it('handles OOV words via the grapheme heuristic', () => {
+    // Doesn't matter what comes back; just that something does and
+    // every element is a known IPA string (non-empty).
+    const phonemes = getWordPhonemes('blorf');
+    expect(phonemes.length).toBeGreaterThan(0);
+    for (const p of phonemes) expect(p).toMatch(/.+/);
   });
 });
 

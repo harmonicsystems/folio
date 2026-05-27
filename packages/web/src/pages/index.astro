@@ -446,7 +446,51 @@ const SAMPLES: Record<string, Sample> = {
       .phon-phonemes {
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
         color: var(--ink);
-        line-height: 1.7;
+        line-height: 1.9;
+      }
+      .phon-chip {
+        display: inline-block;
+        padding: 0.1rem 0.35rem;
+        margin: 0 0.15rem 0.15rem 0;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 3px;
+        cursor: pointer;
+        font: inherit;
+        color: inherit;
+        transition: background 0.1s ease, border-color 0.1s ease;
+      }
+      .phon-chip:hover {
+        background: var(--cream);
+        border-color: var(--rule);
+      }
+      .phon-chip.active {
+        background: var(--ochre);
+        color: var(--cream);
+        border-color: var(--ochre);
+      }
+      .phon-clear {
+        display: block;
+        margin: 0.4rem 0 0.2rem 1em;
+        font: inherit;
+        font-size: 0.7rem;
+        background: transparent;
+        border: none;
+        color: var(--taupe);
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+        cursor: pointer;
+        padding: 0;
+      }
+      .phon-clear:hover { color: var(--ink); }
+      .phon-clear[hidden] { display: none; }
+
+      /* In-text highlight for words containing active phonemes —
+         background tint, distinct from reach-word's wavy underline so
+         the two can stack on the same word without conflict. */
+      ::highlight(phoneme-match) {
+        background-color: rgba(163, 120, 40, 0.22);
+        border-radius: 2px;
       }
       .phon-source {
         font-size: 0.7rem;
@@ -807,7 +851,11 @@ const SAMPLES: Record<string, Sample> = {
         <details class="phon-details">
           <summary>Phonemes by acquisition age</summary>
           <ul class="phoneme-by-age" id="phoneme-by-age"></ul>
+          <button type="button" class="phon-clear" id="phon-clear" hidden>
+            Clear phoneme highlights
+          </button>
           <p class="phon-source">
+            Click any phoneme to highlight words that contain it.
             Consonant ages: Crowe &amp; McLeod (2020), AJSLP.
             Vowels default to age 3 pending norm sourcing.
           </p>
@@ -879,7 +927,7 @@ const SAMPLES: Record<string, Sample> = {
     ></script>
 
     <script>
-      import { analyze } from '@harmonic-systems/early-literacy';
+      import { analyze, getWordPhonemes } from '@harmonic-systems/early-literacy';
       import type {
         AgeBand,
         ReachWord,
@@ -1069,11 +1117,23 @@ const SAMPLES: Record<string, Sample> = {
             label.textContent = age >= 6 ? 'age 6+' : `age ${age}`;
             const ph = document.createElement('span');
             ph.className = 'phon-phonemes';
-            ph.textContent = phonemes.map((p) => `/${p.phoneme}/`).join(' ');
+            for (const p of phonemes) {
+              const chip = document.createElement('button');
+              chip.type = 'button';
+              chip.className = `phon-chip${activePhonemes.has(p.phoneme) ? ' active' : ''}`;
+              chip.dataset.phoneme = p.phoneme;
+              chip.title = `${p.count} occurrence${p.count === 1 ? '' : 's'} · acquired age ${p.acquisitionAge}`;
+              chip.textContent = `/${p.phoneme}/`;
+              ph.appendChild(chip);
+            }
             li.append(label, ph);
             phonList.appendChild(li);
           }
         }
+
+        // Show/hide the "Clear" button based on whether anything is active.
+        const clearBtn = byId('phon-clear');
+        if (clearBtn) clearBtn.hidden = activePhonemes.size === 0;
       }
 
       function renderPerSpread(profile: ReadabilityProfile): void {
@@ -1265,6 +1325,71 @@ const SAMPLES: Record<string, Sample> = {
         return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       }
 
+      // Active phonemes — words containing any of these get a tinted
+      // background highlight via CSS Custom Highlight API.
+      const activePhonemes = new Set<string>();
+      // Cache word → phoneme set so we don't repeat getWordPhonemes()
+      // across analyses. Cleared lazily — words drop out of the cache
+      // when the editor's vocabulary changes.
+      const wordPhonemeCache = new Map<string, ReadonlySet<string>>();
+
+      function wordContainsActivePhoneme(word: string): boolean {
+        if (activePhonemes.size === 0) return false;
+        const lower = word.toLowerCase();
+        let set = wordPhonemeCache.get(lower);
+        if (!set) {
+          set = new Set(getWordPhonemes(lower));
+          wordPhonemeCache.set(lower, set);
+        }
+        for (const p of activePhonemes) {
+          if (set.has(p)) return true;
+        }
+        return false;
+      }
+
+      function applyPhonemeHighlights(): void {
+        const HighlightCtor = (window as unknown as {
+          Highlight?: new (...ranges: Range[]) => unknown;
+        }).Highlight;
+        const highlights = (CSS as unknown as {
+          highlights?: Map<string, unknown>;
+        }).highlights;
+        if (!HighlightCtor || !highlights) return;
+
+        if (activePhonemes.size === 0) {
+          highlights.delete('phoneme-match');
+          return;
+        }
+
+        const ranges: Range[] = [];
+        const surface = byId('editor-surface');
+        if (!surface) return;
+        const wordRegex = /[A-Za-zÀ-ɏ]+(?:['’][A-Za-z]+)?/g;
+        const editors = surface.querySelectorAll('.page-editor-editable');
+        for (const editor of editors) {
+          const walker = document.createTreeWalker(
+            editor,
+            NodeFilter.SHOW_TEXT,
+          );
+          let node: Node | null;
+          while ((node = walker.nextNode())) {
+            const text = node.textContent ?? '';
+            wordRegex.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = wordRegex.exec(text)) !== null) {
+              if (!wordContainsActivePhoneme(m[0])) continue;
+              const range = new Range();
+              range.setStart(node, m.index);
+              range.setEnd(node, m.index + m[0].length);
+              ranges.push(range);
+            }
+          }
+        }
+
+        const highlight = new HighlightCtor(...ranges);
+        highlights.set('phoneme-match', highlight);
+      }
+
       /**
        * Paint reach-word highlights inside every page editor using the
        * CSS Custom Highlight API. No DOM modification — the highlight
@@ -1326,6 +1451,8 @@ const SAMPLES: Record<string, Sample> = {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
         const profile = analyze(engine);
+        // Vocabulary may have shifted — bust the per-word cache.
+        wordPhonemeCache.clear();
         markEmptySpreads(web);
         updatePageWordCounts(web);
         renderTopMetrics(profile);
@@ -1336,6 +1463,7 @@ const SAMPLES: Record<string, Sample> = {
         renderWarnings(profile);
         updateStatusBar(profile);
         applyReachWordHighlights(profile);
+        applyPhonemeHighlights();
       }
 
       let debounceTimer: number | null = null;
@@ -1443,6 +1571,35 @@ const SAMPLES: Record<string, Sample> = {
         const collapsed = document.body.classList.toggle('sidebar-collapsed');
         const btn = byId('sidebar-toggle');
         if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
+      });
+
+      // Phoneme chip clicks (event delegation — chips are re-rendered
+      // on every analyze pass, so binding per-element would leak).
+      byId('phoneme-by-age')?.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        const chip = target?.closest?.('.phon-chip') as HTMLElement | null;
+        if (!chip) return;
+        const phoneme = chip.dataset.phoneme;
+        if (!phoneme) return;
+        if (activePhonemes.has(phoneme)) {
+          activePhonemes.delete(phoneme);
+        } else {
+          activePhonemes.add(phoneme);
+        }
+        chip.classList.toggle('active', activePhonemes.has(phoneme));
+        const clearBtn = byId('phon-clear');
+        if (clearBtn) clearBtn.hidden = activePhonemes.size === 0;
+        applyPhonemeHighlights();
+      });
+
+      byId('phon-clear')?.addEventListener('click', () => {
+        activePhonemes.clear();
+        document.querySelectorAll('.phon-chip.active').forEach((el) =>
+          el.classList.remove('active'),
+        );
+        const clearBtn = byId('phon-clear');
+        if (clearBtn) clearBtn.hidden = true;
+        applyPhonemeHighlights();
       });
 
       byId('reset-btn')?.addEventListener('click', () => {

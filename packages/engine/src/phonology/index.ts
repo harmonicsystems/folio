@@ -30,6 +30,29 @@ export { getPronunciation, estimatePronunciation } from './lookup.js';
 export { syllabify, syllableCount } from './syllabify.js';
 
 /**
+ * The IPA phoneme set used by a single word, deduplicated and in
+ * order of first occurrence within the word. Useful for "does this
+ * word contain phoneme X?" queries (e.g., SLP-style sound-targeting
+ * UIs) without exposing the ARPABET internals.
+ *
+ * Returns an empty array for words whose pronunciation contains no
+ * known phonemes (e.g., empty input).
+ */
+export function getWordPhonemes(word: string): string[] {
+  const arpas = getPronunciation(word);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const arpa of arpas) {
+    const info = ARPABET_TO_PHONEME.get(stripStress(arpa));
+    if (!info) continue;
+    if (seen.has(info.ipa)) continue;
+    seen.add(info.ipa);
+    out.push(info.ipa);
+  }
+  return out;
+}
+
+/**
  * Analyze a single text blob. All phonemes are attributed to spread 1.
  * For spread-aware first-occurrence tracking, use
  * {@link analyzePhonologyBySpread}.
