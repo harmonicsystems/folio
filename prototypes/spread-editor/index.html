@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Folio — Spread-First Editor (Prototype)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">Folio</span>
+        <span class="brand-sub">spread-first prototype</span>
+      </div>
+
+      <div class="construction-picker" id="construction-picker">
+        <label>
+          <span class="label-text">Construction</span>
+          <select id="age-band">
+            <option value="picture">Picture book</option>
+            <option value="board">Board book</option>
+          </select>
+        </label>
+        <label>
+          <span class="label-text">Trim</span>
+          <select id="trim-size">
+            <option value="8.5x8.5">8.5 × 8.5 (square)</option>
+            <option value="8x10">8 × 10 (portrait)</option>
+            <option value="10x8">10 × 8 (landscape)</option>
+            <option value="7x7">7 × 7 (square, board)</option>
+            <option value="5x7">5 × 7 (portrait, board)</option>
+          </select>
+        </label>
+        <label>
+          <span class="label-text">Body font</span>
+          <select id="body-font">
+            <option value="caslon">Libre Caslon Text</option>
+            <option value="atkinson">Atkinson Hyperlegible</option>
+          </select>
+        </label>
+        <button id="reset-text" type="button" class="reset-btn" title="Reset sample text">
+          Reset sample
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="editor-surface" id="editor-surface" aria-label="Manuscript spreads">
+        <!-- spreads injected by script.js -->
+      </section>
+
+      <aside class="readability-sidebar" id="sidebar" aria-label="Readability profile">
+        <h2 class="sidebar-title">Readability</h2>
+
+        <div class="metric">
+          <div class="metric-label">Word count</div>
+          <div class="metric-value">
+            <span id="total-words">0</span>
+            <span class="metric-suffix">/ <span id="total-target">600</span></span>
+          </div>
+          <div class="meter" aria-hidden="true">
+            <div class="meter-fill" id="word-meter-fill"></div>
+          </div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Reach words</div>
+          <div class="metric-value">
+            <span id="reach-count">0</span>
+            <span class="metric-suffix">flagged</span>
+          </div>
+          <ul class="reach-list" id="reach-list"></ul>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Vocabulary</div>
+          <dl class="vocab-grid">
+            <dt>Tier 1</dt><dd><span id="tier1">—</span></dd>
+            <dt>Tier 2</dt><dd><span id="tier2">—</span></dd>
+            <dt>Sight words</dt><dd><span id="sight">—</span></dd>
+            <dt>Unique</dt><dd><span id="unique">—</span></dd>
+          </dl>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Phonology (mock)</div>
+          <dl class="vocab-grid">
+            <dt>Decodability</dt><dd>0.78</dd>
+            <dt>Syllables/word</dt><dd>1.21</dd>
+            <dt>Dominant syllable</dt><dd>CVC</dd>
+          </dl>
+        </div>
+
+        <div class="legend">
+          <div class="legend-row">
+            <span class="dot dot-green"></span> within target
+          </div>
+          <div class="legend-row">
+            <span class="dot dot-amber"></span> approaching cap
+          </div>
+          <div class="legend-row">
+            <span class="dot dot-red"></span> over cap
+          </div>
+          <div class="legend-row legend-reach">
+            <span class="reach-sample">reach</span>
+            word — hover for reason
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="footnote">
+      Throwaway visual prototype. Engine integration, persistence, and shipping live elsewhere.
+    </footer>
+
+    <script src="./script.js" type="module"></script>
+  </body>
+</html>
