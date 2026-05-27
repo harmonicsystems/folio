@@ -28,7 +28,7 @@ const SPREAD_COUNT = 16;
       content="Folio — spread-first manuscript editor for picture books and early-reader literature."
     />
     <title>Folio — spread editor</title>
-    <style>
+    <style is:global>
       :root {
         --cream: #f7f1e6;
         --beige: #ece2cf;
@@ -103,16 +103,35 @@ const SPREAD_COUNT = 16;
         background: var(--cream); border: 1px solid var(--rule);
         border-radius: 2px; color: var(--ink); font-family: inherit;
       }
+      .spread-body {
+        flex: 1; min-height: 8rem;
+        display: flex; gap: 0.5rem;
+      }
+      .spread[data-placement="text-left"] .spread-body { flex-direction: row; }
+      .spread[data-placement="text-right"] .spread-body { flex-direction: row-reverse; }
+      .spread[data-placement="text-top"] .spread-body { flex-direction: column; }
+      .spread[data-placement="text-bottom"] .spread-body { flex-direction: column-reverse; }
+      .spread[data-placement="wordless"] .spread-body { flex-direction: column; }
+      .spread[data-placement="wordless"] .spread-text { display: none; }
       .spread-text {
-        flex: 1; min-height: 8rem; resize: vertical;
+        flex: 1; resize: none;
         border: none; outline: none; background: transparent;
         font-family: ui-serif, Georgia, serif;
         font-size: 0.9rem; line-height: 1.5; color: var(--ink);
-        padding: 0;
+        padding: 0; min-width: 0;
       }
-      .spread.wordless .spread-text {
-        font-style: italic; color: var(--taupe);
+      .spread-illustration {
+        flex: 1;
+        background: var(--cream);
+        border: 1px dashed var(--rule);
+        border-radius: 2px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.65rem; color: var(--taupe);
+        text-transform: uppercase; letter-spacing: 0.08em;
+        min-width: 0; min-height: 2rem;
       }
+      .spread-illustration::before { content: 'illustration'; }
+      .spread[data-placement="wordless"] .spread-illustration::before { content: 'wordless'; }
       .spread-footer {
         display: flex; justify-content: space-between; align-items: center;
         gap: 0.5rem; font-size: 0.75rem; color: var(--taupe);
@@ -242,13 +261,16 @@ const SPREAD_COUNT = 16;
                 <option value="wordless">wordless</option>
               </select>
             </header>
-            <textarea
-              class="spread-text"
-              data-spread-text={index}
-              placeholder="…"
-              spellcheck="false"
-              aria-label={`Spread ${index} text`}
-            ></textarea>
+            <div class="spread-body">
+              <textarea
+                class="spread-text"
+                data-spread-text={index}
+                placeholder="…"
+                spellcheck="false"
+                aria-label={`Spread ${index} text`}
+              ></textarea>
+              <div class="spread-illustration" aria-hidden="true"></div>
+            </div>
             <footer class="spread-footer">
               <span class="spread-wc" data-spread-wc={index}>0</span>
               <span class="spread-wc-target" data-spread-ceiling={index}>/ —</span>
@@ -518,11 +540,16 @@ const SPREAD_COUNT = 16;
       document.addEventListener('change', (e) => {
         const t = e.target as HTMLElement | null;
         if (!t) return;
-        if (
-          t.matches?.('.spread-placement') ||
-          t.id === 'age-band' ||
-          t.id === 'trim-size'
-        ) {
+        if (t.matches?.('.spread-placement')) {
+          const article = t.closest('.spread');
+          if (article) {
+            article.setAttribute(
+              'data-placement',
+              (t as HTMLSelectElement).value,
+            );
+          }
+          runAnalysis();
+        } else if (t.id === 'age-band' || t.id === 'trim-size') {
           runAnalysis();
         }
       });
@@ -537,6 +564,10 @@ const SPREAD_COUNT = 16;
             `[data-spread-placement="${i}"]`,
           ) as HTMLSelectElement | null;
           if (sel) sel.value = 'text-left';
+          const article = document.querySelector(
+            `[data-spread="${i}"]`,
+          );
+          article?.setAttribute('data-placement', 'text-left');
         }
         runAnalysis();
       });
