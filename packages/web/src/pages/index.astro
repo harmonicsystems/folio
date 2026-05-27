@@ -350,6 +350,101 @@ const SAMPLES: Record<string, Sample> = {
       .ps-wc.over { color: var(--rust); }
       .ps-wc.wordless { color: var(--taupe); font-style: italic; }
 
+      /* ---- phonology details (collapsible) ---- */
+      .phon-details {
+        border-top: 1px solid var(--rule);
+        padding-top: 0.4rem;
+        margin-top: 0.5rem;
+      }
+      .phon-details summary {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        cursor: pointer;
+        padding: 0.3rem 0;
+        user-select: none;
+        list-style: none;
+      }
+      .phon-details summary::-webkit-details-marker { display: none; }
+      .phon-details summary::before {
+        content: '▸';
+        display: inline-block;
+        width: 1em;
+        font-size: 0.7em;
+        transition: transform 0.12s ease;
+      }
+      .phon-details[open] summary::before { transform: rotate(90deg); }
+      .phon-details summary:hover { color: var(--ink); }
+      .phon-details[open] summary { color: var(--ink); }
+
+      .syll-list, .phoneme-by-age {
+        list-style: none; padding: 0.3rem 0 0 1em; margin: 0;
+      }
+      .syll-row {
+        display: grid;
+        grid-template-columns: 3rem 1fr 2.5rem;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        padding: 0.2rem 0;
+      }
+      .syll-label {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        color: var(--ink);
+      }
+      .syll-bar {
+        height: 4px;
+        background: var(--rule);
+        border-radius: 2px;
+        position: relative;
+        overflow: hidden;
+      }
+      .syll-fill {
+        position: absolute;
+        left: 0; top: 0; bottom: 0;
+        background: var(--taupe);
+        border-radius: 2px;
+      }
+      .syll-fill.complex { background: var(--ochre); }
+      .syll-pct {
+        font-family: ui-monospace, monospace;
+        color: var(--taupe);
+        text-align: right;
+        font-size: 0.7rem;
+      }
+
+      .phon-age-row {
+        display: grid;
+        grid-template-columns: 3.5rem 1fr;
+        gap: 0.6rem;
+        font-size: 0.75rem;
+        padding: 0.35rem 0;
+        border-bottom: 1px dashed var(--rule);
+        align-items: baseline;
+      }
+      .phon-age-row:last-child { border-bottom: none; }
+      .phon-age {
+        color: var(--taupe);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: 0.7rem;
+      }
+      .phon-age.late { color: var(--ochre); }
+      .phon-age.latest { color: var(--rust); }
+      .phon-phonemes {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        color: var(--ink);
+        line-height: 1.7;
+      }
+      .phon-source {
+        font-size: 0.7rem;
+        color: var(--taupe);
+        font-style: italic;
+        margin: 0.5rem 0 0;
+        padding: 0 0 0 1em;
+      }
+
       .reach-list { list-style: none; padding: 0; margin: 0; }
       .reach-list li {
         padding: 0.3rem 0; border-bottom: 1px solid var(--rule);
@@ -693,6 +788,20 @@ const SAMPLES: Record<string, Sample> = {
           <span class="value" id="top-syllable">—</span>
         </div>
 
+        <details class="phon-details">
+          <summary>Syllable shapes</summary>
+          <ul class="syll-list" id="syll-list"></ul>
+        </details>
+
+        <details class="phon-details">
+          <summary>Phonemes by acquisition age</summary>
+          <ul class="phoneme-by-age" id="phoneme-by-age"></ul>
+          <p class="phon-source">
+            Consonant ages: Crowe &amp; McLeod (2020), AJSLP.
+            Vowels default to age 3 pending norm sourcing.
+          </p>
+        </details>
+
         <h3>Per spread</h3>
         <ol class="per-spread-list" id="per-spread-list"></ol>
 
@@ -870,6 +979,89 @@ const SAMPLES: Record<string, Sample> = {
           const [topType, topCount] = entries[0];
           const topPct = ((topCount / total) * 100).toFixed(0);
           setText('top-syllable', `${topType} (${topPct}%)`);
+        }
+      }
+
+      function renderPhonologyDetail(profile: ReadabilityProfile): void {
+        const phon = profile.phonology;
+
+        // ---- Syllable shapes ----
+        const sylList = byId('syll-list');
+        if (sylList) {
+          sylList.innerHTML = '';
+          const types = phon.syllableTypes;
+          const entries = Object.entries(types) as Array<[string, number]>;
+          const total = entries.reduce((a, [, n]) => a + n, 0);
+          entries.sort((a, b) => b[1] - a[1]);
+          for (const [type, count] of entries) {
+            if (count === 0) continue;
+            const pct = total > 0 ? (count / total) * 100 : 0;
+            const li = document.createElement('li');
+            li.className = 'syll-row';
+            const label = document.createElement('span');
+            label.className = 'syll-label';
+            label.textContent = type;
+            const bar = document.createElement('span');
+            bar.className = 'syll-bar';
+            const fill = document.createElement('span');
+            // CCVC and CVCC are more complex shapes — give the bar an
+            // accent color to signal that they raise reading difficulty.
+            fill.className = `syll-fill${type === 'CCVC' || type === 'CVCC' || type === 'other' ? ' complex' : ''}`;
+            fill.style.width = `${pct}%`;
+            bar.appendChild(fill);
+            const pctSpan = document.createElement('span');
+            pctSpan.className = 'syll-pct';
+            pctSpan.textContent = `${pct.toFixed(0)}%`;
+            li.append(label, bar, pctSpan);
+            sylList.appendChild(li);
+          }
+        }
+
+        // ---- Phonemes by acquisition age ----
+        const phonList = byId('phoneme-by-age');
+        if (phonList) {
+          phonList.innerHTML = '';
+          const inv = phon.phonemeInventory;
+          if (inv.length === 0) {
+            const empty = document.createElement('li');
+            empty.className = 'phon-age-row';
+            const lbl = document.createElement('span');
+            lbl.className = 'phon-age';
+            lbl.textContent = '—';
+            const ph = document.createElement('span');
+            ph.className = 'phon-phonemes';
+            ph.style.fontStyle = 'italic';
+            ph.style.color = 'var(--taupe)';
+            ph.textContent = 'Type into a page to see the inventory.';
+            empty.append(lbl, ph);
+            phonList.appendChild(empty);
+            return;
+          }
+          // Group by floor(age) with 6+ catchall. Sort phonemes by count
+          // within each group so the most prominent show first.
+          const groups = new Map<number, typeof inv>();
+          for (const p of inv) {
+            const age = Math.min(Math.floor(p.acquisitionAge), 6);
+            const arr = groups.get(age) ?? [];
+            arr.push(p);
+            groups.set(age, arr);
+          }
+          const sortedAges = [...groups.keys()].sort((a, b) => a - b);
+          for (const age of sortedAges) {
+            const phonemes = groups.get(age)!.slice().sort((a, b) => b.count - a.count);
+            const li = document.createElement('li');
+            li.className = 'phon-age-row';
+            const label = document.createElement('span');
+            const ageClass =
+              age >= 6 ? 'phon-age latest' : age >= 5 ? 'phon-age late' : 'phon-age';
+            label.className = ageClass;
+            label.textContent = age >= 6 ? 'age 6+' : `age ${age}`;
+            const ph = document.createElement('span');
+            ph.className = 'phon-phonemes';
+            ph.textContent = phonemes.map((p) => `/${p.phoneme}/`).join(' ');
+            li.append(label, ph);
+            phonList.appendChild(li);
+          }
         }
       }
 
@@ -1126,6 +1318,7 @@ const SAMPLES: Record<string, Sample> = {
         markEmptySpreads(web);
         updatePageWordCounts(web);
         renderTopMetrics(profile);
+        renderPhonologyDetail(profile);
         renderTileWordCounts(profile);
         renderPerSpread(profile);
         renderReachWords(profile.reachWords);
