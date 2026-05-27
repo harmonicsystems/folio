@@ -1,4 +1,7 @@
 ---
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import type { AgeBand } from '@harmonic-systems/early-literacy';
 
 const ageBands: { id: AgeBand; label: string; range: string }[] = [
@@ -16,6 +19,48 @@ const trimSizes = [
 ];
 
 const SPREAD_COUNT = 16;
+
+// Load one boilerplate sample per age band from corpora/. The text is
+// read at build time and inlined into the bundle via `define:vars` on
+// the script below — at runtime the editor just reaches into a const.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CORPORA = resolve(__dirname, '../../../../corpora');
+const loadCorpus = (slug: string) =>
+  readFileSync(`${CORPORA}/${slug}.txt`, 'utf8');
+
+interface Sample {
+  ageBand: AgeBand;
+  label: string;
+  text: string;
+}
+
+const SAMPLES: Record<string, Sample> = {
+  board: {
+    ageBand: 'board',
+    label: 'Board · synthetic',
+    text: loadCorpus('synthetic-board-book'),
+  },
+  'early-picture': {
+    ageBand: 'early-picture',
+    label: 'Early picture · Lear, 1871',
+    text: loadCorpus('owl-and-pussycat'),
+  },
+  picture: {
+    ageBand: 'picture',
+    label: 'Picture · Potter, 1902',
+    text: loadCorpus('peter-rabbit'),
+  },
+  'early-reader': {
+    ageBand: 'early-reader',
+    label: 'Early reader · Aesop / Vernon Jones, 1912',
+    text: loadCorpus('aesop-selected'),
+  },
+  chapter: {
+    ageBand: 'chapter',
+    label: 'Chapter · Baum, 1900 (opening)',
+    text: loadCorpus('wizard-of-oz-opening'),
+  },
+};
 ---
 
 <!doctype html>
@@ -236,6 +281,15 @@ const SPREAD_COUNT = 16;
             ))}
           </select>
         </label>
+        <label class="control">
+          <span class="control-label">Load sample</span>
+          <select id="sample-loader">
+            <option value="">— pick one —</option>
+            {Object.entries(SAMPLES).map(([key, s]) => (
+              <option value={key}>{s.label}</option>
+            ))}
+          </select>
+        </label>
         <div class="control">
           <span class="control-label">Reset</span>
           <button id="reset-btn" type="button">Clear all spreads</button>
@@ -331,6 +385,13 @@ const SPREAD_COUNT = 16;
       <a href="/">paste-and-analyze</a> · Harmonic Systems
     </footer>
 
+    <script
+      id="samples-data"
+      type="application/json"
+      is:inline
+      set:html={JSON.stringify(SAMPLES)}
+    ></script>
+
     <script>
       import { analyze } from '@harmonic-systems/early-literacy';
       import type {
@@ -349,6 +410,15 @@ const SPREAD_COUNT = 16;
 
       const SPREAD_COUNT = 16;
       const DEBOUNCE_MS = 250;
+
+      interface Sample {
+        ageBand: AgeBand;
+        label: string;
+        text: string;
+      }
+      const SAMPLES: Record<string, Sample> = JSON.parse(
+        document.getElementById('samples-data')?.textContent ?? '{}',
+      );
 
       function byId(id: string): HTMLElement | null {
         return document.getElementById(id);
@@ -551,6 +621,38 @@ const SPREAD_COUNT = 16;
           runAnalysis();
         } else if (t.id === 'age-band' || t.id === 'trim-size') {
           runAnalysis();
+        }
+      });
+
+      function loadSample(key: string): void {
+        const sample = SAMPLES[key];
+        if (!sample) return;
+        const ageSel = byId('age-band') as HTMLSelectElement | null;
+        if (ageSel) ageSel.value = sample.ageBand;
+        const spreads = sample.text
+          .split(/\n\s*\n/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const ta = document.querySelector(
+            `[data-spread-text="${i}"]`,
+          ) as HTMLTextAreaElement | null;
+          const sel = document.querySelector(
+            `[data-spread-placement="${i}"]`,
+          ) as HTMLSelectElement | null;
+          const article = document.querySelector(`[data-spread="${i}"]`);
+          if (ta) ta.value = spreads[i - 1] ?? '';
+          if (sel) sel.value = 'text-left';
+          article?.setAttribute('data-placement', 'text-left');
+        }
+        runAnalysis();
+      }
+
+      byId('sample-loader')?.addEventListener('change', (e) => {
+        const sel = e.target as HTMLSelectElement;
+        if (sel.value) {
+          loadSample(sel.value);
+          sel.value = '';
         }
       });
 
