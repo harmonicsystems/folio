@@ -233,6 +233,41 @@ const SAMPLES: Record<string, Sample> = {
       }
       .page-editor-paragraph { margin: 0; padding: 0; }
       .page-editor-paragraph + .page-editor-paragraph { margin-top: 0.5em; }
+      .page-editor-text-bold { font-weight: 700; }
+      .page-editor-text-italic { font-style: italic; }
+      .page-editor-text-underline {
+        text-decoration: underline;
+        text-decoration-color: var(--taupe);
+        text-underline-offset: 0.15em;
+      }
+
+      /* ---- Lexical floating selection toolbar ---- */
+      .lex-toolbar {
+        position: fixed;
+        background: var(--ink);
+        border-radius: 4px;
+        padding: 2px;
+        display: flex;
+        gap: 1px;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      }
+      .lex-tool {
+        background: transparent;
+        color: var(--cream);
+        border: none;
+        padding: 0.3rem 0.55rem;
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 2px;
+        min-width: 1.8rem;
+      }
+      .lex-tool:hover { background: rgba(255, 255, 255, 0.12); }
+      .lex-tool.active { background: var(--cream); color: var(--ink); }
+      .lex-tool-bold { font-weight: 700; }
+      .lex-tool-italic { font-style: italic; }
+      .lex-tool-underline { text-decoration: underline; }
       .page-illustration {
         flex: 1;
         background: var(--cream);

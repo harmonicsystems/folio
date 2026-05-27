@@ -20,7 +20,7 @@
  * no toolbar yet.
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
@@ -30,8 +30,13 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
   $getRoot,
+  $getSelection,
+  $isRangeSelection,
   $createParagraphNode,
   $createTextNode,
+  FORMAT_TEXT_COMMAND,
+  SELECTION_CHANGE_COMMAND,
+  COMMAND_PRIORITY_LOW,
 } from 'lexical';
 
 type Side = 'left' | 'right';
@@ -55,8 +60,99 @@ const initialConfig = {
   },
   theme: {
     paragraph: 'page-editor-paragraph',
+    text: {
+      bold: 'page-editor-text-bold',
+      italic: 'page-editor-text-italic',
+      underline: 'page-editor-text-underline',
+    },
   },
 };
+
+function FloatingToolbar() {
+  const [editor] = useLexicalComposerContext();
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [active, setActive] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+  });
+
+  const updateToolbar = useCallback(() => {
+    editor.getEditorState().read(() => {
+      const sel = $getSelection();
+      if (!$isRangeSelection(sel) || sel.isCollapsed()) {
+        setPos(null);
+        return;
+      }
+      const nativeSel = window.getSelection();
+      if (!nativeSel || nativeSel.rangeCount === 0) {
+        setPos(null);
+        return;
+      }
+      const rect = nativeSel.getRangeAt(0).getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        setPos(null);
+        return;
+      }
+      setPos({ top: rect.top - 38, left: rect.left + rect.width / 2 });
+      setActive({
+        bold: sel.hasFormat('bold'),
+        italic: sel.hasFormat('italic'),
+        underline: sel.hasFormat('underline'),
+      });
+    });
+  }, [editor]);
+
+  useEffect(() => {
+    return editor.registerCommand(
+      SELECTION_CHANGE_COMMAND,
+      () => {
+        updateToolbar();
+        return false;
+      },
+      COMMAND_PRIORITY_LOW,
+    );
+  }, [editor, updateToolbar]);
+
+  if (!pos) return null;
+
+  const dispatch = (fmt: 'bold' | 'italic' | 'underline') => (e: React.MouseEvent) => {
+    e.preventDefault();
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, fmt);
+  };
+
+  return (
+    <div
+      className="lex-toolbar"
+      style={{ top: pos.top, left: pos.left, transform: 'translateX(-50%)' }}
+    >
+      <button
+        type="button"
+        className={`lex-tool lex-tool-bold${active.bold ? ' active' : ''}`}
+        onMouseDown={dispatch('bold')}
+        aria-label="Bold"
+      >
+        B
+      </button>
+      <button
+        type="button"
+        className={`lex-tool lex-tool-italic${active.italic ? ' active' : ''}`}
+        onMouseDown={dispatch('italic')}
+        aria-label="Italic"
+      >
+        I
+      </button>
+      <button
+        type="button"
+        className={`lex-tool lex-tool-underline${active.underline ? ' active' : ''}`}
+        onMouseDown={dispatch('underline')}
+        aria-label="Underline"
+      >
+        U
+      </button>
+    </div>
+  );
+}
 
 function HandleRegister({ spread, side }: { spread: number; side: Side }) {
   const [editor] = useLexicalComposerContext();
@@ -136,6 +232,7 @@ export default function PageEditor({ spread, side, placeholder }: Props) {
           }}
         />
         <HandleRegister spread={spread} side={side} />
+        <FloatingToolbar />
       </div>
     </LexicalComposer>
   );
