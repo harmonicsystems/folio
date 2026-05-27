@@ -211,8 +211,8 @@ const SAMPLES: Record<string, Sample> = {
         text-transform: uppercase; letter-spacing: 0.08em;
         min-width: 0; min-height: 2rem;
       }
-      .page-illustration::before { content: 'illustration'; }
-      .page[data-placement="illustration-only"] .page-illustration::before { content: 'illustration'; }
+      /* The dashed cream box is enough to read as "illustration
+         zone" — repeating the word 32 times in the grid was noise. */
       .spread-footer {
         display: flex; justify-content: space-between; align-items: center;
         gap: 0.5rem; font-size: 0.75rem; color: var(--taupe);
@@ -244,13 +244,36 @@ const SAMPLES: Record<string, Sample> = {
 
       .per-spread-list {
         list-style: none; padding: 0; margin: 0;
-        display: grid; grid-template-columns: auto 1fr auto;
-        gap: 0.25rem 0.6rem; font-size: 0.8rem;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.3rem 0.6rem; font-size: 0.8rem;
       }
       .ps-num { color: var(--taupe); }
-      .ps-label { color: var(--ink); }
+      .ps-bar {
+        position: relative; height: 4px;
+        background: var(--rule); border-radius: 2px;
+        overflow: hidden;
+      }
+      .ps-bar-fill {
+        position: absolute; left: 0; top: 0; bottom: 0;
+        background: var(--taupe);
+        border-radius: 2px;
+        transition: width 0.15s ease;
+      }
+      .ps-bar-fill.approaching { background: var(--ochre); }
+      .ps-bar-fill.over { background: var(--rust); }
+      .ps-bar-fill.wordless {
+        left: 50%; right: 50%; top: 50%; bottom: 50%;
+        width: 0.4rem; height: 0.4rem;
+        transform: translate(-50%, -50%);
+        background: var(--taupe);
+        border-radius: 50%;
+        opacity: 0.6;
+      }
       .ps-wc { font-family: ui-monospace, monospace; text-align: right; }
       .ps-wc.over { color: var(--rust); }
+      .ps-wc.wordless { color: var(--taupe); font-style: italic; }
 
       .reach-list { list-style: none; padding: 0; margin: 0; }
       .reach-list li {
@@ -656,18 +679,32 @@ const SAMPLES: Record<string, Sample> = {
           const num = document.createElement('span');
           num.className = 'ps-num';
           num.textContent = String(sp.index);
-          const label = document.createElement('span');
-          label.className = 'ps-label';
-          label.textContent = sp.wordCountCeiling === 0 ? 'wordless' : '';
+
+          const bar = document.createElement('div');
+          bar.className = 'ps-bar';
+          const fill = document.createElement('div');
+          fill.className = 'ps-bar-fill';
+          if (sp.wordCountCeiling === 0) {
+            fill.classList.add('wordless');
+          } else {
+            const ratio = sp.wordCount / sp.wordCountCeiling;
+            fill.style.width = `${Math.min(1, ratio) * 100}%`;
+            if (ratio > 1) fill.classList.add('over');
+            else if (ratio > 0.8) fill.classList.add('approaching');
+          }
+          bar.appendChild(fill);
+
           const wc = document.createElement('span');
           const isOver =
             sp.wordCountCeiling > 0 && sp.wordCount > sp.wordCountCeiling;
-          wc.className = `ps-wc${isOver ? ' over' : ''}`;
-          wc.textContent =
-            sp.wordCountCeiling > 0
-              ? `${sp.wordCount}/${sp.wordCountCeiling}`
-              : `${sp.wordCount}`;
-          list.append(num, label, wc);
+          if (sp.wordCountCeiling === 0) {
+            wc.className = 'ps-wc wordless';
+            wc.textContent = '— —';
+          } else {
+            wc.className = `ps-wc${isOver ? ' over' : ''}`;
+            wc.textContent = `${sp.wordCount}/${sp.wordCountCeiling}`;
+          }
+          list.append(num, bar, wc);
         }
       }
 
