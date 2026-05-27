@@ -126,7 +126,7 @@ const SAMPLES: Record<string, Sample> = {
       @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }
 
       .editor-surface {
-        display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
         gap: 1rem;
       }
       .spread {
@@ -143,29 +143,40 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.75rem; color: var(--taupe);
         text-transform: uppercase; letter-spacing: 0.06em;
       }
-      .spread-placement {
-        font-size: 0.75rem; padding: 0.2rem 0.4rem;
+      .spread-pages {
+        flex: 1; min-height: 8rem;
+        display: flex; gap: 0;
+      }
+      .page {
+        flex: 1; min-width: 0;
+        display: flex; flex-direction: column; gap: 0.4rem;
+        padding: 0.4rem 0.5rem;
+      }
+      .page-left { border-right: 1px solid var(--rule); }
+      .page-controls {
+        display: flex; justify-content: flex-end;
+      }
+      .page-placement {
+        font-size: 0.7rem; padding: 0.15rem 0.35rem;
         background: var(--cream); border: 1px solid var(--rule);
         border-radius: 2px; color: var(--ink); font-family: inherit;
       }
-      .spread-body {
-        flex: 1; min-height: 8rem;
-        display: flex; gap: 0.5rem;
+      .page-body {
+        flex: 1; min-height: 5rem;
+        display: flex; flex-direction: column; gap: 0.4rem;
       }
-      .spread[data-placement="text-left"] .spread-body { flex-direction: row; }
-      .spread[data-placement="text-right"] .spread-body { flex-direction: row-reverse; }
-      .spread[data-placement="text-top"] .spread-body { flex-direction: column; }
-      .spread[data-placement="text-bottom"] .spread-body { flex-direction: column-reverse; }
-      .spread[data-placement="wordless"] .spread-body { flex-direction: column; }
-      .spread[data-placement="wordless"] .spread-text { display: none; }
-      .spread-text {
+      .page[data-placement="text-only"] .page-illustration { display: none; }
+      .page[data-placement="illustration-only"] .page-text { display: none; }
+      .page[data-placement="text-top"] .page-body { flex-direction: column; }
+      .page[data-placement="text-bottom"] .page-body { flex-direction: column-reverse; }
+      .page-text {
         flex: 1; resize: none;
         border: none; outline: none; background: transparent;
         font-family: ui-serif, Georgia, serif;
         font-size: 0.9rem; line-height: 1.5; color: var(--ink);
         padding: 0; min-width: 0;
       }
-      .spread-illustration {
+      .page-illustration {
         flex: 1;
         background: var(--cream);
         border: 1px dashed var(--rule);
@@ -175,8 +186,8 @@ const SAMPLES: Record<string, Sample> = {
         text-transform: uppercase; letter-spacing: 0.08em;
         min-width: 0; min-height: 2rem;
       }
-      .spread-illustration::before { content: 'illustration'; }
-      .spread[data-placement="wordless"] .spread-illustration::before { content: 'wordless'; }
+      .page-illustration::before { content: 'illustration'; }
+      .page[data-placement="illustration-only"] .page-illustration::before { content: 'illustration'; }
       .spread-footer {
         display: flex; justify-content: space-between; align-items: center;
         gap: 0.5rem; font-size: 0.75rem; color: var(--taupe);
@@ -276,21 +287,14 @@ const SAMPLES: Record<string, Sample> = {
         max-height: calc(100vh - 10rem);
         padding: 1.25rem;
         gap: 0.75rem;
-        /* hairline at the gutter — sells the "open book" feel */
-        background-image: linear-gradient(
-          to right,
-          transparent calc(50% - 1px),
-          var(--rule) calc(50% - 0.5px),
-          var(--rule) calc(50% + 0.5px),
-          transparent calc(50% + 1px)
-        );
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
       }
-      .editor-surface[data-view="book"] .spread-body { gap: 1rem; }
-      .editor-surface[data-view="book"] .spread-text {
+      .editor-surface[data-view="book"] .spread-pages { gap: 0; }
+      .editor-surface[data-view="book"] .page { padding: 0.75rem 1rem; gap: 0.6rem; }
+      .editor-surface[data-view="book"] .page-text {
         font-size: 1.05rem; line-height: 1.6;
       }
-      .editor-surface[data-view="book"] .spread-illustration {
+      .editor-surface[data-view="book"] .page-illustration {
         font-size: 0.75rem;
       }
 
@@ -394,26 +398,41 @@ const SAMPLES: Record<string, Sample> = {
         aria-label="Manuscript spreads"
       >
         {Array.from({ length: SPREAD_COUNT }, (_, i) => i + 1).map((index) => (
-          <article class="spread" data-spread={index} data-placement="text-left">
+          <article class="spread" data-spread={index}>
             <header class="spread-header">
               <span class="spread-number">Spread {index}</span>
-              <select class="spread-placement" data-spread-placement={index} aria-label={`Spread ${index} placement`}>
-                <option value="text-left" selected>text left</option>
-                <option value="text-right">text right</option>
-                <option value="text-top">text top</option>
-                <option value="text-bottom">text bottom</option>
-                <option value="wordless">wordless</option>
-              </select>
             </header>
-            <div class="spread-body">
-              <textarea
-                class="spread-text"
-                data-spread-text={index}
-                placeholder="…"
-                spellcheck="false"
-                aria-label={`Spread ${index} text`}
-              ></textarea>
-              <div class="spread-illustration" aria-hidden="true"></div>
+            <div class="spread-pages">
+              {(['left', 'right'] as const).map((side) => (
+                <div
+                  class={`page page-${side}`}
+                  data-page={`${index}-${side}`}
+                  data-placement="text-only"
+                >
+                  <div class="page-controls">
+                    <select
+                      class="page-placement"
+                      data-page-placement={`${index}-${side}`}
+                      aria-label={`Spread ${index} ${side} page placement`}
+                    >
+                      <option value="text-only" selected>text only</option>
+                      <option value="text-top">text top</option>
+                      <option value="text-bottom">text bottom</option>
+                      <option value="illustration-only">illustration only</option>
+                    </select>
+                  </div>
+                  <div class="page-body">
+                    <textarea
+                      class="page-text"
+                      data-page-text={`${index}-${side}`}
+                      placeholder="…"
+                      spellcheck="false"
+                      aria-label={`Spread ${index} ${side} page text`}
+                    ></textarea>
+                    <div class="page-illustration" aria-hidden="true"></div>
+                  </div>
+                </div>
+              ))}
             </div>
             <footer class="spread-footer">
               <span class="spread-wc" data-spread-wc={index}>0</span>
@@ -497,7 +516,8 @@ const SAMPLES: Record<string, Sample> = {
       import {
         toEngineManuscript,
         TRIM_SIZES,
-        type SpreadPlacement,
+        type PageContent,
+        type PagePlacement,
         type WebManuscript,
         type WebSpread,
       } from '../types.js';
@@ -518,6 +538,19 @@ const SAMPLES: Record<string, Sample> = {
         return document.getElementById(id);
       }
 
+      function readPage(spread: number, side: 'left' | 'right'): PageContent {
+        const ta = document.querySelector(
+          `[data-page-text="${spread}-${side}"]`,
+        ) as HTMLTextAreaElement | null;
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        return {
+          text: ta?.value ?? '',
+          placement: (sel?.value ?? 'text-only') as PagePlacement,
+        };
+      }
+
       function readManuscript(): WebManuscript {
         const ageSel = byId('age-band') as HTMLSelectElement | null;
         const trimSel = byId('trim-size') as HTMLSelectElement | null;
@@ -526,14 +559,11 @@ const SAMPLES: Record<string, Sample> = {
         const trimSize = TRIM_SIZES[trimKey] ?? TRIM_SIZES.STANDARD_PORTRAIT;
         const spreads: WebSpread[] = [];
         for (let i = 1; i <= SPREAD_COUNT; i++) {
-          const ta = document.querySelector(
-            `[data-spread-text="${i}"]`,
-          ) as HTMLTextAreaElement | null;
-          const sel = document.querySelector(
-            `[data-spread-placement="${i}"]`,
-          ) as HTMLSelectElement | null;
-          const placement = (sel?.value ?? 'text-left') as SpreadPlacement;
-          spreads.push({ index: i, text: ta?.value ?? '', placement });
+          spreads.push({
+            index: i,
+            leftPage: readPage(i, 'left'),
+            rightPage: readPage(i, 'right'),
+          });
         }
         return { ageBand, trimSize, spreads };
       }
@@ -692,8 +722,7 @@ const SAMPLES: Record<string, Sample> = {
         const t = e.target as HTMLElement | null;
         if (!t) return;
         if (
-          t.matches?.('.spread-text') ||
-          t.matches?.('.spread-placement') ||
+          t.matches?.('.page-text') ||
           t.id === 'age-band' ||
           t.id === 'trim-size'
         ) {
@@ -704,10 +733,10 @@ const SAMPLES: Record<string, Sample> = {
       document.addEventListener('change', (e) => {
         const t = e.target as HTMLElement | null;
         if (!t) return;
-        if (t.matches?.('.spread-placement')) {
-          const article = t.closest('.spread');
-          if (article) {
-            article.setAttribute(
+        if (t.matches?.('.page-placement')) {
+          const page = t.closest('.page');
+          if (page) {
+            page.setAttribute(
               'data-placement',
               (t as HTMLSelectElement).value,
             );
@@ -719,6 +748,24 @@ const SAMPLES: Record<string, Sample> = {
         }
       });
 
+      function setPage(
+        spread: number,
+        side: 'left' | 'right',
+        text: string,
+        placement: PagePlacement,
+      ): void {
+        const ta = document.querySelector(
+          `[data-page-text="${spread}-${side}"]`,
+        ) as HTMLTextAreaElement | null;
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        const page = document.querySelector(`[data-page="${spread}-${side}"]`);
+        if (ta) ta.value = text;
+        if (sel) sel.value = placement;
+        page?.setAttribute('data-placement', placement);
+      }
+
       function loadSample(key: string): void {
         const sample = SAMPLES[key];
         if (!sample) return;
@@ -729,16 +776,12 @@ const SAMPLES: Record<string, Sample> = {
           .map((s) => s.trim())
           .filter((s) => s.length > 0);
         for (let i = 1; i <= SPREAD_COUNT; i++) {
-          const ta = document.querySelector(
-            `[data-spread-text="${i}"]`,
-          ) as HTMLTextAreaElement | null;
-          const sel = document.querySelector(
-            `[data-spread-placement="${i}"]`,
-          ) as HTMLSelectElement | null;
-          const article = document.querySelector(`[data-spread="${i}"]`);
-          if (ta) ta.value = spreads[i - 1] ?? '';
-          if (sel) sel.value = 'text-left';
-          article?.setAttribute('data-placement', 'text-left');
+          const text = spreads[i - 1] ?? '';
+          // Convention: load all of the spread's text onto the left page;
+          // right page becomes a full-bleed illustration when the spread
+          // has any text, otherwise both pages are blank text-only.
+          setPage(i, 'left', text, 'text-only');
+          setPage(i, 'right', '', text ? 'illustration-only' : 'text-only');
         }
         runAnalysis();
       }
@@ -753,18 +796,8 @@ const SAMPLES: Record<string, Sample> = {
 
       byId('reset-btn')?.addEventListener('click', () => {
         for (let i = 1; i <= SPREAD_COUNT; i++) {
-          const ta = document.querySelector(
-            `[data-spread-text="${i}"]`,
-          ) as HTMLTextAreaElement | null;
-          if (ta) ta.value = '';
-          const sel = document.querySelector(
-            `[data-spread-placement="${i}"]`,
-          ) as HTMLSelectElement | null;
-          if (sel) sel.value = 'text-left';
-          const article = document.querySelector(
-            `[data-spread="${i}"]`,
-          );
-          article?.setAttribute('data-placement', 'text-left');
+          setPage(i, 'left', '', 'text-only');
+          setPage(i, 'right', '', 'text-only');
         }
         runAnalysis();
       });

@@ -26,21 +26,27 @@ The engine's `Manuscript` and `Spread` stay as they are: text content, age band,
 // packages/web/src/types.ts (new)
 import type { Manuscript, Spread } from '@harmonic-systems/early-literacy';
 
-export type SpreadPlacement = 'text-left' | 'text-right' | 'text-top' | 'text-bottom' | 'wordless';
+export type PagePlacement = 'text-only' | 'text-top' | 'text-bottom' | 'illustration-only';
+export interface PageContent { text: string; placement: PagePlacement }
 export type TrimSize = { widthIn: number; heightIn: number; orientation: 'portrait' | 'landscape' };
 
-export interface WebSpread extends Spread {
-  placement: SpreadPlacement;
+export interface WebSpread extends Omit<Spread, 'text'> {
+  leftPage: PageContent;
+  rightPage: PageContent;
   illustrationBrief?: string;
 }
 
-export interface WebManuscript extends Manuscript {
+export interface WebManuscript extends Omit<Manuscript, 'spreads'> {
   trimSize: TrimSize;
   spreads: WebSpread[];
 }
 ```
 
-The web layer strips composition fields before calling `analyze(manuscript)`. The engine never sees them.
+A spread is two facing pages, and each page composes independently — picture books work at the page level, not the spread level. The engine's `Spread.text` becomes a derived field: `toEngineManuscript()` concatenates `leftPage.text` and `rightPage.text` with a single space when both are non-empty. A spread with both pages `illustration-only` maps to the engine's `wordless: true`.
+
+The web layer strips composition fields before calling `analyze(manuscript)`. The engine never sees pages, placements, trim size, or briefs.
+
+> **Amendment 2026-05-27:** The original draft modeled placement at the *spread* level (`SpreadPlacement` with values like `text-left`, `text-right`, `wordless`). First-user testing of the book view made it immediately obvious that a spread is two pages, and a single spread-level placement is a workaround for the missing page abstraction. The two-page model above replaces it. Engine contract is unchanged.
 
 ### Q2 — `analyze()` returns `perSpread: SpreadProfile[]` directly.
 
