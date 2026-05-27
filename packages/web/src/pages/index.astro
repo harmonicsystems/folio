@@ -111,6 +111,14 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.75rem; color: var(--taupe);
         text-transform: lowercase; letter-spacing: 0.04em;
       }
+      .saved-indicator {
+        font-size: 0.7rem;
+        color: var(--taupe);
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        opacity: 0.75;
+        margin-left: 0.5rem;
+      }
+      .saved-indicator:empty { display: none; }
 
       .controls { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
       .control { display: flex; flex-direction: column; gap: 0.25rem; }
@@ -732,6 +740,7 @@ const SAMPLES: Record<string, Sample> = {
       <div class="brand">
         <span class="brand-mark">Folio</span>
         <span class="brand-sub">spread editor</span>
+        <span class="saved-indicator" id="saved-indicator" aria-live="polite"></span>
       </div>
 
       <div class="controls">
@@ -1040,6 +1049,103 @@ const SAMPLES: Record<string, Sample> = {
       const SAMPLES: Record<string, Sample> = JSON.parse(
         document.getElementById('samples-data')?.textContent ?? '{}',
       );
+
+      // ---- persistence ----
+      const DRAFT_KEY = 'folio.draft.v1';
+      interface SavedDraft {
+        version: 1;
+        ageBand: string;
+        trimKey: string;
+        spreads: Array<{
+          leftPage: { text: string; placement: string };
+          rightPage: { text: string; placement: string };
+        }>;
+        savedAt: number;
+      }
+      let lastSavedAt = 0;
+
+      function loadDraft(): SavedDraft | null {
+        try {
+          const raw = localStorage.getItem(DRAFT_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (parsed?.version !== 1) return null;
+          if (!parsed.ageBand || !Array.isArray(parsed.spreads)) return null;
+          return parsed as SavedDraft;
+        } catch {
+          return null;
+        }
+      }
+
+      function saveDraft(): void {
+        try {
+          const web = readManuscript();
+          const trimSel = byId('trim-size') as HTMLSelectElement | null;
+          const trimKey = trimSel?.value ?? 'STANDARD_PORTRAIT';
+          const draft: SavedDraft = {
+            version: 1,
+            ageBand: web.ageBand,
+            trimKey,
+            spreads: web.spreads.map((s) => ({
+              leftPage: {
+                text: s.leftPage.text,
+                placement: s.leftPage.placement,
+              },
+              rightPage: {
+                text: s.rightPage.text,
+                placement: s.rightPage.placement,
+              },
+            })),
+            savedAt: Date.now(),
+          };
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+          lastSavedAt = draft.savedAt;
+          updateSavedIndicator();
+        } catch {
+          // QuotaExceededError, private-mode restrictions, etc.
+          // — silently degrade; the in-memory editor still works.
+        }
+      }
+
+      function clearDraft(): void {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          /* ignore */
+        }
+        lastSavedAt = 0;
+        updateSavedIndicator();
+      }
+
+      function relativeTime(ms: number): string {
+        if (ms < 5_000) return 'just now';
+        if (ms < 60_000) return `${Math.floor(ms / 1000)}s ago`;
+        if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
+        return `${Math.floor(ms / 3_600_000)}h ago`;
+      }
+
+      function updateSavedIndicator(): void {
+        const el = byId('saved-indicator');
+        if (!el) return;
+        el.textContent =
+          lastSavedAt === 0 ? '' : `saved ${relativeTime(Date.now() - lastSavedAt)}`;
+      }
+
+      // Refresh the relative-time label so "12s ago" → "42s ago" etc.
+      setInterval(updateSavedIndicator, 30_000);
+
+      // Restore controls immediately so the editors hydrate against the
+      // right age band / trim. Per-page content restores in the
+      // page-editor-ready handler below as each Lexical instance mounts.
+      const restoredDraft = loadDraft();
+      if (restoredDraft) {
+        const ageSel = byId('age-band') as HTMLSelectElement | null;
+        if (ageSel) ageSel.value = restoredDraft.ageBand;
+        const trimSel = byId('trim-size') as HTMLSelectElement | null;
+        if (trimSel) trimSel.value = restoredDraft.trimKey;
+        lastSavedAt = restoredDraft.savedAt;
+      }
+      const restoredPages = new Set<string>();
 
       function byId(id: string): HTMLElement | null {
         return document.getElementById(id);
@@ -1550,6 +1656,7 @@ const SAMPLES: Record<string, Sample> = {
         updateStatusBar(profile);
         applyReachWordHighlights(profile);
         applyPhonemeHighlights();
+        saveDraft();
       }
 
       let debounceTimer: number | null = null;
@@ -1575,7 +1682,32 @@ const SAMPLES: Record<string, Sample> = {
       // Each PageEditor announces itself on mount. The first hydration
       // triggers a debounced analysis; the rest coalesce into the same
       // tick. After ~250 ms the analysis sees all 32 editors ready.
-      document.addEventListener('page-editor-ready', () => {
+      document.addEventListener('page-editor-ready', (e) => {
+        // Restore this page's saved content if we have one. Each editor
+        // is restored at most once; subsequent ready events (which
+        // shouldn't happen for the same instance, but be defensive)
+        // are no-ops.
+        if (restoredDraft) {
+          const detail = (e as CustomEvent<{ spread: number; side: 'left' | 'right' }>).detail;
+          if (detail) {
+            const key = `${detail.spread}-${detail.side}`;
+            if (!restoredPages.has(key)) {
+              restoredPages.add(key);
+              const spr = restoredDraft.spreads[detail.spread - 1];
+              if (spr) {
+                const page = detail.side === 'left' ? spr.leftPage : spr.rightPage;
+                if (page.text || page.placement !== 'text-only') {
+                  setPage(
+                    detail.spread,
+                    detail.side,
+                    page.text,
+                    page.placement as PagePlacement,
+                  );
+                }
+              }
+            }
+          }
+        }
         scheduleAnalysis();
       });
 
@@ -1968,8 +2100,15 @@ const SAMPLES: Record<string, Sample> = {
           setPage(i, 'left', '', 'text-only');
           setPage(i, 'right', '', 'text-only');
         }
+        // Clear localStorage first so the post-reset runAnalysis writes a
+        // fresh empty state with a new savedAt timestamp rather than
+        // overwriting the old draft surreptitiously.
+        clearDraft();
         runAnalysis();
       });
+
+      // Initial indicator paint (in case there's a restored draft).
+      updateSavedIndicator();
 
       // ---- view mode (grid / book) ----
       const ASPECT_BY_TRIM: Record<string, number> = {
