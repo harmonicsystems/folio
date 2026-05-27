@@ -1,13 +1,67 @@
 ---
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import type { AgeBand } from '@harmonic-systems/early-literacy';
+import PageEditor from '../components/PageEditor.tsx';
 
 const ageBands: { id: AgeBand; label: string; range: string }[] = [
   { id: 'board', label: 'Board book', range: '0–3' },
-  { id: 'early-picture', label: 'Early picture book', range: '0–3' },
+  { id: 'early-picture', label: 'Early picture', range: '0–3' },
   { id: 'picture', label: 'Picture book', range: '3–7' },
   { id: 'early-reader', label: 'Early reader', range: '5–9' },
   { id: 'chapter', label: 'Chapter book', range: '7–10' },
 ];
+
+const trimSizes = [
+  { id: 'STANDARD_PORTRAIT', label: '8 × 10 portrait' },
+  { id: 'STANDARD_LANDSCAPE', label: '10 × 8 landscape' },
+  { id: 'SQUARE', label: '9 × 9 square' },
+];
+
+const SPREAD_COUNT = 16;
+
+// Load one boilerplate sample per age band from corpora/. The text is
+// read at build time and inlined into the bundle via `define:vars` on
+// the script below — at runtime the editor just reaches into a const.
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CORPORA = resolve(__dirname, '../../../../corpora');
+const loadCorpus = (slug: string) =>
+  readFileSync(`${CORPORA}/${slug}.txt`, 'utf8');
+
+interface Sample {
+  ageBand: AgeBand;
+  label: string;
+  text: string;
+}
+
+const SAMPLES: Record<string, Sample> = {
+  board: {
+    ageBand: 'board',
+    label: 'Board · synthetic',
+    text: loadCorpus('synthetic-board-book'),
+  },
+  'early-picture': {
+    ageBand: 'early-picture',
+    label: 'Early picture · Lear, 1871',
+    text: loadCorpus('owl-and-pussycat'),
+  },
+  picture: {
+    ageBand: 'picture',
+    label: 'Picture · Potter, 1902',
+    text: loadCorpus('peter-rabbit'),
+  },
+  'early-reader': {
+    ageBand: 'early-reader',
+    label: 'Early reader · Aesop / Vernon Jones, 1912',
+    text: loadCorpus('aesop-selected'),
+  },
+  chapter: {
+    ageBand: 'chapter',
+    label: 'Chapter · Baum, 1900 (opening)',
+    text: loadCorpus('wizard-of-oz-opening'),
+  },
+};
 ---
 
 <!doctype html>
@@ -17,10 +71,16 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Folio — a constraint-engine and authoring tool for picture books and early-reader literature."
+      content="Folio — spread-first manuscript editor for picture books and early-reader literature."
     />
-    <title>Folio — pre-alpha</title>
-    <style>
+    <title>Folio — spread editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+    />
+    <style is:global>
       :root {
         --cream: #f7f1e6;
         --beige: #ece2cf;
@@ -29,392 +89,737 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         --rule: #d9cdb4;
         --ochre: #a37828;
         --rust: #9a4a2a;
+        --surface: #ffffff;
       }
       * { box-sizing: border-box; }
       html, body {
-        margin: 0;
-        padding: 0;
-        background: var(--cream);
-        color: var(--ink);
+        margin: 0; padding: 0;
+        background: var(--cream); color: var(--ink);
         font-family: ui-serif, Georgia, 'Times New Roman', serif;
-        line-height: 1.6;
-      }
-      main {
-        max-width: 36rem;
-        margin: 0 auto;
-        padding: 6rem 1.5rem 4rem;
-      }
-      h1 {
-        font-size: 2rem;
-        font-weight: 500;
-        margin: 0 0 0.25rem;
-        letter-spacing: -0.01em;
-      }
-      .tagline {
-        color: var(--taupe);
-        font-style: italic;
-        margin: 0 0 3rem;
-      }
-      p { margin: 0 0 1.25rem; }
-      h2 {
-        font-size: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--taupe);
-        margin: 3rem 0 1rem;
-      }
-
-      /* form */
-      form { margin: 0; }
-      label.field {
-        display: block;
-        margin: 0 0 1.5rem;
-      }
-      label.field .label-text {
-        display: block;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--taupe);
-        margin-bottom: 0.5rem;
-      }
-      textarea, select {
-        width: 100%;
-        background: #fff;
-        border: 1px solid var(--rule);
-        border-radius: 2px;
-        padding: 0.75rem;
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.9rem;
-        color: var(--ink);
         line-height: 1.5;
       }
-      textarea {
-        min-height: 14rem;
-        resize: vertical;
+
+      .topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.75rem 1.5rem; background: var(--surface);
+        border-bottom: 1px solid var(--rule);
+        position: sticky; top: 0; z-index: 10; gap: 1rem; flex-wrap: wrap;
       }
-      textarea:focus, select:focus {
-        outline: none;
-        border-color: var(--taupe);
+      .brand { display: flex; align-items: baseline; gap: 0.5rem; }
+      .brand-mark { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; }
+      .brand-sub {
+        font-size: 0.75rem; color: var(--taupe);
+        text-transform: lowercase; letter-spacing: 0.04em;
       }
-      .form-actions {
-        display: flex;
-        align-items: center;
+
+      .controls { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
+      .control { display: flex; flex-direction: column; gap: 0.25rem; }
+      .control-label {
+        font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--taupe);
+      }
+      .control select, .control button {
+        padding: 0.4rem 0.6rem; font: inherit; font-size: 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 2px; color: var(--ink);
+      }
+      .control button { cursor: pointer; }
+      .control button:hover { background: var(--beige); }
+
+      .workspace {
+        display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;
+        padding: 1.5rem; max-width: 1400px; margin: 0 auto;
+      }
+      @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }
+
+      .editor-surface {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
         gap: 1rem;
-        margin-top: 0.5rem;
-        flex-wrap: wrap;
       }
-      button {
+      .spread {
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px; padding: 0.75rem;
+        display: flex; flex-direction: column; gap: 0.5rem;
+      }
+      .spread.has-warning { border-color: var(--ochre); }
+      /* Untouched spreads — both pages empty + default text-only
+         placement — recede so attention lands on the filled ones.
+         Hover / focus restores full opacity so they're still inviting. */
+      .spread.empty {
+        opacity: 0.45;
+        transition: opacity 0.18s ease;
+      }
+      .spread.empty:hover,
+      .spread.empty:focus-within { opacity: 1; }
+      /* Don't mute in book view — that's a one-spread-at-a-time surface
+         and the user is intentionally focused on each spread. */
+      .editor-surface[data-view="book"] .spread.empty { opacity: 1; }
+      .spread-header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.5rem;
+      }
+      .spread-number {
+        font-size: 0.75rem; color: var(--taupe);
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .spread-pages {
+        flex: 1; min-height: 8rem;
+        display: flex; gap: 0;
+      }
+      .page {
+        flex: 1; min-width: 0;
+        display: flex; flex-direction: column; gap: 0.4rem;
+        padding: 0.4rem 0.5rem;
+      }
+      .page-left { border-right: 1px solid var(--rule); }
+      .page-controls {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.5rem;
+      }
+      .page-wc {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.7rem; color: var(--taupe);
+        min-width: 1.5rem;
+      }
+      .page-wc:empty::before {
+        content: ''; display: inline-block; width: 0.4rem; height: 0.4rem;
+        background: var(--rule); border-radius: 50%; opacity: 0.6;
+        vertical-align: middle;
+      }
+      .page-placement {
+        font-size: 0.7rem; padding: 0.15rem 0.35rem;
+        background: var(--cream); border: 1px solid var(--rule);
+        border-radius: 2px; color: var(--ink); font-family: inherit;
+        opacity: 0.35;
+        transition: opacity 0.15s ease;
+      }
+      .page:hover .page-placement,
+      .page:focus-within .page-placement,
+      .page-placement:hover,
+      .page-placement:focus { opacity: 1; }
+      .page-body {
+        flex: 1; min-height: 5rem;
+        display: flex; flex-direction: column; gap: 0.4rem;
+      }
+      .page[data-placement="text-only"] .page-illustration { display: none; }
+      .page[data-placement="illustration-only"] .page-text { display: none; }
+      .page[data-placement="text-top"] .page-body { flex-direction: column; }
+      .page[data-placement="text-bottom"] .page-body { flex-direction: column-reverse; }
+      .page-text {
+        flex: 1; resize: none;
+        border: none; outline: none; background: transparent;
+        font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+        font-weight: var(--body-font-weight, 400);
+        font-size: 0.9rem; line-height: 1.5; color: var(--ink);
+        padding: 0; min-width: 0;
+      }
+      /* Lexical shell: positions the placeholder absolutely over the
+         contenteditable so empty pages still show the hint. */
+      .page-editor-shell {
+        position: relative; flex: 1;
+        display: flex; min-width: 0;
+      }
+      .page-editor-editable {
+        overflow-y: auto;
+        min-height: 1.5em;
+      }
+      .page-editor-placeholder {
+        position: absolute; top: 0; left: 0;
+        pointer-events: none;
+        color: var(--taupe); opacity: 0.5;
+        font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+        font-weight: var(--body-font-weight, 400);
+        font-size: 0.9rem; line-height: 1.5;
+      }
+      .page-editor-paragraph { margin: 0; padding: 0; }
+      .page-editor-paragraph + .page-editor-paragraph { margin-top: 0.5em; }
+      .page-editor-text-bold { font-weight: 700; }
+      .page-editor-text-italic { font-style: italic; }
+      .page-editor-text-underline {
+        text-decoration: underline;
+        text-decoration-color: var(--taupe);
+        text-underline-offset: 0.15em;
+      }
+
+      /* ---- Lexical floating selection toolbar ---- */
+      .lex-toolbar {
+        position: fixed;
         background: var(--ink);
+        border-radius: 4px;
+        padding: 2px;
+        display: flex;
+        gap: 1px;
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      }
+      .lex-tool {
+        background: transparent;
         color: var(--cream);
         border: none;
-        padding: 0.65rem 1.25rem;
-        font-family: inherit;
-        font-size: 0.95rem;
-        letter-spacing: 0.01em;
+        padding: 0.3rem 0.55rem;
+        font: inherit;
+        font-size: 0.85rem;
         cursor: pointer;
         border-radius: 2px;
+        min-width: 1.8rem;
       }
-      button:hover { background: #1a1612; }
-      button.secondary {
-        background: transparent;
-        color: var(--taupe);
-        padding: 0.65rem 0;
+      .lex-tool:hover { background: rgba(255, 255, 255, 0.12); }
+      .lex-tool.active { background: var(--cream); color: var(--ink); }
+      .lex-tool-bold { font-weight: 700; }
+      .lex-tool-italic { font-style: italic; }
+      .lex-tool-underline { text-decoration: underline; }
+
+      /* ---- in-line reach-word highlighting (CSS Custom Highlight API) ---- */
+      ::highlight(reach-word) {
+        text-decoration: underline wavy;
+        text-decoration-color: var(--rust);
+        text-underline-offset: 0.18em;
+        text-decoration-thickness: 1.5px;
+      }
+      .page-illustration {
+        flex: 1;
+        background: var(--cream);
+        border: 1px dashed var(--rule);
+        border-radius: 2px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.65rem; color: var(--taupe);
+        text-transform: uppercase; letter-spacing: 0.08em;
+        min-width: 0; min-height: 2rem;
+      }
+      /* The dashed cream box is enough to read as "illustration
+         zone" — repeating the word 32 times in the grid was noise. */
+      .spread-footer {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 0.5rem; font-size: 0.75rem; color: var(--taupe);
+      }
+      .spread-wc { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+      .spread-wc.over { color: var(--rust); }
+
+      .sidebar {
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px; padding: 1rem;
+        position: sticky; top: 5rem; align-self: start;
+        max-height: calc(100vh - 6rem); overflow-y: auto;
+      }
+      .sidebar h3 {
+        font-size: 0.85rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--taupe);
+        margin: 0 0 0.5rem; font-weight: 600;
+      }
+      .sidebar h3:not(:first-child) { margin-top: 1.5rem; }
+      .metric-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 0.4rem 0; border-bottom: 1px solid var(--rule);
         font-size: 0.85rem;
-        text-decoration: underline;
-        text-decoration-color: var(--rule);
-        text-underline-offset: 0.25rem;
       }
-      button.secondary:hover { color: var(--ink); background: transparent; }
+      .metric-row .label { color: var(--taupe); }
+      .metric-row .value { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+      .metric-row .value.over { color: var(--rust); }
+      .metric-row .value.under { color: var(--ochre); }
 
-      /* results */
-      .results { display: none; }
-      .results.visible { display: block; }
-      ul.rows {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        border-top: 1px solid var(--rule);
+      .per-spread-list {
+        list-style: none; padding: 0; margin: 0;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 0.3rem 0.6rem; font-size: 0.8rem;
       }
-      ul.rows li {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 1rem;
-        padding: 0.65rem 0;
-        border-bottom: 1px solid var(--rule);
+      .ps-num { color: var(--taupe); }
+      .ps-bar {
+        position: relative; height: 4px;
+        background: var(--rule); border-radius: 2px;
+        overflow: hidden;
       }
-      ul.rows .label { color: var(--taupe); font-size: 0.9rem; }
-      ul.rows .value {
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.9rem;
-        text-align: right;
+      .ps-bar-fill {
+        position: absolute; left: 0; top: 0; bottom: 0;
+        background: var(--taupe);
+        border-radius: 2px;
+        transition: width 0.15s ease;
       }
-      ul.rows .value .qualifier {
-        color: var(--taupe);
-        margin-left: 0.5rem;
+      .ps-bar-fill.approaching { background: var(--ochre); }
+      .ps-bar-fill.over { background: var(--rust); }
+      .ps-bar-fill.wordless {
+        left: 50%; right: 50%; top: 50%; bottom: 50%;
+        width: 0.4rem; height: 0.4rem;
+        transform: translate(-50%, -50%);
+        background: var(--taupe);
+        border-radius: 50%;
+        opacity: 0.6;
       }
-      ul.rows .value.over { color: var(--rust); }
-      ul.rows .value.under { color: var(--ochre); }
+      .ps-wc { font-family: ui-monospace, monospace; text-align: right; }
+      .ps-wc.over { color: var(--rust); }
+      .ps-wc.wordless { color: var(--taupe); font-style: italic; }
 
-      /* warnings */
-      ul.warnings {
-        list-style: none;
-        padding: 0;
-        margin: 0;
+      .reach-list { list-style: none; padding: 0; margin: 0; }
+      .reach-list li {
+        padding: 0.3rem 0; border-bottom: 1px solid var(--rule);
+        font-size: 0.8rem;
+        display: flex; justify-content: space-between; gap: 0.5rem;
       }
-      ul.warnings li {
-        padding: 0.75rem 1rem;
-        margin-bottom: 0.5rem;
-        background: #fff;
-        border-left: 3px solid var(--rule);
-        font-size: 0.9rem;
+      .reach-list .word { font-family: ui-monospace, monospace; color: var(--rust); }
+      .reach-list .at { color: var(--taupe); }
+
+      .warning-list { list-style: none; padding: 0; margin: 0; }
+      .warning-list li {
+        padding: 0.5rem; margin-bottom: 0.5rem;
+        background: var(--cream); border-left: 3px solid var(--rule);
+        font-size: 0.8rem;
       }
-      ul.warnings li.warning { border-left-color: var(--ochre); }
-      ul.warnings li.error { border-left-color: var(--rust); }
-      ul.warnings .code {
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.75rem;
-        color: var(--taupe);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-right: 0.5rem;
+      .warning-list li.warning { border-left-color: var(--ochre); }
+      .warning-list li.error { border-left-color: var(--rust); }
+      .warning-list li.info { border-left-color: var(--taupe); }
+      .warning-list .code {
+        font-family: ui-monospace, monospace; font-size: 0.7rem;
+        color: var(--taupe); text-transform: uppercase;
+        letter-spacing: 0.06em; margin-right: 0.5rem;
       }
+
       .empty {
-        color: var(--taupe);
-        font-style: italic;
-        font-size: 0.9rem;
-        margin: 0;
+        color: var(--taupe); font-style: italic;
+        font-size: 0.8rem; margin: 0.25rem 0;
       }
 
-      /* reach words */
-      .spread-group {
-        padding: 0.65rem 0;
-        border-bottom: 1px solid var(--rule);
+      /* ---- view toggle (segmented control) ---- */
+      .view-toggle { display: flex; }
+      .view-toggle button {
+        padding: 0.4rem 0.75rem; font: inherit; font-size: 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        color: var(--taupe); cursor: pointer;
       }
-      .spread-group:first-child { border-top: 1px solid var(--rule); }
-      .spread-label {
-        color: var(--taupe);
-        font-size: 0.85rem;
-        margin-bottom: 0.25rem;
+      .view-toggle button:first-child {
+        border-radius: 2px 0 0 2px; border-right-width: 0;
       }
-      .spread-words {
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.9rem;
+      .view-toggle button:last-child { border-radius: 0 2px 2px 0; }
+      .view-toggle button.active { background: var(--ink); color: var(--cream); }
+      .view-toggle button:hover:not(.active) { background: var(--beige); }
+
+      /* ---- book view: spread-by-spread, scroll-snap ---- */
+      .editor-surface[data-view="book"] {
+        display: flex; flex-direction: row;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        scroll-behavior: smooth;
+        gap: 1.5rem;
+        padding-bottom: 0.5rem;
+      }
+      .editor-surface[data-view="book"] .spread {
+        flex: 0 0 100%;
+        scroll-snap-align: center;
+        scroll-snap-stop: always;
+        aspect-ratio: var(--spread-aspect, 1.6);
+        max-height: calc(100vh - 10rem);
+        padding: 1.25rem;
+        gap: 0.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      }
+      .editor-surface[data-view="book"] .spread-pages { gap: 0; }
+      .editor-surface[data-view="book"] .page { padding: 0.75rem 1rem; gap: 0.6rem; }
+      .editor-surface[data-view="book"] .page-text {
+        font-size: 1.05rem; line-height: 1.6;
+      }
+      .editor-surface[data-view="book"] .page-illustration {
+        font-size: 0.75rem;
       }
 
-      footer {
-        margin-top: 4rem;
-        padding-top: 1.5rem;
+      /* ---- collapsible sidebar + status bar ---- */
+      body.sidebar-collapsed .workspace {
+        grid-template-columns: 1fr;
+        padding-bottom: 4rem;
+      }
+      body.sidebar-collapsed .sidebar { display: none; }
+      .status-bar {
+        display: none;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: var(--surface);
         border-top: 1px solid var(--rule);
+        padding: 0.55rem 1.5rem;
+        z-index: 4;
+        gap: 1.5rem;
         font-size: 0.85rem;
-        color: var(--taupe);
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-around;
       }
-      footer a { color: var(--taupe); }
+      body.sidebar-collapsed .status-bar { display: flex; }
+      .status-item {
+        display: flex; align-items: baseline; gap: 0.4rem;
+      }
+      .status-label {
+        text-transform: uppercase; letter-spacing: 0.08em;
+        font-size: 0.7rem; color: var(--taupe);
+      }
+      .status-val {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        color: var(--ink);
+      }
+      .status-val.over { color: var(--rust); }
+      .status-val.under { color: var(--ochre); }
+      .status-sub { color: var(--taupe); font-size: 0.8rem; }
+
+      /* ---- coming soon list ---- */
+      .coming-soon {
+        list-style: none; padding: 0; margin: 0;
+        font-size: 0.8rem;
+      }
+      .coming-soon li {
+        padding: 0.35rem 0;
+        color: var(--taupe);
+        border-bottom: 1px dashed var(--rule);
+        font-style: italic;
+      }
+      .coming-soon li:last-child { border-bottom: none; }
+      .coming-soon li::before {
+        content: '·'; margin-right: 0.4rem;
+        opacity: 0.5; font-style: normal;
+      }
+
+      /* ---- floating prev/next + spread counter (book mode only) ---- */
+      .nav-prev, .nav-next, .spread-counter { display: none; }
+      body.book-mode .nav-prev,
+      body.book-mode .nav-next,
+      body.book-mode .spread-counter { display: flex; }
+      .nav-prev, .nav-next {
+        position: fixed; top: 50%; transform: translateY(-50%);
+        align-items: center; justify-content: center;
+        width: 2.75rem; height: 2.75rem;
+        background: var(--surface); color: var(--ink);
+        border: 1px solid var(--rule); border-radius: 50%;
+        font-size: 1.4rem; line-height: 1; cursor: pointer;
+        z-index: 5;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      .nav-prev { left: 1rem; }
+      .nav-next { right: 1rem; }
+      .nav-prev:hover, .nav-next:hover { background: var(--beige); }
+      .nav-prev:disabled, .nav-next:disabled {
+        opacity: 0.35; cursor: not-allowed;
+      }
+      .spread-counter {
+        position: fixed; bottom: 1.25rem; left: 50%;
+        transform: translateX(-50%);
+        align-items: center; justify-content: center;
+        padding: 0.35rem 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 999px;
+        font-family: ui-monospace, monospace; font-size: 0.8rem;
+        color: var(--taupe);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        z-index: 5;
+      }
+
+      footer.footnote {
+        padding: 1.5rem; text-align: center;
+        color: var(--taupe); font-size: 0.8rem;
+        border-top: 1px solid var(--rule); background: var(--surface);
+      }
+      footer.footnote a { color: var(--taupe); }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Folio</h1>
-      <p class="tagline">Restraint → creative flow.</p>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">Folio</span>
+        <span class="brand-sub">spread editor</span>
+      </div>
 
-      <p>
-        Paste a manuscript below. One spread per blank-line block. Pick
-        the age band you're writing for. The engine reads the gauges —
-        word count, sight-word coverage, lexical diversity, the words
-        sitting beyond a typical reader of that age.
-      </p>
-
-      <form id="analyze-form">
-        <label class="field">
-          <span class="label-text">Age band</span>
-          <select id="age-band" name="age-band">
+      <div class="controls">
+        <label class="control">
+          <span class="control-label">Age band</span>
+          <select id="age-band">
             {ageBands.map((b) => (
               <option value={b.id} selected={b.id === 'picture'}>
-                {b.label} · ages {b.range}
+                {b.label} · {b.range}
               </option>
             ))}
           </select>
         </label>
-
-        <label class="field">
-          <span class="label-text">Manuscript</span>
-          <textarea
-            id="manuscript"
-            name="manuscript"
-            placeholder="In the great green room&#10;&#10;There was a telephone&#10;And a red balloon"
-            spellcheck="false"
-          ></textarea>
+        <label class="control">
+          <span class="control-label">Trim</span>
+          <select id="trim-size">
+            {trimSizes.map((t) => (
+              <option value={t.id} selected={t.id === 'STANDARD_PORTRAIT'}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </label>
-
-        <div class="form-actions">
-          <button type="submit">Analyze</button>
-          <button type="button" class="secondary" data-sample="board">
-            Load board-book sample
-          </button>
-          <button type="button" class="secondary" data-sample="picture">
-            Load Peter Rabbit
-          </button>
-          <button type="button" class="secondary" data-sample="early-picture">
-            Load Owl &amp; Pussycat
-          </button>
-          <button type="button" class="secondary" data-sample="early-reader">
-            Load Aesop selection
-          </button>
+        <label class="control">
+          <span class="control-label">Body font</span>
+          <select id="body-font">
+            <option value="caslon" selected>Libre Caslon</option>
+            <option value="futura">Futura</option>
+            <option value="futura-bold">Futura Bold</option>
+            <option value="atkinson">Atkinson Hyperlegible</option>
+            <option value="bricolage">Bricolage Grotesque</option>
+          </select>
+        </label>
+        <label class="control">
+          <span class="control-label">Layout</span>
+          <select id="layout-preset">
+            <option value="">— preset —</option>
+            <option value="classic">Classic facing</option>
+            <option value="mirror">Mirror</option>
+            <option value="text-top">Text top</option>
+            <option value="full-text">Full text</option>
+          </select>
+        </label>
+        <label class="control">
+          <span class="control-label">Load sample</span>
+          <select id="sample-loader">
+            <option value="">— pick one —</option>
+            {Object.entries(SAMPLES).map(([key, s]) => (
+              <option value={key}>{s.label}</option>
+            ))}
+          </select>
+        </label>
+        <div class="control">
+          <span class="control-label">Reset</span>
+          <button id="reset-btn" type="button">Clear all spreads</button>
         </div>
-      </form>
+        <div class="control">
+          <span class="control-label">View</span>
+          <div class="view-toggle">
+            <button data-view-set="grid" class="active" type="button">Grid</button>
+            <button data-view-set="book" type="button">Book</button>
+          </div>
+        </div>
+        <div class="control">
+          <span class="control-label">Sidebar</span>
+          <button id="sidebar-toggle" type="button">Hide</button>
+        </div>
+      </div>
+    </header>
 
-      <section class="results" id="results" aria-live="polite">
-        <h2>Length</h2>
-        <ul class="rows">
-          <li>
-            <span class="label">Word count</span>
-            <span class="value" id="word-count"></span>
-          </li>
-          <li>
-            <span class="label">Sentences</span>
-            <span class="value" id="sentence-count"></span>
-          </li>
-          <li>
-            <span class="label">Average sentence length</span>
-            <span class="value" id="avg-sentence"></span>
-          </li>
-        </ul>
-
-        <h2>Vocabulary</h2>
-        <ul class="rows">
-          <li>
-            <span class="label">Sight-word coverage</span>
-            <span class="value" id="sight-coverage"></span>
-          </li>
-          <li>
-            <span class="label">Type-token ratio</span>
-            <span class="value" id="ttr"></span>
-          </li>
-          <li>
-            <span class="label">Unique words</span>
-            <span class="value" id="unique-words"></span>
-          </li>
-        </ul>
-
-        <h2>Warnings</h2>
-        <div id="warnings-container"></div>
-
-        <h2>Reach words by spread</h2>
-        <p class="empty" id="reach-help">
-          Tokens outside the Dolch + Fry sight-word lists. Each word is
-          shown on the spread it first appears.
-        </p>
-        <div id="reach-container"></div>
+    <main class="workspace">
+      <section
+        class="editor-surface"
+        id="editor-surface"
+        aria-label="Manuscript spreads"
+      >
+        {Array.from({ length: SPREAD_COUNT }, (_, i) => i + 1).map((index) => (
+          <article class="spread" data-spread={index}>
+            <header class="spread-header">
+              <span class="spread-number">Spread {index}</span>
+            </header>
+            <div class="spread-pages">
+              {(['left', 'right'] as const).map((side) => (
+                <div
+                  class={`page page-${side}`}
+                  data-page={`${index}-${side}`}
+                  data-placement="text-only"
+                >
+                  <div class="page-controls">
+                    <span
+                      class="page-wc"
+                      data-page-wc={`${index}-${side}`}
+                      aria-label={`Spread ${index} ${side} page word count`}
+                    ></span>
+                    <select
+                      class="page-placement"
+                      data-page-placement={`${index}-${side}`}
+                      aria-label={`Spread ${index} ${side} page placement`}
+                    >
+                      <option value="text-only" selected>text only</option>
+                      <option value="text-top">text top</option>
+                      <option value="text-bottom">text bottom</option>
+                      <option value="illustration-only">illustration only</option>
+                    </select>
+                  </div>
+                  <div class="page-body">
+                    <PageEditor
+                      client:load
+                      spread={index}
+                      side={side}
+                      placeholder="…"
+                    />
+                    <div class="page-illustration" aria-hidden="true"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <footer class="spread-footer">
+              <span class="spread-wc" data-spread-wc={index}>0</span>
+              <span class="spread-wc-target" data-spread-ceiling={index}>/ —</span>
+            </footer>
+          </article>
+        ))}
       </section>
 
-      <footer>
-        Harmonic Systems · <a href="https://harmonic-systems.org">harmonic-systems.org</a>
-      </footer>
+      <aside class="sidebar" aria-label="Readability profile">
+        <h3>Length</h3>
+        <div class="metric-row">
+          <span class="label">Word count</span>
+          <span class="value" id="total-words">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Target</span>
+          <span class="value" id="total-target">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Sentences</span>
+          <span class="value" id="total-sentences">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Avg sentence length</span>
+          <span class="value" id="avg-sentence">—</span>
+        </div>
+
+        <h3>Vocabulary</h3>
+        <div class="metric-row">
+          <span class="label">Sight-word coverage</span>
+          <span class="value" id="sight-coverage">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Type-token ratio</span>
+          <span class="value" id="ttr">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Unique words</span>
+          <span class="value" id="unique-words">0</span>
+        </div>
+
+        <h3>Phonology</h3>
+        <div class="metric-row">
+          <span class="label">Decodability</span>
+          <span class="value" id="decodability">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Avg syllables / word</span>
+          <span class="value" id="avg-syllables">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Top syllable type</span>
+          <span class="value" id="top-syllable">—</span>
+        </div>
+
+        <h3>Per spread</h3>
+        <ol class="per-spread-list" id="per-spread-list"></ol>
+
+        <h3>Reach words</h3>
+        <p class="empty" id="reach-empty">
+          Tokens outside Dolch + Fry will appear here.
+        </p>
+        <ul class="reach-list" id="reach-list"></ul>
+
+        <h3>Warnings</h3>
+        <p class="empty" id="warnings-empty">None.</p>
+        <ul class="warning-list" id="warning-list"></ul>
+
+        <h3>Coming soon</h3>
+        <ul class="coming-soon">
+          <li>Phonology · full inventory + acquisition-age weighting</li>
+          <li>Prosody · meter + rhyme detection</li>
+          <li>Syntax · sentence variety, clause depth</li>
+          <li>Vocabulary tiers · Beck / McKeown / Kucan</li>
+          <li>Reach-word reason tooltips (tier 2 vs low-freq)</li>
+          <li>Dialogic-reading prompt suggestions</li>
+        </ul>
+      </aside>
     </main>
+
+    <footer class="footnote">
+      <a href="/paste">paste-and-analyze</a> · Harmonic Systems
+    </footer>
+
+    <div class="status-bar" id="status-bar" aria-live="polite">
+      <span class="status-item">
+        <span class="status-label">Words</span>
+        <span class="status-val" id="sb-words">0</span>
+        <span class="status-sub" id="sb-target">/ —</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Sight</span>
+        <span class="status-val" id="sb-sight">—</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Spreads</span>
+        <span class="status-val" id="sb-spreads">0</span>
+        <span class="status-sub">/ 16</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Decode</span>
+        <span class="status-val" id="sb-decode">—</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Warnings</span>
+        <span class="status-val" id="sb-warnings">0</span>
+      </span>
+    </div>
+
+    <button class="nav-prev" id="nav-prev" type="button" aria-label="Previous spread">‹</button>
+    <button class="nav-next" id="nav-next" type="button" aria-label="Next spread">›</button>
+    <div class="spread-counter" id="spread-counter" aria-live="polite"></div>
+
+    <script
+      id="samples-data"
+      type="application/json"
+      is:inline
+      set:html={JSON.stringify(SAMPLES)}
+    ></script>
 
     <script>
       import { analyze } from '@harmonic-systems/early-literacy';
       import type {
         AgeBand,
-        Manuscript,
-        ReadabilityProfile,
         ReachWord,
+        ReadabilityProfile,
         Warning,
       } from '@harmonic-systems/early-literacy';
+      import {
+        toEngineManuscript,
+        TRIM_SIZES,
+        type PageContent,
+        type PagePlacement,
+        type WebManuscript,
+        type WebSpread,
+      } from '../types.js';
 
-      const SAMPLES: Record<string, { ageBand: AgeBand; text: string }> = {
-        board: {
-          ageBand: 'board',
-          text:
-            'Where is the cat?\n\n' +
-            'The cat is up. The cat is down.\n\n' +
-            'The cat is in. The cat is out.\n\n' +
-            'The cat is here. The cat is there.\n\n' +
-            'The cat is big. The cat is small.\n\n' +
-            'Where is the cat now?\n\n' +
-            'Good night, cat.',
-        },
-        picture: {
-          ageBand: 'picture',
-          text:
-            'Once upon a time there were four little Rabbits, and their names were—Flopsy, Mopsy, Cotton-tail, and Peter.\n\n' +
-            'They lived with their Mother in a sand-bank, underneath the root of a very big fir-tree.\n\n' +
-            '"Now my dears," said old Mrs. Rabbit one morning, "you may go into the fields or down the lane, but don\'t go into Mr. McGregor\'s garden: your Father had an accident there; he was put in a pie by Mrs. McGregor."\n\n' +
-            '"Now run along, and don\'t get into mischief. I am going out."\n\n' +
-            'Then old Mrs. Rabbit took a basket and her umbrella, and went through the wood to the baker\'s. She bought a loaf of brown bread and five currant buns.\n\n' +
-            'Flopsy, Mopsy, and Cotton-tail, who were good little bunnies, went down the lane to gather blackberries.\n\n' +
-            'But Peter, who was very naughty, ran straight away to Mr. McGregor\'s garden, and squeezed under the gate!',
-        },
-        'early-picture': {
-          ageBand: 'early-picture',
-          text: `The Owl and the Pussy-Cat went to sea
-In a beautiful pea-green boat:
-They took some honey, and plenty of money
-Wrapped up in a five-pound note.
-The Owl looked up to the stars above,
-And sang to a small guitar,
-"O lovely Pussy, O Pussy, my love,
-What a beautiful Pussy you are,
-You are,
-You are!
-What a beautiful Pussy you are!"
+      const SPREAD_COUNT = 16;
+      const DEBOUNCE_MS = 250;
 
-Pussy said to the Owl, "You elegant fowl,
-How charmingly sweet you sing!
-Oh! let us be married; too long we have tarried:
-But what shall we do for a ring?"
-They sailed away, for a year and a day,
-To the land where the bong-tree grows;
-And there in a wood a Piggy-wig stood,
-With a ring at the end of his nose,
-His nose,
-His nose,
-With a ring at the end of his nose.
+      interface Sample {
+        ageBand: AgeBand;
+        label: string;
+        text: string;
+      }
+      const SAMPLES: Record<string, Sample> = JSON.parse(
+        document.getElementById('samples-data')?.textContent ?? '{}',
+      );
 
-"Dear Pig, are you willing to sell for one shilling
-Your ring?" Said the Piggy, "I will."
-So they took it away, and were married next day
-By the Turkey who lives on the hill.
-They dined on mince and slices of quince,
-Which they ate with a runcible spoon;
-And hand in hand, on the edge of the sand,
-They danced by the light of the moon,
-The moon,
-The moon,
-They danced by the light of the moon.`,
-        },
-        'early-reader': {
-          ageBand: 'early-reader',
-          text: `A thirsty Crow found a Pitcher with some water in it, but so little was there that, try as she might, she could not reach it with her beak, and it seemed as though she would die of thirst within sight of the remedy. At last she hit upon a clever plan. She began dropping pebbles into the Pitcher, and with each pebble the water rose a little higher until at last it reached the brim, and the knowing bird was enabled to quench her thirst.
-Necessity is the mother of invention.
+      function byId(id: string): HTMLElement | null {
+        return document.getElementById(id);
+      }
 
-A hungry Fox saw some fine bunches of Grapes hanging from a vine that was trained along a high trellis, and did his best to reach them by jumping as high as he could into the air. But it was all in vain, for they were just out of reach: so he gave up trying, and walked away with an air of dignity and unconcern, remarking, "I thought those Grapes were ripe, but I see now they are quite sour."
+      function readPage(spread: number, side: 'left' | 'right'): PageContent {
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        const text =
+          (window as unknown as {
+            __pageEditors?: Record<string, { getText: () => string }>;
+          }).__pageEditors?.[`${spread}-${side}`]?.getText() ?? '';
+        return {
+          text,
+          placement: (sel?.value ?? 'text-only') as PagePlacement,
+        };
+      }
 
-A Dog was lying in a Manger on the hay which had been put there for the cattle, and when they came and tried to eat, he growled and snapped at them and wouldn't let them get at their food. "What a selfish beast," said one of them to his companions; "he can't eat himself and yet he won't let those eat who can."
-
-A Shepherd's Boy was tending his flock near a village, and thought it would be great fun to hoax the villagers by pretending that a Wolf was attacking the sheep: so he shouted out, "Wolf! wolf!" and when the people came running up he laughed at them for their pains. He did this more than once, and every time the villagers found they had been hoaxed, for there was no Wolf at all. At last a Wolf really did come, and the Boy cried, "Wolf! wolf!" as loud as he could: but the people were so used to hearing him call that they took no notice of his cries for help. And so the Wolf had it all his own way, and killed off sheep after sheep at his leisure.
-You cannot believe a liar even when he tells the truth.
-
-A Lion asleep in his lair was waked up by a Mouse running over his face. Losing his temper he seized it with his paw and was about to kill it. The Mouse, terrified, piteously entreated him to spare its life. "Please let me go," it cried, "and one day I will repay you for your kindness." The idea of so insignificant a creature ever being able to do anything for him amused the Lion so much that he laughed aloud, and good-humouredly let it go. But the Mouse's chance came, after all. One day the Lion got entangled in a net which had been spread for game by some hunters, and the Mouse heard and recognised his roars of anger and ran to the spot. Without more ado it set to work to gnaw the ropes with its teeth, and succeeded before long in setting the Lion free. "There!" said the Mouse, "you laughed at me when I promised I would repay you: but now you see, even a Mouse can help a Lion."
-
-A Hare was one day making fun of a Tortoise, and laughing at him because of the slowness of his pace. "What a sluggard you are!" said he; "I don't wonder that you lose every race you run. Come, I'll run a race with you, and I'll soon show you what speed is!" The Tortoise smiled quietly and said, "All right: I accept your challenge, and I'll run you a race from here to the cornfield. But as you are so very sure of winning, suppose we ask the Fox to act as umpire." The Hare agreed, and off they started. The Hare, of course, shot ahead, and as the Tortoise plodded on at his steady pace, the Hare thought to himself, "The fellow hasn't a chance, so I may as well have a nap in the sun while I'm waiting for him to come up." So he lay down under a bush and fell asleep. Meanwhile the Tortoise went slowly and steadily on his way, and presently he passed the sleeping Hare, and continued on till he reached the cornfield, and won the race. The Hare woke up with a start, and seeing that the Tortoise had passed him, he set off at full speed, but it was too late, and he could not overtake him.
-Slow and steady wins the race.
-
-A Wolf came upon a Lamb straying from the flock, and felt some compunction about taking the life of so helpless a creature without some plausible excuse; so he cast about for a grievance and said at last, "Last year, sirrah, you grossly insulted me." "That is impossible, sir," bleated the Lamb, "for I wasn't born then." "Well," retorted the Wolf, "you feed in my pastures." "That cannot be," replied the Lamb, "for I have never yet tasted grass." "You drink from my spring, then," continued the Wolf. "Indeed, sir," said the poor Lamb, "I have never yet drunk anything but my mother's milk." "Well, anyhow," said the Wolf, "I'm not going without my dinner": and he sprang upon the Lamb and devoured it without more ado.
-
-A Town Mouse and a Country Mouse were cousins, and very good friends, and the Country Mouse invited the Town Mouse to come and stay with her. So the Town Mouse came, and they sat down to dinner; but the Country Mouse had nothing to offer but hay and barley and other such homely fare. The Town Mouse turned up her nose at it and said, "Cousin, how can you endure the boredom of this stupid country life? Come with me to the town, and I'll show you how to live." So the Country Mouse went to the town, and the Town Mouse showed her into a grand house, and they went into the dining-room, where there was a fine feast laid out on the table. But just as they were about to begin, in came the servants with the dogs; and the mice had to run away, and hide themselves in a hole in the wall. Presently all was quiet, and out they came again; but the Country Mouse said, "No, cousin, this is no life for me. You may have your fine feasts and your life in constant fear of cats and dogs and men; I prefer my simple food and my peaceful life in the country."`,
-        },
-      };
-
-      function buildManuscript(text: string, ageBand: AgeBand): Manuscript {
-        const spreads = text
-          .split(/\n\s*\n/)
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0)
-          .map((text, i) => ({ index: i + 1, text }));
-        return { ageBand, spreads };
+      function readManuscript(): WebManuscript {
+        const ageSel = byId('age-band') as HTMLSelectElement | null;
+        const trimSel = byId('trim-size') as HTMLSelectElement | null;
+        const ageBand = (ageSel?.value as AgeBand) ?? 'picture';
+        const trimKey = trimSel?.value ?? 'STANDARD_PORTRAIT';
+        const trimSize = TRIM_SIZES[trimKey] ?? TRIM_SIZES.STANDARD_PORTRAIT;
+        const spreads: WebSpread[] = [];
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          spreads.push({
+            index: i,
+            leftPage: readPage(i, 'left'),
+            rightPage: readPage(i, 'right'),
+          });
+        }
+        return { ageBand, trimSize, spreads };
       }
 
       function fmtPercent(n: number): string {
@@ -426,129 +831,612 @@ A Town Mouse and a Country Mouse were cousins, and very good friends, and the Co
       }
 
       function setText(id: string, value: string, cls = ''): void {
-        const el = document.getElementById(id);
+        const el = byId(id);
         if (!el) return;
         el.textContent = value;
         el.className = `value ${cls}`.trim();
       }
 
-      function renderWarnings(warnings: Warning[]): void {
-        const container = document.getElementById('warnings-container');
-        if (!container) return;
-        if (warnings.length === 0) {
-          container.innerHTML = '<p class="empty">None.</p>';
+      function renderTopMetrics(profile: ReadabilityProfile): void {
+        const { wordCount, wordCountTarget } = profile;
+        let countClass = '';
+        if (wordCount > wordCountTarget.max) countClass = 'over';
+        else if (wordCountTarget.min > 0 && wordCount < wordCountTarget.min) {
+          countClass = 'under';
+        }
+        setText('total-words', String(wordCount), countClass);
+        const targetLabel =
+          wordCountTarget.min > 0
+            ? `${wordCountTarget.min}–${wordCountTarget.max}`
+            : `≤${wordCountTarget.max}`;
+        setText('total-target', targetLabel);
+        setText('total-sentences', String(profile.sentenceCount));
+        setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
+        setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
+        setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
+        setText('unique-words', String(profile.vocabulary.uniqueWords));
+
+        // Phonology
+        const phon = profile.phonology;
+        setText('decodability', fmtPercent(phon.decodabilityScore));
+        setText('avg-syllables', fmtNumber(phon.averageSyllablesPerWord, 2));
+        const syl = phon.syllableTypes;
+        const entries = Object.entries(syl) as Array<[string, number]>;
+        const total = entries.reduce((a, [, n]) => a + n, 0);
+        if (total === 0) {
+          setText('top-syllable', '—');
+        } else {
+          entries.sort((a, b) => b[1] - a[1]);
+          const [topType, topCount] = entries[0];
+          const topPct = ((topCount / total) * 100).toFixed(0);
+          setText('top-syllable', `${topType} (${topPct}%)`);
+        }
+      }
+
+      function renderPerSpread(profile: ReadabilityProfile): void {
+        const list = byId('per-spread-list');
+        if (!list) return;
+        list.innerHTML = '';
+        for (const sp of profile.perSpread) {
+          const num = document.createElement('span');
+          num.className = 'ps-num';
+          num.textContent = String(sp.index);
+
+          const bar = document.createElement('div');
+          bar.className = 'ps-bar';
+          const fill = document.createElement('div');
+          fill.className = 'ps-bar-fill';
+          if (sp.wordCountCeiling === 0) {
+            fill.classList.add('wordless');
+          } else {
+            const ratio = sp.wordCount / sp.wordCountCeiling;
+            fill.style.width = `${Math.min(1, ratio) * 100}%`;
+            if (ratio > 1) fill.classList.add('over');
+            else if (ratio > 0.8) fill.classList.add('approaching');
+          }
+          bar.appendChild(fill);
+
+          const wc = document.createElement('span');
+          const isOver =
+            sp.wordCountCeiling > 0 && sp.wordCount > sp.wordCountCeiling;
+          if (sp.wordCountCeiling === 0) {
+            wc.className = 'ps-wc wordless';
+            wc.textContent = '— —';
+          } else {
+            wc.className = `ps-wc${isOver ? ' over' : ''}`;
+            wc.textContent = `${sp.wordCount}/${sp.wordCountCeiling}`;
+          }
+          list.append(num, bar, wc);
+        }
+      }
+
+      function renderTileWordCounts(profile: ReadabilityProfile): void {
+        for (const sp of profile.perSpread) {
+          const wcEl = document.querySelector(
+            `[data-spread-wc="${sp.index}"]`,
+          );
+          const ceilingEl = document.querySelector(
+            `[data-spread-ceiling="${sp.index}"]`,
+          );
+          const tile = document.querySelector(`[data-spread="${sp.index}"]`);
+          if (wcEl) {
+            wcEl.textContent = String(sp.wordCount);
+            const isOver =
+              sp.wordCountCeiling > 0 && sp.wordCount > sp.wordCountCeiling;
+            wcEl.className = `spread-wc${isOver ? ' over' : ''}`;
+          }
+          if (ceilingEl) {
+            ceilingEl.textContent =
+              sp.wordCountCeiling > 0 ? `/ ${sp.wordCountCeiling}` : 'wordless';
+          }
+          if (tile) {
+            tile.classList.toggle('has-warning', sp.warnings.length > 0);
+            tile.classList.toggle('wordless', sp.wordCountCeiling === 0);
+          }
+        }
+      }
+
+      function renderReachWords(reach: ReachWord[]): void {
+        const list = byId('reach-list');
+        const empty = byId('reach-empty');
+        if (!list || !empty) return;
+        list.innerHTML = '';
+        if (reach.length === 0) {
+          empty.style.display = '';
           return;
         }
-        const list = document.createElement('ul');
-        list.className = 'warnings';
-        for (const w of warnings) {
+        empty.style.display = 'none';
+        for (const r of reach) {
+          const li = document.createElement('li');
+          const word = document.createElement('span');
+          word.className = 'word';
+          word.textContent = r.word;
+          const at = document.createElement('span');
+          at.className = 'at';
+          at.textContent = `spread ${r.spread}`;
+          li.append(word, at);
+          list.appendChild(li);
+        }
+      }
+
+      function renderWarnings(profile: ReadabilityProfile): void {
+        const list = byId('warning-list');
+        const empty = byId('warnings-empty');
+        if (!list || !empty) return;
+        const all: Warning[] = [...profile.warnings];
+        for (const sp of profile.perSpread) all.push(...sp.warnings);
+        list.innerHTML = '';
+        if (all.length === 0) {
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+        for (const w of all) {
           const li = document.createElement('li');
           li.className = w.severity;
           const code = document.createElement('span');
           code.className = 'code';
           code.textContent = w.code;
           const msg = document.createElement('span');
-          msg.textContent = w.message;
+          msg.textContent =
+            w.spread !== undefined ? `[spread ${w.spread}] ${w.message}` : w.message;
           li.append(code, msg);
           list.appendChild(li);
         }
-        container.replaceChildren(list);
       }
 
-      function renderReachWords(reach: ReachWord[]): void {
-        const container = document.getElementById('reach-container');
-        const help = document.getElementById('reach-help');
-        if (!container || !help) return;
-        if (reach.length === 0) {
-          container.innerHTML = '';
-          help.textContent = 'No reach words — every token is in Dolch or Fry.';
+      function updatePageWordCounts(web: WebManuscript): void {
+        for (const sp of web.spreads) {
+          for (const side of ['left', 'right'] as const) {
+            const page = side === 'left' ? sp.leftPage : sp.rightPage;
+            const count = (page.text.match(/\S+/g) ?? []).length;
+            const el = document.querySelector(
+              `[data-page-wc="${sp.index}-${side}"]`,
+            );
+            if (el) el.textContent = count === 0 ? '' : String(count);
+          }
+        }
+      }
+
+      function markEmptySpreads(web: WebManuscript): void {
+        for (const sp of web.spreads) {
+          const isEmpty =
+            !sp.leftPage.text.trim() &&
+            !sp.rightPage.text.trim() &&
+            sp.leftPage.placement === 'text-only' &&
+            sp.rightPage.placement === 'text-only';
+          const tile = document.querySelector(`[data-spread="${sp.index}"]`);
+          tile?.classList.toggle('empty', isEmpty);
+        }
+      }
+
+      function updateStatusBar(profile: ReadabilityProfile): void {
+        const w = byId('sb-words');
+        const t = byId('sb-target');
+        const s = byId('sb-sight');
+        const sp = byId('sb-spreads');
+        const wa = byId('sb-warnings');
+        if (w) {
+          w.textContent = String(profile.wordCount);
+          let cls = '';
+          if (profile.wordCount > profile.wordCountTarget.max) cls = 'over';
+          else if (
+            profile.wordCountTarget.min > 0 &&
+            profile.wordCount < profile.wordCountTarget.min
+          )
+            cls = 'under';
+          w.className = `status-val ${cls}`.trim();
+        }
+        if (t) {
+          t.textContent =
+            profile.wordCountTarget.min > 0
+              ? `/ ${profile.wordCountTarget.min}–${profile.wordCountTarget.max}`
+              : `/ ${profile.wordCountTarget.max}`;
+        }
+        if (s) {
+          s.textContent = `${(profile.vocabulary.sightWordCoverage * 100).toFixed(0)}%`;
+        }
+        if (sp) {
+          sp.textContent = String(
+            profile.perSpread.filter((p) => p.wordCount > 0).length,
+          );
+        }
+        const dc = byId('sb-decode');
+        if (dc) {
+          dc.textContent =
+            profile.wordCount === 0
+              ? '—'
+              : `${(profile.phonology.decodabilityScore * 100).toFixed(0)}%`;
+          dc.className = 'status-val';
+        }
+        if (wa) {
+          const all =
+            profile.warnings.length +
+            profile.perSpread.reduce((acc, p) => acc + p.warnings.length, 0);
+          wa.textContent = String(all);
+          wa.className = `status-val${all > 0 ? ' over' : ''}`;
+        }
+      }
+
+      function escapeRegex(s: string): string {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
+
+      /**
+       * Paint reach-word highlights inside every page editor using the
+       * CSS Custom Highlight API. No DOM modification — the highlight
+       * is a separate paint layer the browser draws over arbitrary
+       * Range objects. Re-applied after every analyze() pass.
+       *
+       * Falls back silently in browsers without the API.
+       */
+      function applyReachWordHighlights(profile: ReadabilityProfile): void {
+        const HighlightCtor = (window as unknown as {
+          Highlight?: new (...ranges: Range[]) => unknown;
+        }).Highlight;
+        const highlights = (CSS as unknown as {
+          highlights?: Map<string, unknown>;
+        }).highlights;
+        if (!HighlightCtor || !highlights) return;
+
+        if (profile.reachWords.length === 0) {
+          highlights.delete('reach-word');
           return;
         }
-        help.textContent =
-          'Tokens outside the Dolch + Fry sight-word lists. Each word is shown on the spread it first appears.';
-        const bySpread = new Map<number, string[]>();
-        for (const r of reach) {
-          const list = bySpread.get(r.spread) ?? [];
-          list.push(r.word);
-          bySpread.set(r.spread, list);
-        }
-        const frag = document.createDocumentFragment();
-        for (const spread of [...bySpread.keys()].sort((a, b) => a - b)) {
-          const words = bySpread.get(spread)!;
-          const group = document.createElement('div');
-          group.className = 'spread-group';
-          const label = document.createElement('div');
-          label.className = 'spread-label';
-          label.textContent = `Spread ${spread} · ${words.length} word${words.length === 1 ? '' : 's'}`;
-          const wordsEl = document.createElement('div');
-          wordsEl.className = 'spread-words';
-          wordsEl.textContent = words.join(', ');
-          group.append(label, wordsEl);
-          frag.appendChild(group);
-        }
-        container.replaceChildren(frag);
-      }
 
-      function render(profile: ReadabilityProfile): void {
-        const { wordCount, wordCountTarget } = profile;
-        let countClass = '';
-        let qualifier = `target ≤${wordCountTarget.max}`;
-        if (wordCountTarget.min > 0) {
-          qualifier = `target ${wordCountTarget.min}–${wordCountTarget.max}`;
-        }
-        if (wordCount > wordCountTarget.max) countClass = 'over';
-        else if (wordCountTarget.min > 0 && wordCount < wordCountTarget.min) {
-          countClass = 'under';
-        }
-        const wcEl = document.getElementById('word-count');
-        if (wcEl) {
-          wcEl.className = `value ${countClass}`.trim();
-          wcEl.innerHTML = `${wordCount}<span class="qualifier">${qualifier}</span>`;
+        const reachWords = Array.from(
+          new Set(profile.reachWords.map((r) => r.word.toLowerCase())),
+        );
+        const pattern = new RegExp(
+          `\\b(?:${reachWords.map(escapeRegex).join('|')})\\b`,
+          'gi',
+        );
+
+        const ranges: Range[] = [];
+        const surface = byId('editor-surface');
+        if (!surface) return;
+        const editors = surface.querySelectorAll('.page-editor-editable');
+        for (const editor of editors) {
+          const walker = document.createTreeWalker(
+            editor,
+            NodeFilter.SHOW_TEXT,
+          );
+          let node: Node | null;
+          while ((node = walker.nextNode())) {
+            const text = node.textContent ?? '';
+            pattern.lastIndex = 0;
+            let m: RegExpExecArray | null;
+            while ((m = pattern.exec(text)) !== null) {
+              const range = new Range();
+              range.setStart(node, m.index);
+              range.setEnd(node, m.index + m[0].length);
+              ranges.push(range);
+            }
+          }
         }
 
-        setText('sentence-count', String(profile.sentenceCount));
-        setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
-        setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
-        setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
-        setText('unique-words', String(profile.vocabulary.uniqueWords));
-
-        renderWarnings(profile.warnings);
-        renderReachWords(profile.reachWords);
-
-        document.getElementById('results')?.classList.add('visible');
+        const highlight = new HighlightCtor(...ranges);
+        highlights.set('reach-word', highlight);
       }
 
       function runAnalysis(): void {
-        const textarea = document.getElementById('manuscript') as HTMLTextAreaElement | null;
-        const select = document.getElementById('age-band') as HTMLSelectElement | null;
-        if (!textarea || !select) return;
-        const text = textarea.value;
-        if (text.trim().length === 0) return;
-        const ageBand = select.value as AgeBand;
-        const manuscript = buildManuscript(text, ageBand);
-        const profile = analyze(manuscript);
-        render(profile);
+        const web = readManuscript();
+        const engine = toEngineManuscript(web);
+        const profile = analyze(engine);
+        markEmptySpreads(web);
+        updatePageWordCounts(web);
+        renderTopMetrics(profile);
+        renderTileWordCounts(profile);
+        renderPerSpread(profile);
+        renderReachWords(profile.reachWords);
+        renderWarnings(profile);
+        updateStatusBar(profile);
+        applyReachWordHighlights(profile);
       }
 
-      document.getElementById('analyze-form')?.addEventListener('submit', (e) => {
-        e.preventDefault();
+      let debounceTimer: number | null = null;
+      function scheduleAnalysis(): void {
+        if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(runAnalysis, DEBOUNCE_MS);
+      }
+
+      document.addEventListener('input', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!t) return;
+        if (t.id === 'age-band' || t.id === 'trim-size') {
+          scheduleAnalysis();
+        }
+      });
+
+      // Lexical editors dispatch this on every editor-state change;
+      // covers typing, paste, undo/redo, programmatic setText.
+      document.addEventListener('page-text-change', () => {
+        scheduleAnalysis();
+      });
+
+      // Each PageEditor announces itself on mount. The first hydration
+      // triggers a debounced analysis; the rest coalesce into the same
+      // tick. After ~250 ms the analysis sees all 32 editors ready.
+      document.addEventListener('page-editor-ready', () => {
+        scheduleAnalysis();
+      });
+
+      document.addEventListener('change', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!t) return;
+        if (t.matches?.('.page-placement')) {
+          const page = t.closest('.page');
+          if (page) {
+            page.setAttribute(
+              'data-placement',
+              (t as HTMLSelectElement).value,
+            );
+          }
+          runAnalysis();
+        } else if (t.id === 'age-band' || t.id === 'trim-size') {
+          if (t.id === 'trim-size') applyTrimAspect();
+          runAnalysis();
+        }
+      });
+
+      function setPage(
+        spread: number,
+        side: 'left' | 'right',
+        text: string,
+        placement: PagePlacement,
+      ): void {
+        const handle = (window as unknown as {
+          __pageEditors?: Record<string, { setText: (s: string) => void }>;
+        }).__pageEditors?.[`${spread}-${side}`];
+        handle?.setText(text);
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        const page = document.querySelector(`[data-page="${spread}-${side}"]`);
+        if (sel) sel.value = placement;
+        page?.setAttribute('data-placement', placement);
+      }
+
+      function loadSample(key: string): void {
+        const sample = SAMPLES[key];
+        if (!sample) return;
+        const ageSel = byId('age-band') as HTMLSelectElement | null;
+        if (ageSel) ageSel.value = sample.ageBand;
+        const spreads = sample.text
+          .split(/\n\s*\n/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const text = spreads[i - 1] ?? '';
+          // Convention: load all of the spread's text onto the left page;
+          // right page becomes a full-bleed illustration when the spread
+          // has any text, otherwise both pages are blank text-only.
+          setPage(i, 'left', text, 'text-only');
+          setPage(i, 'right', '', text ? 'illustration-only' : 'text-only');
+        }
+        runAnalysis();
+      }
+
+      byId('sample-loader')?.addEventListener('change', (e) => {
+        const sel = e.target as HTMLSelectElement;
+        if (sel.value) {
+          loadSample(sel.value);
+          sel.value = '';
+        }
+      });
+
+      byId('body-font')?.addEventListener('change', applyBodyFont);
+
+      byId('layout-preset')?.addEventListener('change', (e) => {
+        const sel = e.target as HTMLSelectElement;
+        if (sel.value) {
+          applyLayoutPreset(sel.value);
+          sel.value = '';
+        }
+      });
+
+      byId('sidebar-toggle')?.addEventListener('click', () => {
+        const collapsed = document.body.classList.toggle('sidebar-collapsed');
+        const btn = byId('sidebar-toggle');
+        if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
+      });
+
+      byId('reset-btn')?.addEventListener('click', () => {
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          setPage(i, 'left', '', 'text-only');
+          setPage(i, 'right', '', 'text-only');
+        }
         runAnalysis();
       });
 
-      for (const btn of document.querySelectorAll<HTMLButtonElement>('button[data-sample]')) {
-        btn.addEventListener('click', () => {
-          const key = btn.dataset.sample;
-          if (!key) return;
-          const sample = SAMPLES[key];
-          if (!sample) return;
-          const textarea = document.getElementById('manuscript') as HTMLTextAreaElement | null;
-          const select = document.getElementById('age-band') as HTMLSelectElement | null;
-          if (!textarea || !select) return;
-          textarea.value = sample.text;
-          select.value = sample.ageBand;
-          runAnalysis();
+      // ---- view mode (grid / book) ----
+      const ASPECT_BY_TRIM: Record<string, number> = {
+        STANDARD_PORTRAIT: 1.6,
+        STANDARD_LANDSCAPE: 2.5,
+        SQUARE: 2.0,
+      };
+
+      function applyTrimAspect(): void {
+        const trimSel = byId('trim-size') as HTMLSelectElement | null;
+        const key = trimSel?.value ?? 'STANDARD_PORTRAIT';
+        document.documentElement.style.setProperty(
+          '--spread-aspect',
+          String(ASPECT_BY_TRIM[key] ?? 1.6),
+        );
+      }
+
+      // ---- body font ----
+      const FONTS: Record<string, { family: string; weight: number }> = {
+        caslon: {
+          family: '"Libre Caslon Text", Georgia, serif',
+          weight: 400,
+        },
+        futura: {
+          family: '"Futura", "Futura PT", "Trebuchet MS", system-ui, sans-serif',
+          weight: 400,
+        },
+        'futura-bold': {
+          family: '"Futura", "Futura PT", "Trebuchet MS", system-ui, sans-serif',
+          weight: 700,
+        },
+        atkinson: {
+          family: '"Atkinson Hyperlegible", system-ui, sans-serif',
+          weight: 400,
+        },
+        bricolage: {
+          family: '"Bricolage Grotesque", system-ui, sans-serif',
+          weight: 400,
+        },
+      };
+
+      function applyBodyFont(): void {
+        const sel = byId('body-font') as HTMLSelectElement | null;
+        const key = sel?.value ?? 'caslon';
+        const font = FONTS[key] ?? FONTS.caslon;
+        document.documentElement.style.setProperty(
+          '--body-font-family',
+          font.family,
+        );
+        document.documentElement.style.setProperty(
+          '--body-font-weight',
+          String(font.weight),
+        );
+      }
+
+      // ---- layout presets ----
+      // Presets only touch placements, never text content.
+      type Placements = { left: PagePlacement; right: PagePlacement };
+      const LAYOUT_PRESETS: Record<string, (idx: number) => Placements> = {
+        classic: () => ({ left: 'text-only', right: 'illustration-only' }),
+        mirror: (i) =>
+          i % 2 === 1
+            ? { left: 'text-only', right: 'illustration-only' }
+            : { left: 'illustration-only', right: 'text-only' },
+        'text-top': () => ({ left: 'text-top', right: 'text-top' }),
+        'full-text': () => ({ left: 'text-only', right: 'text-only' }),
+      };
+
+      function setPlacement(
+        spread: number,
+        side: 'left' | 'right',
+        placement: PagePlacement,
+      ): void {
+        const sel = document.querySelector(
+          `[data-page-placement="${spread}-${side}"]`,
+        ) as HTMLSelectElement | null;
+        const page = document.querySelector(`[data-page="${spread}-${side}"]`);
+        if (sel) sel.value = placement;
+        page?.setAttribute('data-placement', placement);
+      }
+
+      function applyLayoutPreset(key: string): void {
+        const fn = LAYOUT_PRESETS[key];
+        if (!fn) return;
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const { left, right } = fn(i);
+          setPlacement(i, 'left', left);
+          setPlacement(i, 'right', right);
+        }
+        runAnalysis();
+      }
+
+      function currentSpreadIndex(): number {
+        const surface = byId('editor-surface');
+        if (!surface || surface.getAttribute('data-view') !== 'book') return 0;
+        const tiles = surface.querySelectorAll<HTMLElement>('.spread');
+        const surfRect = surface.getBoundingClientRect();
+        let bestIdx = 0;
+        let bestVisible = 0;
+        tiles.forEach((tile, i) => {
+          const r = tile.getBoundingClientRect();
+          const v = Math.max(
+            0,
+            Math.min(r.right, surfRect.right) - Math.max(r.left, surfRect.left),
+          );
+          if (v > bestVisible) {
+            bestVisible = v;
+            bestIdx = i;
+          }
+        });
+        return bestIdx;
+      }
+
+      function updateSpreadCounter(): void {
+        const counter = byId('spread-counter');
+        const prevBtn = byId('nav-prev') as HTMLButtonElement | null;
+        const nextBtn = byId('nav-next') as HTMLButtonElement | null;
+        if (!counter) return;
+        const idx = currentSpreadIndex();
+        counter.textContent = `Spread ${idx + 1} of ${SPREAD_COUNT}`;
+        if (prevBtn) prevBtn.disabled = idx <= 0;
+        if (nextBtn) nextBtn.disabled = idx >= SPREAD_COUNT - 1;
+      }
+
+      function scrollToSpread(idx: number): void {
+        const clamped = Math.max(0, Math.min(SPREAD_COUNT - 1, idx));
+        const tile = document.querySelector(`[data-spread="${clamped + 1}"]`);
+        tile?.scrollIntoView({
+          block: 'nearest',
+          inline: 'center',
+          behavior: 'smooth',
         });
       }
+
+      function setViewMode(mode: 'grid' | 'book'): void {
+        const surface = byId('editor-surface');
+        if (!surface) return;
+        surface.setAttribute('data-view', mode);
+        document.body.classList.toggle('book-mode', mode === 'book');
+        for (const btn of document.querySelectorAll<HTMLButtonElement>(
+          '[data-view-set]',
+        )) {
+          btn.classList.toggle('active', btn.dataset.viewSet === mode);
+        }
+        if (mode === 'book') {
+          requestAnimationFrame(() => {
+            const first = document.querySelector('[data-spread="1"]');
+            first?.scrollIntoView({ block: 'nearest', inline: 'center' });
+            updateSpreadCounter();
+          });
+        }
+      }
+
+      for (const btn of document.querySelectorAll<HTMLButtonElement>(
+        '[data-view-set]',
+      )) {
+        btn.addEventListener('click', () => {
+          setViewMode(btn.dataset.viewSet as 'grid' | 'book');
+        });
+      }
+
+      byId('nav-prev')?.addEventListener('click', () => {
+        scrollToSpread(currentSpreadIndex() - 1);
+      });
+      byId('nav-next')?.addEventListener('click', () => {
+        scrollToSpread(currentSpreadIndex() + 1);
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (!document.body.classList.contains('book-mode')) return;
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+        if (e.key === 'ArrowLeft') {
+          scrollToSpread(currentSpreadIndex() - 1);
+          e.preventDefault();
+        } else if (e.key === 'ArrowRight') {
+          scrollToSpread(currentSpreadIndex() + 1);
+          e.preventDefault();
+        }
+      });
+
+      byId('editor-surface')?.addEventListener('scroll', () => {
+        if (document.body.classList.contains('book-mode')) updateSpreadCounter();
+      });
+
+      applyTrimAspect();
+      applyBodyFont();
+      runAnalysis();
     </script>
   </body>
 </html>

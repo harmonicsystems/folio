@@ -12,7 +12,7 @@ This monorepo holds two related products that share one engine:
 
 2. **Folio** — a future syncing iPad/macOS authoring app for writer-illustrator teams, built on the engine. Not in this repo yet.
 
-In between, there's a CLI (`packages/cli/`) and a web alpha (`packages/web/`) — the engine's first usable interfaces. The web alpha runs `analyze()` in the browser and ships two surfaces: a paste-and-analyze page at `/` and a spread-first editor at `/editor` (16 tiles, per-spread analysis, live updates). Run with `pnpm --filter @harmonic-systems/folio-web dev`.
+In between, there's a CLI (`packages/cli/`) and a web alpha (`packages/web/`) — the engine's first usable interfaces. The web alpha runs `analyze()` in the browser and ships two surfaces: a spread-first editor at `/` (16 spreads, two facing pages each, rich text, in-line reach-word underlining, grid + book views, live updates) and a paste-and-analyze fallback at `/paste`. Run with `pnpm --filter @harmonic-systems/folio-web dev`.
 
 ## Status
 
