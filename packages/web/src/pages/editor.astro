@@ -1,0 +1,547 @@
+---
+import type { AgeBand } from '@harmonic-systems/early-literacy';
+
+const ageBands: { id: AgeBand; label: string; range: string }[] = [
+  { id: 'board', label: 'Board book', range: '0–3' },
+  { id: 'early-picture', label: 'Early picture', range: '0–3' },
+  { id: 'picture', label: 'Picture book', range: '3–7' },
+  { id: 'early-reader', label: 'Early reader', range: '5–9' },
+  { id: 'chapter', label: 'Chapter book', range: '7–10' },
+];
+
+const trimSizes = [
+  { id: 'STANDARD_PORTRAIT', label: '8 × 10 portrait' },
+  { id: 'STANDARD_LANDSCAPE', label: '10 × 8 landscape' },
+  { id: 'SQUARE', label: '9 × 9 square' },
+];
+
+const SPREAD_COUNT = 16;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Folio — spread-first manuscript editor for picture books and early-reader literature."
+    />
+    <title>Folio — spread editor</title>
+    <style>
+      :root {
+        --cream: #f7f1e6;
+        --beige: #ece2cf;
+        --taupe: #8a7c66;
+        --ink: #2c2620;
+        --rule: #d9cdb4;
+        --ochre: #a37828;
+        --rust: #9a4a2a;
+        --surface: #ffffff;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--cream); color: var(--ink);
+        font-family: ui-serif, Georgia, 'Times New Roman', serif;
+        line-height: 1.5;
+      }
+
+      .topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.75rem 1.5rem; background: var(--surface);
+        border-bottom: 1px solid var(--rule);
+        position: sticky; top: 0; z-index: 10; gap: 1rem; flex-wrap: wrap;
+      }
+      .brand { display: flex; align-items: baseline; gap: 0.5rem; }
+      .brand-mark { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; }
+      .brand-sub {
+        font-size: 0.75rem; color: var(--taupe);
+        text-transform: lowercase; letter-spacing: 0.04em;
+      }
+
+      .controls { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
+      .control { display: flex; flex-direction: column; gap: 0.25rem; }
+      .control-label {
+        font-size: 0.7rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--taupe);
+      }
+      .control select, .control button {
+        padding: 0.4rem 0.6rem; font: inherit; font-size: 0.85rem;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 2px; color: var(--ink);
+      }
+      .control button { cursor: pointer; }
+      .control button:hover { background: var(--beige); }
+
+      .workspace {
+        display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;
+        padding: 1.5rem; max-width: 1400px; margin: 0 auto;
+      }
+      @media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }
+
+      .editor-surface {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+      .spread {
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px; padding: 0.75rem;
+        display: flex; flex-direction: column; gap: 0.5rem;
+      }
+      .spread.has-warning { border-color: var(--ochre); }
+      .spread-header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.5rem;
+      }
+      .spread-number {
+        font-size: 0.75rem; color: var(--taupe);
+        text-transform: uppercase; letter-spacing: 0.06em;
+      }
+      .spread-placement {
+        font-size: 0.75rem; padding: 0.2rem 0.4rem;
+        background: var(--cream); border: 1px solid var(--rule);
+        border-radius: 2px; color: var(--ink); font-family: inherit;
+      }
+      .spread-text {
+        flex: 1; min-height: 8rem; resize: vertical;
+        border: none; outline: none; background: transparent;
+        font-family: ui-serif, Georgia, serif;
+        font-size: 0.9rem; line-height: 1.5; color: var(--ink);
+        padding: 0;
+      }
+      .spread.wordless .spread-text {
+        font-style: italic; color: var(--taupe);
+      }
+      .spread-footer {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 0.5rem; font-size: 0.75rem; color: var(--taupe);
+      }
+      .spread-wc { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+      .spread-wc.over { color: var(--rust); }
+
+      .sidebar {
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px; padding: 1rem;
+        position: sticky; top: 5rem; align-self: start;
+        max-height: calc(100vh - 6rem); overflow-y: auto;
+      }
+      .sidebar h3 {
+        font-size: 0.85rem; text-transform: uppercase;
+        letter-spacing: 0.08em; color: var(--taupe);
+        margin: 0 0 0.5rem; font-weight: 600;
+      }
+      .sidebar h3:not(:first-child) { margin-top: 1.5rem; }
+      .metric-row {
+        display: flex; justify-content: space-between; align-items: baseline;
+        padding: 0.4rem 0; border-bottom: 1px solid var(--rule);
+        font-size: 0.85rem;
+      }
+      .metric-row .label { color: var(--taupe); }
+      .metric-row .value { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+      .metric-row .value.over { color: var(--rust); }
+      .metric-row .value.under { color: var(--ochre); }
+
+      .per-spread-list {
+        list-style: none; padding: 0; margin: 0;
+        display: grid; grid-template-columns: auto 1fr auto;
+        gap: 0.25rem 0.6rem; font-size: 0.8rem;
+      }
+      .ps-num { color: var(--taupe); }
+      .ps-label { color: var(--ink); }
+      .ps-wc { font-family: ui-monospace, monospace; text-align: right; }
+      .ps-wc.over { color: var(--rust); }
+
+      .reach-list { list-style: none; padding: 0; margin: 0; }
+      .reach-list li {
+        padding: 0.3rem 0; border-bottom: 1px solid var(--rule);
+        font-size: 0.8rem;
+        display: flex; justify-content: space-between; gap: 0.5rem;
+      }
+      .reach-list .word { font-family: ui-monospace, monospace; color: var(--rust); }
+      .reach-list .at { color: var(--taupe); }
+
+      .warning-list { list-style: none; padding: 0; margin: 0; }
+      .warning-list li {
+        padding: 0.5rem; margin-bottom: 0.5rem;
+        background: var(--cream); border-left: 3px solid var(--rule);
+        font-size: 0.8rem;
+      }
+      .warning-list li.warning { border-left-color: var(--ochre); }
+      .warning-list li.error { border-left-color: var(--rust); }
+      .warning-list li.info { border-left-color: var(--taupe); }
+      .warning-list .code {
+        font-family: ui-monospace, monospace; font-size: 0.7rem;
+        color: var(--taupe); text-transform: uppercase;
+        letter-spacing: 0.06em; margin-right: 0.5rem;
+      }
+
+      .empty {
+        color: var(--taupe); font-style: italic;
+        font-size: 0.8rem; margin: 0.25rem 0;
+      }
+
+      footer.footnote {
+        padding: 1.5rem; text-align: center;
+        color: var(--taupe); font-size: 0.8rem;
+        border-top: 1px solid var(--rule); background: var(--surface);
+      }
+      footer.footnote a { color: var(--taupe); }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">Folio</span>
+        <span class="brand-sub">spread editor</span>
+      </div>
+
+      <div class="controls">
+        <label class="control">
+          <span class="control-label">Age band</span>
+          <select id="age-band">
+            {ageBands.map((b) => (
+              <option value={b.id} selected={b.id === 'picture'}>
+                {b.label} · {b.range}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label class="control">
+          <span class="control-label">Trim</span>
+          <select id="trim-size">
+            {trimSizes.map((t) => (
+              <option value={t.id} selected={t.id === 'STANDARD_PORTRAIT'}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="control">
+          <span class="control-label">Reset</span>
+          <button id="reset-btn" type="button">Clear all spreads</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section
+        class="editor-surface"
+        id="editor-surface"
+        aria-label="Manuscript spreads"
+      >
+        {Array.from({ length: SPREAD_COUNT }, (_, i) => i + 1).map((index) => (
+          <article class="spread" data-spread={index} data-placement="text-left">
+            <header class="spread-header">
+              <span class="spread-number">Spread {index}</span>
+              <select class="spread-placement" data-spread-placement={index} aria-label={`Spread ${index} placement`}>
+                <option value="text-left" selected>text left</option>
+                <option value="text-right">text right</option>
+                <option value="text-top">text top</option>
+                <option value="text-bottom">text bottom</option>
+                <option value="wordless">wordless</option>
+              </select>
+            </header>
+            <textarea
+              class="spread-text"
+              data-spread-text={index}
+              placeholder="…"
+              spellcheck="false"
+              aria-label={`Spread ${index} text`}
+            ></textarea>
+            <footer class="spread-footer">
+              <span class="spread-wc" data-spread-wc={index}>0</span>
+              <span class="spread-wc-target" data-spread-ceiling={index}>/ —</span>
+            </footer>
+          </article>
+        ))}
+      </section>
+
+      <aside class="sidebar" aria-label="Readability profile">
+        <h3>Length</h3>
+        <div class="metric-row">
+          <span class="label">Word count</span>
+          <span class="value" id="total-words">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Target</span>
+          <span class="value" id="total-target">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Sentences</span>
+          <span class="value" id="total-sentences">0</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Avg sentence length</span>
+          <span class="value" id="avg-sentence">—</span>
+        </div>
+
+        <h3>Vocabulary</h3>
+        <div class="metric-row">
+          <span class="label">Sight-word coverage</span>
+          <span class="value" id="sight-coverage">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Type-token ratio</span>
+          <span class="value" id="ttr">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Unique words</span>
+          <span class="value" id="unique-words">0</span>
+        </div>
+
+        <h3>Per spread</h3>
+        <ol class="per-spread-list" id="per-spread-list"></ol>
+
+        <h3>Reach words</h3>
+        <p class="empty" id="reach-empty">
+          Tokens outside Dolch + Fry will appear here.
+        </p>
+        <ul class="reach-list" id="reach-list"></ul>
+
+        <h3>Warnings</h3>
+        <p class="empty" id="warnings-empty">None.</p>
+        <ul class="warning-list" id="warning-list"></ul>
+      </aside>
+    </main>
+
+    <footer class="footnote">
+      <a href="/">paste-and-analyze</a> · Harmonic Systems
+    </footer>
+
+    <script>
+      import { analyze } from '@harmonic-systems/early-literacy';
+      import type {
+        AgeBand,
+        ReachWord,
+        ReadabilityProfile,
+        Warning,
+      } from '@harmonic-systems/early-literacy';
+      import {
+        toEngineManuscript,
+        TRIM_SIZES,
+        type SpreadPlacement,
+        type WebManuscript,
+        type WebSpread,
+      } from '../types.js';
+
+      const SPREAD_COUNT = 16;
+      const DEBOUNCE_MS = 250;
+
+      function byId(id: string): HTMLElement | null {
+        return document.getElementById(id);
+      }
+
+      function readManuscript(): WebManuscript {
+        const ageSel = byId('age-band') as HTMLSelectElement | null;
+        const trimSel = byId('trim-size') as HTMLSelectElement | null;
+        const ageBand = (ageSel?.value as AgeBand) ?? 'picture';
+        const trimKey = trimSel?.value ?? 'STANDARD_PORTRAIT';
+        const trimSize = TRIM_SIZES[trimKey] ?? TRIM_SIZES.STANDARD_PORTRAIT;
+        const spreads: WebSpread[] = [];
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const ta = document.querySelector(
+            `[data-spread-text="${i}"]`,
+          ) as HTMLTextAreaElement | null;
+          const sel = document.querySelector(
+            `[data-spread-placement="${i}"]`,
+          ) as HTMLSelectElement | null;
+          const placement = (sel?.value ?? 'text-left') as SpreadPlacement;
+          spreads.push({ index: i, text: ta?.value ?? '', placement });
+        }
+        return { ageBand, trimSize, spreads };
+      }
+
+      function fmtPercent(n: number): string {
+        return `${(n * 100).toFixed(1)}%`;
+      }
+
+      function fmtNumber(n: number, digits = 2): string {
+        return Number.isFinite(n) ? n.toFixed(digits) : '—';
+      }
+
+      function setText(id: string, value: string, cls = ''): void {
+        const el = byId(id);
+        if (!el) return;
+        el.textContent = value;
+        el.className = `value ${cls}`.trim();
+      }
+
+      function renderTopMetrics(profile: ReadabilityProfile): void {
+        const { wordCount, wordCountTarget } = profile;
+        let countClass = '';
+        if (wordCount > wordCountTarget.max) countClass = 'over';
+        else if (wordCountTarget.min > 0 && wordCount < wordCountTarget.min) {
+          countClass = 'under';
+        }
+        setText('total-words', String(wordCount), countClass);
+        const targetLabel =
+          wordCountTarget.min > 0
+            ? `${wordCountTarget.min}–${wordCountTarget.max}`
+            : `≤${wordCountTarget.max}`;
+        setText('total-target', targetLabel);
+        setText('total-sentences', String(profile.sentenceCount));
+        setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
+        setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
+        setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
+        setText('unique-words', String(profile.vocabulary.uniqueWords));
+      }
+
+      function renderPerSpread(profile: ReadabilityProfile): void {
+        const list = byId('per-spread-list');
+        if (!list) return;
+        list.innerHTML = '';
+        for (const sp of profile.perSpread) {
+          const num = document.createElement('span');
+          num.className = 'ps-num';
+          num.textContent = String(sp.index);
+          const label = document.createElement('span');
+          label.className = 'ps-label';
+          label.textContent = sp.wordCountCeiling === 0 ? 'wordless' : '';
+          const wc = document.createElement('span');
+          const isOver =
+            sp.wordCountCeiling > 0 && sp.wordCount > sp.wordCountCeiling;
+          wc.className = `ps-wc${isOver ? ' over' : ''}`;
+          wc.textContent =
+            sp.wordCountCeiling > 0
+              ? `${sp.wordCount}/${sp.wordCountCeiling}`
+              : `${sp.wordCount}`;
+          list.append(num, label, wc);
+        }
+      }
+
+      function renderTileWordCounts(profile: ReadabilityProfile): void {
+        for (const sp of profile.perSpread) {
+          const wcEl = document.querySelector(
+            `[data-spread-wc="${sp.index}"]`,
+          );
+          const ceilingEl = document.querySelector(
+            `[data-spread-ceiling="${sp.index}"]`,
+          );
+          const tile = document.querySelector(`[data-spread="${sp.index}"]`);
+          if (wcEl) {
+            wcEl.textContent = String(sp.wordCount);
+            const isOver =
+              sp.wordCountCeiling > 0 && sp.wordCount > sp.wordCountCeiling;
+            wcEl.className = `spread-wc${isOver ? ' over' : ''}`;
+          }
+          if (ceilingEl) {
+            ceilingEl.textContent =
+              sp.wordCountCeiling > 0 ? `/ ${sp.wordCountCeiling}` : 'wordless';
+          }
+          if (tile) {
+            tile.classList.toggle('has-warning', sp.warnings.length > 0);
+            tile.classList.toggle('wordless', sp.wordCountCeiling === 0);
+          }
+        }
+      }
+
+      function renderReachWords(reach: ReachWord[]): void {
+        const list = byId('reach-list');
+        const empty = byId('reach-empty');
+        if (!list || !empty) return;
+        list.innerHTML = '';
+        if (reach.length === 0) {
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+        for (const r of reach) {
+          const li = document.createElement('li');
+          const word = document.createElement('span');
+          word.className = 'word';
+          word.textContent = r.word;
+          const at = document.createElement('span');
+          at.className = 'at';
+          at.textContent = `spread ${r.spread}`;
+          li.append(word, at);
+          list.appendChild(li);
+        }
+      }
+
+      function renderWarnings(profile: ReadabilityProfile): void {
+        const list = byId('warning-list');
+        const empty = byId('warnings-empty');
+        if (!list || !empty) return;
+        const all: Warning[] = [...profile.warnings];
+        for (const sp of profile.perSpread) all.push(...sp.warnings);
+        list.innerHTML = '';
+        if (all.length === 0) {
+          empty.style.display = '';
+          return;
+        }
+        empty.style.display = 'none';
+        for (const w of all) {
+          const li = document.createElement('li');
+          li.className = w.severity;
+          const code = document.createElement('span');
+          code.className = 'code';
+          code.textContent = w.code;
+          const msg = document.createElement('span');
+          msg.textContent =
+            w.spread !== undefined ? `[spread ${w.spread}] ${w.message}` : w.message;
+          li.append(code, msg);
+          list.appendChild(li);
+        }
+      }
+
+      function runAnalysis(): void {
+        const web = readManuscript();
+        const engine = toEngineManuscript(web);
+        const profile = analyze(engine);
+        renderTopMetrics(profile);
+        renderTileWordCounts(profile);
+        renderPerSpread(profile);
+        renderReachWords(profile.reachWords);
+        renderWarnings(profile);
+      }
+
+      let debounceTimer: number | null = null;
+      function scheduleAnalysis(): void {
+        if (debounceTimer !== null) window.clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(runAnalysis, DEBOUNCE_MS);
+      }
+
+      document.addEventListener('input', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!t) return;
+        if (
+          t.matches?.('.spread-text') ||
+          t.matches?.('.spread-placement') ||
+          t.id === 'age-band' ||
+          t.id === 'trim-size'
+        ) {
+          scheduleAnalysis();
+        }
+      });
+
+      document.addEventListener('change', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!t) return;
+        if (
+          t.matches?.('.spread-placement') ||
+          t.id === 'age-band' ||
+          t.id === 'trim-size'
+        ) {
+          runAnalysis();
+        }
+      });
+
+      byId('reset-btn')?.addEventListener('click', () => {
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const ta = document.querySelector(
+            `[data-spread-text="${i}"]`,
+          ) as HTMLTextAreaElement | null;
+          if (ta) ta.value = '';
+          const sel = document.querySelector(
+            `[data-spread-placement="${i}"]`,
+          ) as HTMLSelectElement | null;
+          if (sel) sel.value = 'text-left';
+        }
+        runAnalysis();
+      });
+
+      runAnalysis();
+    </script>
+  </body>
+</html>
