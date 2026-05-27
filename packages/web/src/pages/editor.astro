@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import type { AgeBand } from '@harmonic-systems/early-literacy';
+import PageEditor from '../components/PageEditor.tsx';
 
 const ageBands: { id: AgeBand; label: string; range: string }[] = [
   { id: 'board', label: 'Board book', range: '0–3' },
@@ -212,6 +213,26 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.9rem; line-height: 1.5; color: var(--ink);
         padding: 0; min-width: 0;
       }
+      /* Lexical shell: positions the placeholder absolutely over the
+         contenteditable so empty pages still show the hint. */
+      .page-editor-shell {
+        position: relative; flex: 1;
+        display: flex; min-width: 0;
+      }
+      .page-editor-editable {
+        overflow-y: auto;
+        min-height: 1.5em;
+      }
+      .page-editor-placeholder {
+        position: absolute; top: 0; left: 0;
+        pointer-events: none;
+        color: var(--taupe); opacity: 0.5;
+        font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+        font-weight: var(--body-font-weight, 400);
+        font-size: 0.9rem; line-height: 1.5;
+      }
+      .page-editor-paragraph { margin: 0; padding: 0; }
+      .page-editor-paragraph + .page-editor-paragraph { margin-top: 0.5em; }
       .page-illustration {
         flex: 1;
         background: var(--cream);
@@ -563,13 +584,12 @@ const SAMPLES: Record<string, Sample> = {
                     </select>
                   </div>
                   <div class="page-body">
-                    <textarea
-                      class="page-text"
-                      data-page-text={`${index}-${side}`}
+                    <PageEditor
+                      client:load
+                      spread={index}
+                      side={side}
                       placeholder="…"
-                      spellcheck="false"
-                      aria-label={`Spread ${index} ${side} page text`}
-                    ></textarea>
+                    />
                     <div class="page-illustration" aria-hidden="true"></div>
                   </div>
                 </div>
@@ -711,14 +731,15 @@ const SAMPLES: Record<string, Sample> = {
       }
 
       function readPage(spread: number, side: 'left' | 'right'): PageContent {
-        const ta = document.querySelector(
-          `[data-page-text="${spread}-${side}"]`,
-        ) as HTMLTextAreaElement | null;
         const sel = document.querySelector(
           `[data-page-placement="${spread}-${side}"]`,
         ) as HTMLSelectElement | null;
+        const text =
+          (window as unknown as {
+            __pageEditors?: Record<string, { getText: () => string }>;
+          }).__pageEditors?.[`${spread}-${side}`]?.getText() ?? '';
         return {
-          text: ta?.value ?? '',
+          text,
           placement: (sel?.value ?? 'text-only') as PagePlacement,
         };
       }
@@ -975,13 +996,22 @@ const SAMPLES: Record<string, Sample> = {
       document.addEventListener('input', (e) => {
         const t = e.target as HTMLElement | null;
         if (!t) return;
-        if (
-          t.matches?.('.page-text') ||
-          t.id === 'age-band' ||
-          t.id === 'trim-size'
-        ) {
+        if (t.id === 'age-band' || t.id === 'trim-size') {
           scheduleAnalysis();
         }
+      });
+
+      // Lexical editors dispatch this on every editor-state change;
+      // covers typing, paste, undo/redo, programmatic setText.
+      document.addEventListener('page-text-change', () => {
+        scheduleAnalysis();
+      });
+
+      // Each PageEditor announces itself on mount. The first hydration
+      // triggers a debounced analysis; the rest coalesce into the same
+      // tick. After ~250 ms the analysis sees all 32 editors ready.
+      document.addEventListener('page-editor-ready', () => {
+        scheduleAnalysis();
       });
 
       document.addEventListener('change', (e) => {
@@ -1008,14 +1038,14 @@ const SAMPLES: Record<string, Sample> = {
         text: string,
         placement: PagePlacement,
       ): void {
-        const ta = document.querySelector(
-          `[data-page-text="${spread}-${side}"]`,
-        ) as HTMLTextAreaElement | null;
+        const handle = (window as unknown as {
+          __pageEditors?: Record<string, { setText: (s: string) => void }>;
+        }).__pageEditors?.[`${spread}-${side}`];
+        handle?.setText(text);
         const sel = document.querySelector(
           `[data-page-placement="${spread}-${side}"]`,
         ) as HTMLSelectElement | null;
         const page = document.querySelector(`[data-page="${spread}-${side}"]`);
-        if (ta) ta.value = text;
         if (sel) sel.value = placement;
         page?.setAttribute('data-placement', placement);
       }
