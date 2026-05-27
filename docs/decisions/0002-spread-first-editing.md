@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Awaiting ratification.
+Accepted (2026-05-25). Production code in `packages/web/` may now rely on these decisions.
 
 ## Context
 

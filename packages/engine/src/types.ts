@@ -76,6 +76,41 @@ export interface ReadabilityProfile {
 
   /** Developmental warnings — text demanding more than the age band supports. */
   warnings: Warning[];
+
+  /**
+   * Per-spread analysis. One entry per `Manuscript.spreads` entry, in
+   * order. Spread-first authoring surfaces (e.g., the editor in
+   * `packages/web/`) bind sidebar panels to this.
+   *
+   * @see docs/decisions/0003-spread-native-engine-api.md
+   */
+  perSpread: SpreadProfile[];
+}
+
+/**
+ * Per-spread analysis. Indexed parallel to `Manuscript.spreads`.
+ *
+ * Per-spread word-count signals (`wordCountCeiling`, the
+ * `SPREAD_WORD_COUNT_HIGH` warning) are engine *heuristics*, not cited
+ * developmental norms — picture books distribute words unevenly by
+ * design. See ADR 0003 for the formula and rationale.
+ */
+export interface SpreadProfile {
+  index: number;
+  wordCount: number;
+  /**
+   * Heuristic upper-soft-bound for this spread's word count. Computed as
+   * `ceil(manuscriptWordCountTarget.max / nonWordlessSpreadCount * 1.5)`.
+   * Wordless spreads have ceiling `0`. UI signal, not a developmental
+   * claim.
+   */
+  wordCountCeiling: number;
+  /** Percentage (0–1) of this spread's tokens covered by Dolch + Fry. */
+  sightWordCoverage: number;
+  /** Reach words that first appear on this spread. */
+  reachWords: ReachWord[];
+  /** Per-spread warnings (e.g., `SPREAD_WORD_COUNT_HIGH`, info severity). */
+  warnings: Warning[];
 }
 
 export interface VocabularyProfile {

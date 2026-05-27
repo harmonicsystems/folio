@@ -12,7 +12,9 @@ import type {
   AgeBand,
   Manuscript,
   ProsodyProfile,
+  ReachWord,
   ReadabilityProfile,
+  SpreadProfile,
   SyntaxProfile,
   Warning,
 } from '../types.js';
@@ -21,6 +23,7 @@ import {
   analyzeVocabulary,
   identifyReachWordsBySpread,
 } from '../vocabulary/index.js';
+import { sightWordCoverage } from '../vocabulary/sight-words.js';
 import { analyzePhonologyBySpread } from '../phonology/index.js';
 
 /** Word-count targets per age band, from SCBWI / Mary Kole guidance. */
@@ -55,7 +58,51 @@ export function analyze(manuscript: Manuscript): ReadabilityProfile {
     prosody: emptyProsodyProfile(),
     reachWords,
     warnings: buildWarnings(tokens.length, wordCountTarget, manuscript.ageBand),
+    perSpread: buildPerSpread(manuscript, reachWords, wordCountTarget),
   };
+}
+
+/**
+ * Build per-spread profiles. The `wordCountCeiling` heuristic is
+ * `ceil(target.max / nonWordlessSpreadCount * 1.5)` — see ADR 0003.
+ * Wordless spreads carry ceiling `0` and never fire
+ * `SPREAD_WORD_COUNT_HIGH` (any text on a wordless spread is a data-
+ * quality concern handled at a different layer).
+ */
+function buildPerSpread(
+  manuscript: Manuscript,
+  reachWords: readonly ReachWord[],
+  wordCountTarget: { min: number; max: number },
+): SpreadProfile[] {
+  const nonWordlessCount = manuscript.spreads.filter((s) => !s.wordless).length;
+  const baseCeiling =
+    nonWordlessCount === 0
+      ? wordCountTarget.max
+      : Math.ceil((wordCountTarget.max / nonWordlessCount) * 1.5);
+
+  return manuscript.spreads.map((spread) => {
+    const tokens = tokenizeWords(spread.text);
+    const wordCount = tokens.length;
+    const ceiling = spread.wordless ? 0 : baseCeiling;
+    const spreadReach = reachWords.filter((r) => r.spread === spread.index);
+    const warnings: Warning[] = [];
+    if (!spread.wordless && wordCount > ceiling) {
+      warnings.push({
+        severity: 'info',
+        code: 'SPREAD_WORD_COUNT_HIGH',
+        message: `Spread ${spread.index} word count ${wordCount} exceeds the heuristic ceiling (${ceiling}) for this age band.`,
+        spread: spread.index,
+      });
+    }
+    return {
+      index: spread.index,
+      wordCount,
+      wordCountCeiling: ceiling,
+      sightWordCoverage: sightWordCoverage(tokens),
+      reachWords: spreadReach,
+      warnings,
+    };
+  });
 }
 
 /** Naive sentence segmenter — split on `.`, `!`, `?` followed by whitespace

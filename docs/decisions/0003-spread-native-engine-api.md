@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Awaiting ratification.
+Accepted (2026-05-25). Implementation lands incrementally — engine side (`SpreadProfile` type, `perSpread` field, `wordCountCeiling` heuristic, `SPREAD_WORD_COUNT_HIGH` info-warning) is Slice 1 of Track 3.
 
 ## Context
 
