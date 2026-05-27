@@ -141,6 +141,18 @@ const SAMPLES: Record<string, Sample> = {
         display: flex; flex-direction: column; gap: 0.5rem;
       }
       .spread.has-warning { border-color: var(--ochre); }
+      /* Untouched spreads — both pages empty + default text-only
+         placement — recede so attention lands on the filled ones.
+         Hover / focus restores full opacity so they're still inviting. */
+      .spread.empty {
+        opacity: 0.45;
+        transition: opacity 0.18s ease;
+      }
+      .spread.empty:hover,
+      .spread.empty:focus-within { opacity: 1; }
+      /* Don't mute in book view — that's a one-spread-at-a-time surface
+         and the user is intentionally focused on each spread. */
+      .editor-surface[data-view="book"] .spread.empty { opacity: 1; }
       .spread-header {
         display: flex; align-items: center; justify-content: space-between;
         gap: 0.5rem;
@@ -166,7 +178,13 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.7rem; padding: 0.15rem 0.35rem;
         background: var(--cream); border: 1px solid var(--rule);
         border-radius: 2px; color: var(--ink); font-family: inherit;
+        opacity: 0.35;
+        transition: opacity 0.15s ease;
       }
+      .page:hover .page-placement,
+      .page:focus-within .page-placement,
+      .page-placement:hover,
+      .page-placement:focus { opacity: 1; }
       .page-body {
         flex: 1; min-height: 5rem;
         display: flex; flex-direction: column; gap: 0.4rem;
@@ -728,10 +746,23 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      function markEmptySpreads(web: WebManuscript): void {
+        for (const sp of web.spreads) {
+          const isEmpty =
+            !sp.leftPage.text.trim() &&
+            !sp.rightPage.text.trim() &&
+            sp.leftPage.placement === 'text-only' &&
+            sp.rightPage.placement === 'text-only';
+          const tile = document.querySelector(`[data-spread="${sp.index}"]`);
+          tile?.classList.toggle('empty', isEmpty);
+        }
+      }
+
       function runAnalysis(): void {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
         const profile = analyze(engine);
+        markEmptySpreads(web);
         renderTopMetrics(profile);
         renderTileWordCounts(profile);
         renderPerSpread(profile);
