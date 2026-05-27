@@ -679,6 +679,20 @@ const SAMPLES: Record<string, Sample> = {
           <span class="value" id="unique-words">0</span>
         </div>
 
+        <h3>Phonology</h3>
+        <div class="metric-row">
+          <span class="label">Decodability</span>
+          <span class="value" id="decodability">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Avg syllables / word</span>
+          <span class="value" id="avg-syllables">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Top syllable type</span>
+          <span class="value" id="top-syllable">—</span>
+        </div>
+
         <h3>Per spread</h3>
         <ol class="per-spread-list" id="per-spread-list"></ol>
 
@@ -694,11 +708,11 @@ const SAMPLES: Record<string, Sample> = {
 
         <h3>Coming soon</h3>
         <ul class="coming-soon">
-          <li>Phonology · syllable types, decodability</li>
+          <li>Phonology · full inventory + acquisition-age weighting</li>
           <li>Prosody · meter + rhyme detection</li>
           <li>Syntax · sentence variety, clause depth</li>
           <li>Vocabulary tiers · Beck / McKeown / Kucan</li>
-          <li>In-line reach-word highlighting</li>
+          <li>Reach-word reason tooltips (tier 2 vs low-freq)</li>
           <li>Dialogic-reading prompt suggestions</li>
         </ul>
       </aside>
@@ -722,6 +736,10 @@ const SAMPLES: Record<string, Sample> = {
         <span class="status-label">Spreads</span>
         <span class="status-val" id="sb-spreads">0</span>
         <span class="status-sub">/ 16</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Decode</span>
+        <span class="status-val" id="sb-decode">—</span>
       </span>
       <span class="status-item">
         <span class="status-label">Warnings</span>
@@ -837,6 +855,22 @@ const SAMPLES: Record<string, Sample> = {
         setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
         setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
         setText('unique-words', String(profile.vocabulary.uniqueWords));
+
+        // Phonology
+        const phon = profile.phonology;
+        setText('decodability', fmtPercent(phon.decodabilityScore));
+        setText('avg-syllables', fmtNumber(phon.averageSyllablesPerWord, 2));
+        const syl = phon.syllableTypes;
+        const entries = Object.entries(syl) as Array<[string, number]>;
+        const total = entries.reduce((a, [, n]) => a + n, 0);
+        if (total === 0) {
+          setText('top-syllable', '—');
+        } else {
+          entries.sort((a, b) => b[1] - a[1]);
+          const [topType, topCount] = entries[0];
+          const topPct = ((topCount / total) * 100).toFixed(0);
+          setText('top-syllable', `${topType} (${topPct}%)`);
+        }
       }
 
       function renderPerSpread(profile: ReadabilityProfile): void {
@@ -1006,6 +1040,14 @@ const SAMPLES: Record<string, Sample> = {
           sp.textContent = String(
             profile.perSpread.filter((p) => p.wordCount > 0).length,
           );
+        }
+        const dc = byId('sb-decode');
+        if (dc) {
+          dc.textContent =
+            profile.wordCount === 0
+              ? '—'
+              : `${(profile.phonology.decodabilityScore * 100).toFixed(0)}%`;
+          dc.className = 'status-val';
         }
         if (wa) {
           const all =
