@@ -357,6 +357,59 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.75rem;
       }
 
+      /* ---- collapsible sidebar + status bar ---- */
+      body.sidebar-collapsed .workspace {
+        grid-template-columns: 1fr;
+        padding-bottom: 4rem;
+      }
+      body.sidebar-collapsed .sidebar { display: none; }
+      .status-bar {
+        display: none;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        background: var(--surface);
+        border-top: 1px solid var(--rule);
+        padding: 0.55rem 1.5rem;
+        z-index: 4;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: space-around;
+      }
+      body.sidebar-collapsed .status-bar { display: flex; }
+      .status-item {
+        display: flex; align-items: baseline; gap: 0.4rem;
+      }
+      .status-label {
+        text-transform: uppercase; letter-spacing: 0.08em;
+        font-size: 0.7rem; color: var(--taupe);
+      }
+      .status-val {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        color: var(--ink);
+      }
+      .status-val.over { color: var(--rust); }
+      .status-val.under { color: var(--ochre); }
+      .status-sub { color: var(--taupe); font-size: 0.8rem; }
+
+      /* ---- coming soon list ---- */
+      .coming-soon {
+        list-style: none; padding: 0; margin: 0;
+        font-size: 0.8rem;
+      }
+      .coming-soon li {
+        padding: 0.35rem 0;
+        color: var(--taupe);
+        border-bottom: 1px dashed var(--rule);
+        font-style: italic;
+      }
+      .coming-soon li:last-child { border-bottom: none; }
+      .coming-soon li::before {
+        content: '·'; margin-right: 0.4rem;
+        opacity: 0.5; font-style: normal;
+      }
+
       /* ---- floating prev/next + spread counter (book mode only) ---- */
       .nav-prev, .nav-next, .spread-counter { display: none; }
       body.book-mode .nav-prev,
@@ -467,6 +520,10 @@ const SAMPLES: Record<string, Sample> = {
             <button data-view-set="book" type="button">Book</button>
           </div>
         </div>
+        <div class="control">
+          <span class="control-label">Sidebar</span>
+          <button id="sidebar-toggle" type="button">Hide</button>
+        </div>
       </div>
     </header>
 
@@ -571,12 +628,43 @@ const SAMPLES: Record<string, Sample> = {
         <h3>Warnings</h3>
         <p class="empty" id="warnings-empty">None.</p>
         <ul class="warning-list" id="warning-list"></ul>
+
+        <h3>Coming soon</h3>
+        <ul class="coming-soon">
+          <li>Phonology · syllable types, decodability</li>
+          <li>Prosody · meter + rhyme detection</li>
+          <li>Syntax · sentence variety, clause depth</li>
+          <li>Vocabulary tiers · Beck / McKeown / Kucan</li>
+          <li>In-line reach-word highlighting</li>
+          <li>Dialogic-reading prompt suggestions</li>
+        </ul>
       </aside>
     </main>
 
     <footer class="footnote">
       <a href="/">paste-and-analyze</a> · Harmonic Systems
     </footer>
+
+    <div class="status-bar" id="status-bar" aria-live="polite">
+      <span class="status-item">
+        <span class="status-label">Words</span>
+        <span class="status-val" id="sb-words">0</span>
+        <span class="status-sub" id="sb-target">/ —</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Sight</span>
+        <span class="status-val" id="sb-sight">—</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Spreads</span>
+        <span class="status-val" id="sb-spreads">0</span>
+        <span class="status-sub">/ 16</span>
+      </span>
+      <span class="status-item">
+        <span class="status-label">Warnings</span>
+        <span class="status-val" id="sb-warnings">0</span>
+      </span>
+    </div>
 
     <button class="nav-prev" id="nav-prev" type="button" aria-label="Previous spread">‹</button>
     <button class="nav-next" id="nav-next" type="button" aria-label="Next spread">›</button>
@@ -824,6 +912,46 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      function updateStatusBar(profile: ReadabilityProfile): void {
+        const w = byId('sb-words');
+        const t = byId('sb-target');
+        const s = byId('sb-sight');
+        const sp = byId('sb-spreads');
+        const wa = byId('sb-warnings');
+        if (w) {
+          w.textContent = String(profile.wordCount);
+          let cls = '';
+          if (profile.wordCount > profile.wordCountTarget.max) cls = 'over';
+          else if (
+            profile.wordCountTarget.min > 0 &&
+            profile.wordCount < profile.wordCountTarget.min
+          )
+            cls = 'under';
+          w.className = `status-val ${cls}`.trim();
+        }
+        if (t) {
+          t.textContent =
+            profile.wordCountTarget.min > 0
+              ? `/ ${profile.wordCountTarget.min}–${profile.wordCountTarget.max}`
+              : `/ ${profile.wordCountTarget.max}`;
+        }
+        if (s) {
+          s.textContent = `${(profile.vocabulary.sightWordCoverage * 100).toFixed(0)}%`;
+        }
+        if (sp) {
+          sp.textContent = String(
+            profile.perSpread.filter((p) => p.wordCount > 0).length,
+          );
+        }
+        if (wa) {
+          const all =
+            profile.warnings.length +
+            profile.perSpread.reduce((acc, p) => acc + p.warnings.length, 0);
+          wa.textContent = String(all);
+          wa.className = `status-val${all > 0 ? ' over' : ''}`;
+        }
+      }
+
       function runAnalysis(): void {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
@@ -835,6 +963,7 @@ const SAMPLES: Record<string, Sample> = {
         renderPerSpread(profile);
         renderReachWords(profile.reachWords);
         renderWarnings(profile);
+        updateStatusBar(profile);
       }
 
       let debounceTimer: number | null = null;
@@ -927,6 +1056,12 @@ const SAMPLES: Record<string, Sample> = {
           applyLayoutPreset(sel.value);
           sel.value = '';
         }
+      });
+
+      byId('sidebar-toggle')?.addEventListener('click', () => {
+        const collapsed = document.body.classList.toggle('sidebar-collapsed');
+        const btn = byId('sidebar-toggle');
+        if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
       });
 
       byId('reset-btn')?.addEventListener('click', () => {
