@@ -172,7 +172,18 @@ const SAMPLES: Record<string, Sample> = {
       }
       .page-left { border-right: 1px solid var(--rule); }
       .page-controls {
-        display: flex; justify-content: flex-end;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 0.5rem;
+      }
+      .page-wc {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.7rem; color: var(--taupe);
+        min-width: 1.5rem;
+      }
+      .page-wc:empty::before {
+        content: ''; display: inline-block; width: 0.4rem; height: 0.4rem;
+        background: var(--rule); border-radius: 50%; opacity: 0.6;
+        vertical-align: middle;
       }
       .page-placement {
         font-size: 0.7rem; padding: 0.15rem 0.35rem;
@@ -478,6 +489,11 @@ const SAMPLES: Record<string, Sample> = {
                   data-placement="text-only"
                 >
                   <div class="page-controls">
+                    <span
+                      class="page-wc"
+                      data-page-wc={`${index}-${side}`}
+                      aria-label={`Spread ${index} ${side} page word count`}
+                    ></span>
                     <select
                       class="page-placement"
                       data-page-placement={`${index}-${side}`}
@@ -783,6 +799,19 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      function updatePageWordCounts(web: WebManuscript): void {
+        for (const sp of web.spreads) {
+          for (const side of ['left', 'right'] as const) {
+            const page = side === 'left' ? sp.leftPage : sp.rightPage;
+            const count = (page.text.match(/\S+/g) ?? []).length;
+            const el = document.querySelector(
+              `[data-page-wc="${sp.index}-${side}"]`,
+            );
+            if (el) el.textContent = count === 0 ? '' : String(count);
+          }
+        }
+      }
+
       function markEmptySpreads(web: WebManuscript): void {
         for (const sp of web.spreads) {
           const isEmpty =
@@ -800,6 +829,7 @@ const SAMPLES: Record<string, Sample> = {
         const engine = toEngineManuscript(web);
         const profile = analyze(engine);
         markEmptySpreads(web);
+        updatePageWordCounts(web);
         renderTopMetrics(profile);
         renderTileWordCounts(profile);
         renderPerSpread(profile);
