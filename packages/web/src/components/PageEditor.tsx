@@ -45,8 +45,10 @@ import {
   $createParagraphNode,
   $createTextNode,
   FORMAT_TEXT_COMMAND,
+  KEY_DOWN_COMMAND,
   SELECTION_CHANGE_COMMAND,
   COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_NORMAL,
 } from 'lexical';
 
 // Curated transformer list. We deliberately omit headings, lists,
@@ -190,6 +192,39 @@ function FloatingToolbar() {
   );
 }
 
+/**
+ * Typography helpers. Registers keyboard shortcuts on each editor for
+ * inserting characters that don't have keys but matter for line-break
+ * control:
+ * - Cmd/Ctrl + Shift + -   → soft hyphen (U+00AD, invisible until a
+ *                            line wraps where it appears)
+ * - Cmd/Ctrl + Shift + Space → non-breaking space (U+00A0)
+ */
+function TypographyShortcuts() {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    return editor.registerCommand<KeyboardEvent>(
+      KEY_DOWN_COMMAND,
+      (event) => {
+        if (!(event.metaKey || event.ctrlKey) || !event.shiftKey) return false;
+        const insert = (ch: string) => {
+          event.preventDefault();
+          editor.update(() => {
+            const sel = $getSelection();
+            if ($isRangeSelection(sel)) sel.insertText(ch);
+          });
+          return true;
+        };
+        if (event.key === '-' || event.code === 'Minus') return insert('­');
+        if (event.key === ' ' || event.code === 'Space') return insert(' ');
+        return false;
+      },
+      COMMAND_PRIORITY_NORMAL,
+    );
+  }, [editor]);
+  return null;
+}
+
 function HandleRegister({ spread, side }: { spread: number; side: Side }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
@@ -269,6 +304,7 @@ export default function PageEditor({ spread, side, placeholder }: Props) {
           }}
         />
         <HandleRegister spread={spread} side={side} />
+        <TypographyShortcuts />
         <FloatingToolbar />
       </div>
     </LexicalComposer>
