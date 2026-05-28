@@ -501,6 +501,32 @@ const SAMPLES: Record<string, Sample> = {
         border-radius: 2px;
       }
 
+      /* ---- browser compat banner ---- */
+      .compat-banner {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.6rem 1.5rem;
+        background: var(--cream);
+        border-bottom: 1px solid var(--ochre);
+        font-size: 0.85rem;
+        color: var(--ink);
+        line-height: 1.4;
+      }
+      .compat-banner[hidden] { display: none; }
+      .compat-banner button {
+        margin-left: auto;
+        background: transparent;
+        border: none;
+        font-size: 1.3rem;
+        cursor: pointer;
+        color: var(--taupe);
+        padding: 0.1rem 0.5rem;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .compat-banner button:hover { color: var(--ink); }
+
       /* ---- find & replace bar ---- */
       .find-bar {
         display: flex;
@@ -971,6 +997,16 @@ const SAMPLES: Record<string, Sample> = {
         >?</button>
       </div>
     </header>
+
+    <div class="compat-banner" id="compat-banner" hidden role="status">
+      <span>
+        Your browser doesn't support in-line text highlighting (needs Chrome 105+,
+        Safari 17.2+, or Firefox 140+). Reach words, phoneme matches, and find
+        results still appear in the sidebar and count totals — they just won't
+        underline or tint inside the text itself.
+      </span>
+      <button type="button" id="compat-dismiss" aria-label="Dismiss notice">×</button>
+    </div>
 
     <div class="find-bar" id="find-bar" hidden>
       <input
@@ -2380,6 +2416,33 @@ const SAMPLES: Record<string, Sample> = {
         dismissOnboarding();
       });
       showOnboardingIfFirstVisit();
+
+      // ---- browser compat check ----
+      const COMPAT_DISMISSED_KEY = 'folio.compat.dismissed.v1';
+      (function checkBrowserCompat(): void {
+        const banner = byId('compat-banner');
+        if (!banner) return;
+        let dismissed = false;
+        try {
+          dismissed = !!localStorage.getItem(COMPAT_DISMISSED_KEY);
+        } catch {
+          /* ignore */
+        }
+        if (dismissed) return;
+        const hasHighlight =
+          'Highlight' in window &&
+          (CSS as unknown as { highlights?: unknown }).highlights !== undefined;
+        if (!hasHighlight) banner.hidden = false;
+      })();
+      byId('compat-dismiss')?.addEventListener('click', () => {
+        const banner = byId('compat-banner');
+        if (banner) banner.hidden = true;
+        try {
+          localStorage.setItem(COMPAT_DISMISSED_KEY, '1');
+        } catch {
+          /* ignore */
+        }
+      });
 
       // ---- about dialog ----
       const aboutDialog = byId('about-dialog') as HTMLDialogElement | null;
