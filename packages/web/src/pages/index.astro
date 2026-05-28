@@ -1038,6 +1038,14 @@ const SAMPLES: Record<string, Sample> = {
             ))}
           </select>
         </label>
+        <label class="control">
+          <span class="control-label">Export</span>
+          <select id="export-format">
+            <option value="">— format —</option>
+            <option value="txt">Plain text (.txt)</option>
+            <option value="md">Markdown (.md)</option>
+          </select>
+        </label>
         <div class="control">
           <span class="control-label">Reset</span>
           <button id="reset-btn" type="button">Clear all spreads</button>
@@ -2123,6 +2131,62 @@ const SAMPLES: Record<string, Sample> = {
         const sel = e.target as HTMLSelectElement;
         if (sel.value) {
           loadSample(sel.value);
+          sel.value = '';
+        }
+      });
+
+      // ---- export ----
+      type ExportFormat = 'txt' | 'md';
+      function buildExport(format: ExportFormat): string {
+        const editors = (window as unknown as {
+          __pageEditors?: Record<
+            string,
+            { getText: () => string; getMarkdown: () => string }
+          >;
+        }).__pageEditors;
+        if (!editors) return '';
+        const blocks: string[] = [];
+        for (let i = 1; i <= SPREAD_COUNT; i++) {
+          const leftHandle = editors[`${i}-left`];
+          const rightHandle = editors[`${i}-right`];
+          const left =
+            format === 'md'
+              ? leftHandle?.getMarkdown() ?? ''
+              : leftHandle?.getText() ?? '';
+          const right =
+            format === 'md'
+              ? rightHandle?.getMarkdown() ?? ''
+              : rightHandle?.getText() ?? '';
+          const l = left.trim();
+          const r = right.trim();
+          if (!l && !r) continue;
+          // Match the engine's per-spread join convention (single space
+          // when both pages have text; otherwise just the non-empty side).
+          blocks.push(l && r ? `${l} ${r}` : l || r);
+        }
+        return blocks.join('\n\n') + (blocks.length > 0 ? '\n' : '');
+      }
+
+      function downloadManuscript(format: ExportFormat): void {
+        const content = buildExport(format);
+        if (!content.trim()) return;
+        const mime = format === 'md' ? 'text/markdown' : 'text/plain';
+        const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `manuscript.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Give the browser a tick to start the download before revoking.
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      }
+
+      byId('export-format')?.addEventListener('change', (e) => {
+        const sel = e.target as HTMLSelectElement;
+        if (sel.value === 'txt' || sel.value === 'md') {
+          downloadManuscript(sel.value);
           sel.value = '';
         }
       });

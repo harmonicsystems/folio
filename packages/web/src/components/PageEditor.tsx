@@ -30,6 +30,7 @@ import { LexicalErrorBoundary } from '@lexical/react/LexicalErrorBoundary';
 import { MarkdownShortcutPlugin } from '@lexical/react/LexicalMarkdownShortcutPlugin';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
 import {
+  $convertToMarkdownString,
   BOLD_ITALIC_STAR,
   BOLD_ITALIC_UNDERSCORE,
   BOLD_STAR,
@@ -68,6 +69,7 @@ type Side = 'left' | 'right';
 
 interface EditorHandle {
   getText: () => string;
+  getMarkdown: () => string;
   setText: (text: string) => void;
 }
 
@@ -239,6 +241,13 @@ function HandleRegister({ spread, side }: { spread: number; side: Side }) {
         let out = '';
         editor.getEditorState().read(() => {
           out = $getRoot().getTextContent();
+        });
+        return out;
+      },
+      getMarkdown: () => {
+        let out = '';
+        editor.getEditorState().read(() => {
+          out = $convertToMarkdownString(PAGE_TRANSFORMERS);
         });
         return out;
       },
