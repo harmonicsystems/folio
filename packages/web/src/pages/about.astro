@@ -1,0 +1,307 @@
+---
+// Static landing / about page. Lives at /about. Pure Astro, no
+// client JS — the page is the same on first paint as fully loaded.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Folio is a constraint-aware authoring tool for picture books and early-reader literature. Built for authors and speech-language pathologists. Runs in your browser, never sends your manuscript anywhere."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://folio.harmonic-systems.org/about" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Folio" />
+    <meta property="og:title" content="Folio — about" />
+    <meta property="og:description" content="A constraint-aware authoring tool for picture books and early-reader literature. Built for authors and speech-language pathologists." />
+    <meta property="og:url" content="https://folio.harmonic-systems.org/about" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Folio — about" />
+    <meta name="twitter:description" content="A constraint-aware authoring tool for picture books and early-reader literature." />
+    <script
+      is:inline
+      defer
+      data-domain="folio.harmonic-systems.org"
+      src="https://plausible.io/js/script.js"
+    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+    />
+    <title>Folio — about</title>
+    <style>
+      :root {
+        --cream: #f7f1e6;
+        --beige: #ece2cf;
+        --taupe: #8a7c66;
+        --ink: #2c2620;
+        --rule: #d9cdb4;
+        --ochre: #a37828;
+        --rust: #9a4a2a;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--cream); color: var(--ink);
+        font-family: 'Libre Caslon Text', Georgia, serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 4rem 1.5rem 6rem;
+      }
+      header.hero { margin-bottom: 3rem; }
+      h1 {
+        font-size: 2.4rem;
+        font-weight: 500;
+        margin: 0 0 0.5rem;
+        letter-spacing: -0.015em;
+      }
+      .tagline {
+        font-size: 1.15rem;
+        font-style: italic;
+        color: var(--taupe);
+        margin: 0 0 2rem;
+      }
+      .cta-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+      .cta {
+        display: inline-block;
+        padding: 0.7rem 1.4rem;
+        font-size: 1rem;
+        text-decoration: none;
+        border-radius: 3px;
+        border: 1px solid transparent;
+      }
+      .cta.primary {
+        background: var(--ink);
+        color: var(--cream);
+        border-color: var(--ink);
+      }
+      .cta.primary:hover { background: #1a1612; }
+      .cta.secondary {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--rule);
+      }
+      .cta.secondary:hover { background: var(--surface, #fff); border-color: var(--taupe); }
+
+      section { margin: 3rem 0; }
+      h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0 0 1rem;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        margin: 2rem 0 0.5rem;
+      }
+      p { margin: 0 0 1.1rem; font-size: 1.02rem; }
+
+      ul.audience, ul.features, ul.upcoming {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 1.5rem;
+      }
+      ul.audience li {
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--rule);
+      }
+      ul.audience li:last-child { border-bottom: none; }
+      ul.audience strong {
+        display: block;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ochre);
+        margin-bottom: 0.3rem;
+      }
+
+      ul.features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.5rem;
+      }
+      @media (max-width: 600px) {
+        ul.features { grid-template-columns: 1fr; }
+      }
+      ul.features li {
+        padding: 1rem;
+        background: #fff;
+        border: 1px solid var(--rule);
+        border-radius: 4px;
+      }
+      ul.features strong {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
+      }
+      ul.features span { font-size: 0.9rem; color: var(--taupe); line-height: 1.5; }
+
+      ul.upcoming li {
+        padding: 0.5rem 0;
+        font-size: 0.95rem;
+        color: var(--taupe);
+        font-style: italic;
+        border-bottom: 1px dashed var(--rule);
+      }
+      ul.upcoming li:last-child { border-bottom: none; }
+      ul.upcoming li::before { content: '· '; opacity: 0.6; font-style: normal; }
+
+      .privacy-card {
+        padding: 1.5rem;
+        background: #fff;
+        border: 1px solid var(--rule);
+        border-left: 3px solid var(--ochre);
+        border-radius: 4px;
+      }
+      .privacy-card p:last-child { margin-bottom: 0; }
+
+      footer {
+        margin-top: 4rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.9rem;
+        color: var(--taupe);
+      }
+      footer a { color: var(--taupe); }
+      footer a:hover { color: var(--ink); }
+
+      code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        background: var(--beige);
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+        font-size: 0.88em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>Folio</h1>
+        <p class="tagline">Restraint → creative flow. Anti-slop infrastructure for children's literature.</p>
+        <div class="cta-row">
+          <a href="/" class="cta primary">Open the editor →</a>
+          <a href="/paste" class="cta secondary">Paste-and-analyze</a>
+        </div>
+      </header>
+
+      <section>
+        <p>
+          Folio is a constraint-aware authoring tool for picture books and early-reader literature.
+          It helps you see — <em>as you write</em> — how your manuscript lands developmentally:
+          word count against the age-band target, sight-word coverage, reach words in context,
+          phoneme inventory, decodability.
+        </p>
+        <p>
+          The engine measures. It does not author. Folio will never generate manuscript text or
+          illustrations on your behalf. The thesis: when the boring legibility work becomes legible
+          in the background, creative flow has more room.
+        </p>
+      </section>
+
+      <section>
+        <h2>Who it's for</h2>
+        <ul class="audience">
+          <li>
+            <strong>Picture-book authors</strong>
+            Writing toward a specific age band — board, early picture, picture, early reader, or chapter.
+            See word count, pacing across the 16 spreads, vocabulary load, and read-aloud-relevant
+            phoneme structure as you write. Compare your draft against canonical fixtures (Peter Rabbit,
+            Aesop, Owl &amp; Pussycat) to calibrate.
+          </li>
+          <li>
+            <strong>Speech-language pathologists</strong>
+            The phoneme-acquisition norms in the engine come from <em>Crowe &amp; McLeod (2020), AJSLP</em> —
+            the same research base SLPs already use clinically. Click any phoneme in the sidebar to
+            highlight every word containing it across the whole manuscript. Useful for evaluating
+            whether a candidate text fits a client's current phoneme inventory, or for designing
+            intervention materials with controlled sound load.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>What's in the editor</h2>
+        <ul class="features">
+          <li>
+            <strong>16-spread surface</strong>
+            <span>Two facing pages per spread, with independent per-page composition (text-only, text-top, text-bottom, illustration-only). Grid view for overview; book view for one-spread-at-a-time at the trim's open aspect ratio.</span>
+          </li>
+          <li>
+            <strong>Rich text</strong>
+            <span>Bold, italic, underline, strikethrough via Lexical. Floating toolbar on selection. Markdown shortcuts as you type (<code>**bold**</code>, <code>*italic*</code>, <code>~~strike~~</code>). Soft hyphen and non-breaking space via keyboard.</span>
+          </li>
+          <li>
+            <strong>Per-spread analysis</strong>
+            <span>Word-count ceiling per spread (heuristic, documented), sight-word coverage, reach-word attribution, and a mini bar in the sidebar so you can see your manuscript's pacing in one downward glance.</span>
+          </li>
+          <li>
+            <strong>Phonology surface</strong>
+            <span>Decodability score, average syllables per word, syllable-shape breakdown, and the actual phonemes used — grouped by Crowe &amp; McLeod (2020) acquisition age, color-coded by lateness.</span>
+          </li>
+          <li>
+            <strong>In-context highlighting</strong>
+            <span>Reach words underline in-place. Click any phoneme to highlight every word that contains it. Find &amp; replace tints all matches and walks current. All via the CSS Custom Highlight API — no DOM modification, no caret disruption.</span>
+          </li>
+          <li>
+            <strong>Layout presets &amp; fonts</strong>
+            <span>Classic facing, Mirror, Text top, Full text presets apply across all spreads without touching your text. Body fonts: Libre Caslon, Futura, Futura Bold, Atkinson Hyperlegible, Bricolage Grotesque.</span>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Your privacy</h2>
+        <div class="privacy-card">
+          <p>
+            Folio runs entirely in your browser. Your manuscript content never leaves your device — no
+            server roundtrip, no account, no analytics about what you write.
+          </p>
+          <p>
+            Your draft autosaves to this browser's local storage and persists across page reloads. The
+            Reset button clears it. Anonymous page-view counts are recorded via
+            <a href="https://plausible.io/privacy-focused-web-analytics" target="_blank" rel="noopener">Plausible</a> —
+            cookieless, no personal identifiers, no cross-site tracking.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>What's coming</h2>
+        <ul class="upcoming">
+          <li>Prosody — meter + rhyme scheme detection</li>
+          <li>Syntax — sentence variety, clause depth</li>
+          <li>Vocabulary tier classification (Beck / McKeown / Kucan, sourcing in progress)</li>
+          <li>Phoneme inventory deeper view — place / manner / voicing chart with acquisition-age signal</li>
+          <li>Reach-word reason tooltips (tier 2 vs low-frequency)</li>
+          <li>Dialogic-reading prompt suggestions</li>
+          <li>Per-client phoneme acquisition profiles for SLP workflows</li>
+        </ul>
+      </section>
+
+      <footer>
+        Folio is built by <a href="https://harmonic-systems.org">Harmonic Systems</a>.
+        Open source on
+        <a href="https://github.com/harmonicsystems/folio" target="_blank" rel="noopener">GitHub</a>.
+      </footer>
+    </main>
+  </body>
+</html>
