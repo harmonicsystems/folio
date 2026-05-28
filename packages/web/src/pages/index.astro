@@ -74,6 +74,12 @@ const SAMPLES: Record<string, Sample> = {
       content="Folio — spread-first manuscript editor for picture books and early-reader literature."
     />
     <title>Folio — spread editor</title>
+    <script
+      is:inline
+      defer
+      data-domain="folio.harmonic-systems.org"
+      src="https://plausible.io/js/script.js"
+    ></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -1300,9 +1306,15 @@ const SAMPLES: Record<string, Sample> = {
         <h3>Your privacy</h3>
         <p>
           Folio runs entirely in your browser. Your manuscript content never
-          leaves your device — no server, no account, no analytics about what
-          you write. Your draft autosaves to this browser's local storage and
-          can be cleared at any time with the Reset button. A simpler
+          leaves your device — no server roundtrip, no account, no analytics
+          about what you write. Your draft autosaves to this browser's local
+          storage and can be cleared at any time with the Reset button.
+        </p>
+        <p>
+          Anonymous page-view analytics are collected via
+          <a href="https://plausible.io/privacy-focused-web-analytics" target="_blank" rel="noopener">Plausible</a> —
+          cookieless, no personal data, no cross-site tracking. We see "someone
+          loaded the editor page from country X," nothing more. A simpler
           paste-and-analyze surface is also available at
           <a href="/paste">/paste</a>.
         </p>
