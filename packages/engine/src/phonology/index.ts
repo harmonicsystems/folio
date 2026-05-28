@@ -23,11 +23,30 @@ import type {
 } from '../types.js';
 import { ARPABET_TO_PHONEME, stripStress } from '../data/cmu-phonemes.js';
 import { tokenizeWords } from '../vocabulary/tokenize.js';
-import { getPronunciation } from './lookup.js';
+import { getPronunciation, isInCmuDict } from './lookup.js';
 import { syllabify } from './syllabify.js';
 
-export { getPronunciation, estimatePronunciation } from './lookup.js';
+export { getPronunciation, estimatePronunciation, isInCmuDict } from './lookup.js';
 export { syllabify, syllableCount } from './syllabify.js';
+
+/**
+ * Words in the text whose pronunciation came from the grapheme-based
+ * heuristic, not the CMU dict. Deduplicated, lowercased, sorted.
+ *
+ * Returns an empty array when every token has a CMU entry. The list
+ * is the integrity signal for downstream decodability /
+ * phoneme-acquisition claims — if a word here is contributing to
+ * those numbers, the contribution is a best-effort estimate.
+ */
+export function getGuessedWords(text: string): string[] {
+  const seen = new Set<string>();
+  for (const token of tokenizeWords(text)) {
+    const key = token.toLowerCase();
+    if (seen.has(key)) continue;
+    if (!isInCmuDict(key)) seen.add(key);
+  }
+  return [...seen].sort();
+}
 
 /**
  * The IPA phoneme set used by a single word, deduplicated and in

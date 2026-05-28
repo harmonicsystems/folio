@@ -24,8 +24,10 @@ export {
   analyzePhonology,
   analyzePhonologyBySpread,
   estimatePronunciation,
+  getGuessedWords,
   getPronunciation,
   getWordPhonemes,
+  isInCmuDict,
   syllabify,
   syllableCount,
 } from './phonology/index.js';

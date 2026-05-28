@@ -27,6 +27,21 @@ export function getPronunciation(word: string): readonly string[] {
 }
 
 /**
+ * True when the word has a CMU dict entry. False when getPronunciation
+ * would fall through to the grapheme-based heuristic.
+ *
+ * Useful for surfacing "this word's phonology is a best-effort guess"
+ * to authors and clinicians — important integrity signal for any
+ * decodability or phoneme-acquisition claim downstream.
+ *
+ * Lookup is case-insensitive and matches the same lowercasing rule
+ * getPronunciation uses internally.
+ */
+export function isInCmuDict(word: string): boolean {
+  return CMU_DICT.has(word.toLowerCase());
+}
+
+/**
  * Grapheme-based phoneme estimator. Left-to-right matching with two-char
  * digraphs preferred over single chars. Handles common consonant digraphs
  * (sh, th, ch, ph, wh, ng, ck, qu, gh), r-controlled vowels (ar, or, er,

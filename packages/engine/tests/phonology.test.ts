@@ -3,8 +3,10 @@ import {
   analyzePhonology,
   analyzePhonologyBySpread,
   estimatePronunciation,
+  getGuessedWords,
   getPronunciation,
   getWordPhonemes,
+  isInCmuDict,
   syllabify,
   syllableCount,
 } from '../src/phonology/index.js';
@@ -25,6 +27,56 @@ describe('getPronunciation', () => {
     // The function is total — any non-empty input yields phonemes.
     const result = getPronunciation('blorf');
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+describe('isInCmuDict', () => {
+  it('returns true for known dict words', () => {
+    expect(isInCmuDict('cat')).toBe(true);
+    expect(isInCmuDict('apple')).toBe(true);
+  });
+
+  it('returns false for invented / OOV words', () => {
+    expect(isInCmuDict('snicker-snack')).toBe(false);
+    expect(isInCmuDict('blorf')).toBe(false);
+  });
+
+  it('is case-insensitive', () => {
+    expect(isInCmuDict('CAT')).toBe(true);
+    expect(isInCmuDict('Cat')).toBe(true);
+  });
+
+  it('returns false for empty input', () => {
+    expect(isInCmuDict('')).toBe(false);
+  });
+});
+
+describe('getGuessedWords', () => {
+  it('returns empty when every token is in the CMU dict', () => {
+    // Use words confirmed-in-dict via the CMU dict subset (cat, apple
+    // are pinned by existing getPronunciation tests).
+    expect(getGuessedWords('cat apple cat')).toEqual([]);
+  });
+
+  it('returns lowercased, deduplicated, sorted OOV tokens', () => {
+    // "and" is in dict (Dolch service word); the rest are invented.
+    const result = getGuessedWords('blorf and Vroom and BLORF and zog');
+    expect(result).toEqual(['blorf', 'vroom', 'zog']);
+  });
+
+  it('flags real but out-of-subset words too (not just invented ones)', () => {
+    // The Folio CMU subset is curated. "Sat" and "mat" aren't in the
+    // ~320-word subset even though they're common — getGuessedWords
+    // surfaces them so the author knows decodability for these words
+    // is heuristic-based. This is the *point* of the function for the
+    // anti-slop integrity story.
+    const result = getGuessedWords('the cat sat on the mat');
+    expect(result).toContain('sat');
+    expect(result).toContain('mat');
+  });
+
+  it('handles empty input', () => {
+    expect(getGuessedWords('')).toEqual([]);
   });
 });
 
