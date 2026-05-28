@@ -30,6 +30,6 @@ export {
   syllableCount,
 } from './phonology/index.js';
 
+export { analyzeProsody } from './prosody/index.js';
 // Module re-exports — uncomment as implementations land.
 // export { analyzeSyntax } from './syntax/index.js';
-// export { analyzeProsody } from './prosody/index.js';

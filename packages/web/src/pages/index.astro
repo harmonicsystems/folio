@@ -1376,6 +1376,20 @@ const SAMPLES: Record<string, Sample> = {
           </p>
         </details>
 
+        <h3>Prosody</h3>
+        <div class="metric-row">
+          <span class="label">Dominant meter</span>
+          <span class="value" id="dominant-meter">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Meter consistency</span>
+          <span class="value" id="meter-consistency">—</span>
+        </div>
+        <div class="metric-row">
+          <span class="label">Rhyme scheme</span>
+          <span class="value" id="rhyme-scheme">—</span>
+        </div>
+
         <h3>Per spread</h3>
         <ol class="per-spread-list" id="per-spread-list"></ol>
 
@@ -1391,12 +1405,10 @@ const SAMPLES: Record<string, Sample> = {
 
         <h3>Coming soon</h3>
         <ul class="coming-soon">
-          <li>Phonology · full inventory + acquisition-age weighting</li>
-          <li>Prosody · meter + rhyme detection</li>
           <li>Syntax · sentence variety, clause depth</li>
           <li>Vocabulary tiers · Beck / McKeown / Kucan</li>
-          <li>Reach-word reason tooltips (tier 2 vs low-freq)</li>
           <li>Dialogic-reading prompt suggestions</li>
+          <li>Per-client phoneme acquisition profiles (SLP)</li>
         </ul>
       </aside>
     </main>
@@ -1713,6 +1725,15 @@ const SAMPLES: Record<string, Sample> = {
           const topPct = ((topCount / total) * 100).toFixed(0);
           setText('top-syllable', `${topType} (${topPct}%)`);
         }
+
+        // Prosody
+        const pro = profile.prosody;
+        setText('dominant-meter', pro.dominantMeter ?? '—');
+        setText(
+          'meter-consistency',
+          pro.meterConsistency > 0 ? fmtPercent(pro.meterConsistency) : '—',
+        );
+        setText('rhyme-scheme', pro.rhymeScheme ?? '—');
       }
 
       // Shared chip builder so the by-age and by-manner views render

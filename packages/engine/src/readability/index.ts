@@ -11,7 +11,6 @@
 import type {
   AgeBand,
   Manuscript,
-  ProsodyProfile,
   ReachWord,
   ReadabilityProfile,
   SpreadProfile,
@@ -25,6 +24,7 @@ import {
 } from '../vocabulary/index.js';
 import { sightWordCoverage } from '../vocabulary/sight-words.js';
 import { analyzePhonologyBySpread } from '../phonology/index.js';
+import { analyzeProsody } from '../prosody/index.js';
 
 /** Word-count targets per age band, from SCBWI / Mary Kole guidance. */
 const WORD_COUNT_TARGETS: Record<AgeBand, { min: number; max: number }> = {
@@ -55,7 +55,7 @@ export function analyze(manuscript: Manuscript): ReadabilityProfile {
     vocabulary,
     phonology,
     syntax: emptySyntaxProfile(),
-    prosody: emptyProsodyProfile(),
+    prosody: analyzeProsody(fullText),
     reachWords,
     warnings: buildWarnings(tokens.length, wordCountTarget, manuscript.ageBand),
     perSpread: buildPerSpread(manuscript, reachWords, wordCountTarget),
@@ -143,8 +143,4 @@ function emptySyntaxProfile(): SyntaxProfile {
     sentenceLengthStdev: 0,
     sentenceTypes: { declarative: 0, interrogative: 0, exclamatory: 0, imperative: 0 },
   };
-}
-
-function emptyProsodyProfile(): ProsodyProfile {
-  return { meterConsistency: 0 };
 }
