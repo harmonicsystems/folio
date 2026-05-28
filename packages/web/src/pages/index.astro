@@ -978,6 +978,119 @@ const SAMPLES: Record<string, Sample> = {
         border-top: 1px solid var(--rule); background: var(--surface);
       }
       footer.footnote a { color: var(--taupe); }
+
+      /* ---- print / PDF stylesheet ----
+         Triggered by Export → "PDF (via print)" which calls
+         window.print(). Strips every piece of UI chrome, lays out
+         each non-empty spread as one printed page with the two
+         facing pages side-by-side. Text formatting (bold / italic /
+         strikethrough) is preserved natively since the editor IS
+         rich text. */
+      @media print {
+        :root, html, body {
+          background: #fff !important;
+          color: #000 !important;
+        }
+        body {
+          font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+        }
+        /* Hide all chrome. */
+        .topbar, .compat-banner, .find-bar,
+        .sidebar, footer.footnote,
+        .nav-prev, .nav-next, .spread-counter,
+        .status-bar, .onboarding-card,
+        .about-dialog, .lex-toolbar,
+        .page-controls, .spread-footer { display: none !important; }
+
+        .workspace {
+          display: block;
+          padding: 0;
+          margin: 0;
+          max-width: none;
+        }
+        .editor-surface {
+          display: block;
+        }
+
+        /* One spread = one printed page, no border, generous margin. */
+        .spread {
+          page-break-after: always;
+          break-after: page;
+          border: none !important;
+          background: transparent !important;
+          padding: 0.6in 0.5in !important;
+          margin: 0 !important;
+          height: auto !important;
+          aspect-ratio: auto !important;
+          box-shadow: none !important;
+          opacity: 1 !important;
+          display: flex !important;
+          flex-direction: column;
+          gap: 0.3in;
+        }
+        .spread:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+        /* Skip empty spreads in print so the PDF doesn't include
+           16 blanks at the end of a 4-spread draft. */
+        .spread.empty { display: none !important; }
+
+        /* Spread number as a small page header. */
+        .spread-header {
+          font-size: 9pt;
+          color: #666 !important;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 0.15in;
+        }
+        .spread-number {
+          color: #666 !important;
+          letter-spacing: 0.08em;
+        }
+
+        /* Pages side by side, gutter as a faint dashed line. */
+        .spread-pages {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.4in;
+          flex: 1;
+        }
+        .page {
+          padding: 0 !important;
+          min-height: auto !important;
+        }
+        .page-left {
+          border-right: 1px dashed #ccc !important;
+          padding-right: 0.4in !important;
+        }
+
+        /* Illustration zones print as a quiet outline so the
+           composition is visible without dominating. */
+        .page-illustration {
+          background: transparent !important;
+          border: 1px dashed #ccc !important;
+          color: #aaa !important;
+        }
+
+        /* Editor text — readable book body sizing. */
+        .page-text,
+        .page-editor-editable {
+          font-size: 11pt !important;
+          line-height: 1.6 !important;
+          color: #000 !important;
+          min-height: auto !important;
+        }
+        .page-editor-placeholder { display: none !important; }
+
+        /* In-browser highlight layers shouldn't bleed into print. */
+        ::highlight(reach-word),
+        ::highlight(phoneme-match),
+        ::highlight(find-match),
+        ::highlight(find-current) {
+          background: transparent;
+          text-decoration: none;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1044,6 +1157,7 @@ const SAMPLES: Record<string, Sample> = {
             <option value="">— format —</option>
             <option value="txt">Plain text (.txt)</option>
             <option value="md">Markdown (.md)</option>
+            <option value="pdf">PDF (via print)</option>
           </select>
         </label>
         <div class="control">
@@ -2187,6 +2301,11 @@ const SAMPLES: Record<string, Sample> = {
         const sel = e.target as HTMLSelectElement;
         if (sel.value === 'txt' || sel.value === 'md') {
           downloadManuscript(sel.value);
+          sel.value = '';
+        } else if (sel.value === 'pdf') {
+          // Defer print so the select-reset and any pending UI updates
+          // settle before the browser captures the page state.
+          requestAnimationFrame(() => window.print());
           sel.value = '';
         }
       });
