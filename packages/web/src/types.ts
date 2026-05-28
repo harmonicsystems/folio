@@ -76,9 +76,14 @@ export interface WebManuscript extends Omit<Manuscript, 'spreads'> {
 /**
  * Flatten the two-page model into the engine's one-text-per-spread
  * contract before calling `analyze()`. Page texts are concatenated
- * with a single space when both pages have content — the engine's
- * tokenizer and sentence splitter handle this transparently. A
- * spread with both pages `illustration-only` maps to `wordless: true`.
+ * with a newline so each page boundary becomes a "line" for the
+ * prosody analyzer's rhyme detector — picture-book verse usually
+ * has one line per page, so this is the right semantics. The
+ * tokenizer and sentence splitter treat `\n` and a single space
+ * equivalently, so word counts / phonology / vocab are unaffected.
+ *
+ * A spread with both pages `illustration-only` maps to
+ * `wordless: true`.
  *
  * @see docs/decisions/0003-spread-native-engine-api.md
  */
@@ -89,7 +94,7 @@ export function toEngineManuscript(web: WebManuscript): Manuscript {
     spreads: web.spreads.map((s) => {
       const left = s.leftPage.text.trim();
       const right = s.rightPage.text.trim();
-      const text = left && right ? `${left} ${right}` : left || right;
+      const text = left && right ? `${left}\n${right}` : left || right;
       const wordless =
         s.leftPage.placement === 'illustration-only' &&
         s.rightPage.placement === 'illustration-only';
