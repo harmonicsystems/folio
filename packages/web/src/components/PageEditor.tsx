@@ -161,6 +161,7 @@ function FloatingToolbar() {
         className={`lex-tool lex-tool-bold${active.bold ? ' active' : ''}`}
         onMouseDown={dispatch('bold')}
         aria-label="Bold"
+        aria-pressed={active.bold}
       >
         B
       </button>
@@ -169,6 +170,7 @@ function FloatingToolbar() {
         className={`lex-tool lex-tool-italic${active.italic ? ' active' : ''}`}
         onMouseDown={dispatch('italic')}
         aria-label="Italic"
+        aria-pressed={active.italic}
       >
         I
       </button>
@@ -177,6 +179,7 @@ function FloatingToolbar() {
         className={`lex-tool lex-tool-underline${active.underline ? ' active' : ''}`}
         onMouseDown={dispatch('underline')}
         aria-label="Underline"
+        aria-pressed={active.underline}
       >
         U
       </button>
@@ -185,6 +188,7 @@ function FloatingToolbar() {
         className={`lex-tool lex-tool-strike${active.strikethrough ? ' active' : ''}`}
         onMouseDown={dispatch('strikethrough')}
         aria-label="Strikethrough"
+        aria-pressed={active.strikethrough}
       >
         S
       </button>

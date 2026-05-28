@@ -180,10 +180,24 @@ const SAMPLES: Record<string, Sample> = {
       .spread.has-warning { border-color: var(--ochre); }
       /* Untouched spreads — both pages empty + default text-only
          placement — recede so attention lands on the filled ones.
-         Hover / focus restores full opacity so they're still inviting. */
+         Hover / focus restores full opacity so they're still inviting.
+         0.55 keeps the SPREAD N label above WCAG AA Large at the
+         taupe-on-cream contrast we use. */
       .spread.empty {
-        opacity: 0.45;
+        opacity: 0.55;
         transition: opacity 0.18s ease;
+      }
+      /* Visible focus ring for keyboard users across all interactive
+         elements. :focus-visible only fires on keyboard focus, so
+         pointer users still get the clean look. */
+      button:focus-visible,
+      select:focus-visible,
+      input:focus-visible,
+      summary:focus-visible,
+      [contenteditable]:focus-visible {
+        outline: 2px solid var(--ochre);
+        outline-offset: 2px;
+        border-radius: 2px;
       }
       .spread.empty:hover,
       .spread.empty:focus-within { opacity: 1; }
@@ -1014,9 +1028,9 @@ const SAMPLES: Record<string, Sample> = {
         </div>
         <div class="control">
           <span class="control-label">View</span>
-          <div class="view-toggle">
-            <button data-view-set="grid" class="active" type="button">Grid</button>
-            <button data-view-set="book" type="button">Book</button>
+          <div class="view-toggle" role="group" aria-label="View mode">
+            <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
+            <button data-view-set="book" type="button" aria-pressed="false">Book</button>
           </div>
         </div>
         <div class="control">
@@ -1622,8 +1636,14 @@ const SAMPLES: Record<string, Sample> = {
             for (const p of phonemes) {
               const chip = document.createElement('button');
               chip.type = 'button';
-              chip.className = `phon-chip${activePhonemes.has(p.phoneme) ? ' active' : ''}`;
+              const isActive = activePhonemes.has(p.phoneme);
+              chip.className = `phon-chip${isActive ? ' active' : ''}`;
               chip.dataset.phoneme = p.phoneme;
+              chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+              chip.setAttribute(
+                'aria-label',
+                `Phoneme /${p.phoneme}/ — ${p.count} occurrence${p.count === 1 ? '' : 's'}, acquired by age ${p.acquisitionAge}. Toggle highlight.`,
+              );
               chip.title = `${p.count} occurrence${p.count === 1 ? '' : 's'} · acquired age ${p.acquisitionAge}`;
               chip.textContent = `/${p.phoneme}/`;
               ph.appendChild(chip);
@@ -2114,7 +2134,9 @@ const SAMPLES: Record<string, Sample> = {
         } else {
           activePhonemes.add(phoneme);
         }
-        chip.classList.toggle('active', activePhonemes.has(phoneme));
+        const isActive = activePhonemes.has(phoneme);
+        chip.classList.toggle('active', isActive);
+        chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         const clearBtn = byId('phon-clear');
         if (clearBtn) clearBtn.hidden = activePhonemes.size === 0;
         applyPhonemeHighlights();
@@ -2651,6 +2673,22 @@ const SAMPLES: Record<string, Sample> = {
         btn.addEventListener('click', () => {
           setViewMode(btn.dataset.viewSet as 'grid' | 'book');
         });
+      }
+      // Keep aria-pressed in sync whenever view changes.
+      const observer = new MutationObserver(() => {
+        for (const btn of document.querySelectorAll<HTMLButtonElement>(
+          '[data-view-set]',
+        )) {
+          btn.setAttribute(
+            'aria-pressed',
+            btn.classList.contains('active') ? 'true' : 'false',
+          );
+        }
+      });
+      for (const btn of document.querySelectorAll<HTMLButtonElement>(
+        '[data-view-set]',
+      )) {
+        observer.observe(btn, { attributes: true, attributeFilter: ['class'] });
       }
 
       byId('nav-prev')?.addEventListener('click', () => {
