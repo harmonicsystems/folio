@@ -10,6 +10,7 @@
   "expected": {
     "wordCount": { "min": 140, "max": 180 },
     "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.75 },
-    "vocabulary.typeTokenRatio": { "min": 0.6, "max": 0.75 }
+    "vocabulary.typeTokenRatio": { "min": 0.6, "max": 0.75 },
+    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 }
   }
 }
