@@ -98,6 +98,25 @@ describe('analyzeProsody — rhyme scheme', () => {
     const profile = analyzeProsody(text);
     expect(profile.rhymeScheme).toBe('AAAA');
   });
+
+  it('uses spreadsheet-style labels past Z (AA, AB, …) for many distinct rhymes', () => {
+    // Build 28 distinct line endings — should produce labels up to AB
+    // (A..Z = 26, AA = 27, AB = 28). The last-line repeat forces a
+    // rhyme so the scheme is surfaced.
+    const distinctEndings = [
+      'cat', 'dog', 'pig', 'fox', 'bear', 'bird', 'fish', 'frog',
+      'cow', 'duck', 'horse', 'mouse', 'sheep', 'goat', 'lamb', 'wolf',
+      'fly', 'bee', 'ant', 'snail', 'snake', 'crab', 'whale', 'shark',
+      'eel', 'seal', 'newt', 'cat',
+    ];
+    const profile = analyzeProsody(distinctEndings.join('\n'));
+    expect(profile.rhymeScheme).toBeDefined();
+    // Last line ('cat' again) must reuse the first label 'A'.
+    expect(profile.rhymeScheme).toMatch(/A$/);
+    // Must not contain any of the overflow-into-punctuation characters
+    // that the previous incremental String.fromCharCode produced.
+    expect(profile.rhymeScheme).not.toMatch(/[^A-Z\-]/);
+  });
 });
 
 describe('analyzeProsody — integration', () => {

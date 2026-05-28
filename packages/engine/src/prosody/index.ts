@@ -137,6 +137,23 @@ function normalizeVowelForRhyme(arpa: string): string {
 }
 
 /**
+ * Spreadsheet-style rhyme label: 0→A, 25→Z, 26→AA, 27→AB, 51→AZ,
+ * 52→BA. Lets prose-y text with many distinct rhymes produce a
+ * readable scheme string instead of overflowing past Z into the
+ * ASCII punctuation range (which the previous incremental
+ * String.fromCharCode approach did).
+ */
+function rhymeLabelAt(n: number): string {
+  let result = '';
+  let i = n;
+  do {
+    result = String.fromCharCode(65 + (i % 26)) + result;
+    i = Math.floor(i / 26) - 1;
+  } while (i >= 0);
+  return result;
+}
+
+/**
  * Last-stressed-vowel rhyme of a word: returns the suffix starting
  * at the last stressed vowel, joined with `|` so phoneme boundaries
  * are unambiguous in equality checks. Stress digits are stripped
@@ -187,7 +204,7 @@ function detectRhymeScheme(text: string): string | undefined {
 
   const seen = new Map<string, string>();
   const letters: string[] = [];
-  let nextCharCode = 'A'.charCodeAt(0);
+  let nextIndex = 0;
   for (const r of rhymes) {
     if (r === null) {
       letters.push('-');
@@ -195,7 +212,7 @@ function detectRhymeScheme(text: string): string | undefined {
     }
     let letter = seen.get(r);
     if (!letter) {
-      letter = String.fromCharCode(nextCharCode++);
+      letter = rhymeLabelAt(nextIndex++);
       seen.set(r, letter);
     }
     letters.push(letter);
