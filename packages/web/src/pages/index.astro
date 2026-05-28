@@ -491,17 +491,20 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.7rem;
       }
 
-      .phon-age-row {
+      .phon-age-row,
+      .phon-manner-row {
         display: grid;
-        grid-template-columns: 3.5rem 1fr;
+        grid-template-columns: 4.5rem 1fr;
         gap: 0.6rem;
         font-size: 0.75rem;
         padding: 0.35rem 0;
         border-bottom: 1px dashed var(--rule);
         align-items: baseline;
       }
-      .phon-age-row:last-child { border-bottom: none; }
-      .phon-age {
+      .phon-age-row:last-child,
+      .phon-manner-row:last-child { border-bottom: none; }
+      .phon-age,
+      .phon-manner {
         color: var(--taupe);
         text-transform: uppercase;
         letter-spacing: 0.06em;
@@ -509,6 +512,7 @@ const SAMPLES: Record<string, Sample> = {
       }
       .phon-age.late { color: var(--ochre); }
       .phon-age.latest { color: var(--rust); }
+      .phon-manner.vowels { color: var(--ochre); }
       .phon-phonemes {
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
         color: var(--ink);
@@ -1362,6 +1366,16 @@ const SAMPLES: Record<string, Sample> = {
           </p>
         </details>
 
+        <details class="phon-details">
+          <summary>Phonemes by articulation</summary>
+          <ul class="phoneme-by-manner" id="phoneme-by-manner"></ul>
+          <p class="phon-source">
+            Grouped by manner of articulation. Same chips —
+            click to highlight; the chip state syncs across both
+            views.
+          </p>
+        </details>
+
         <h3>Per spread</h3>
         <ol class="per-spread-list" id="per-spread-list"></ol>
 
@@ -1701,6 +1715,28 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      // Shared chip builder so the by-age and by-manner views render
+       // identical buttons, all wired to togglePhoneme.
+      function buildPhonemeChip(p: {
+        phoneme: string;
+        count: number;
+        acquisitionAge: number;
+      }): HTMLButtonElement {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        const isActive = activePhonemes.has(p.phoneme);
+        chip.className = `phon-chip${isActive ? ' active' : ''}`;
+        chip.dataset.phoneme = p.phoneme;
+        chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        chip.setAttribute(
+          'aria-label',
+          `Phoneme /${p.phoneme}/ — ${p.count} occurrence${p.count === 1 ? '' : 's'}, acquired by age ${p.acquisitionAge}. Toggle highlight.`,
+        );
+        chip.title = `${p.count} occurrence${p.count === 1 ? '' : 's'} · acquired age ${p.acquisitionAge}`;
+        chip.textContent = `/${p.phoneme}/`;
+        return chip;
+      }
+
       function renderPhonologyDetail(profile: ReadabilityProfile): void {
         const phon = profile.phonology;
 
@@ -1777,23 +1813,84 @@ const SAMPLES: Record<string, Sample> = {
             label.textContent = age >= 6 ? 'age 6+' : `age ${age}`;
             const ph = document.createElement('span');
             ph.className = 'phon-phonemes';
-            for (const p of phonemes) {
-              const chip = document.createElement('button');
-              chip.type = 'button';
-              const isActive = activePhonemes.has(p.phoneme);
-              chip.className = `phon-chip${isActive ? ' active' : ''}`;
-              chip.dataset.phoneme = p.phoneme;
-              chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-              chip.setAttribute(
-                'aria-label',
-                `Phoneme /${p.phoneme}/ — ${p.count} occurrence${p.count === 1 ? '' : 's'}, acquired by age ${p.acquisitionAge}. Toggle highlight.`,
-              );
-              chip.title = `${p.count} occurrence${p.count === 1 ? '' : 's'} · acquired age ${p.acquisitionAge}`;
-              chip.textContent = `/${p.phoneme}/`;
-              ph.appendChild(chip);
-            }
+            for (const p of phonemes) ph.appendChild(buildPhonemeChip(p));
             li.append(label, ph);
             phonList.appendChild(li);
+          }
+        }
+
+        // ---- Phonemes by manner of articulation ----
+        const mannerList = byId('phoneme-by-manner');
+        if (mannerList) {
+          mannerList.innerHTML = '';
+          const inv = phon.phonemeInventory;
+          if (inv.length === 0) {
+            const empty = document.createElement('li');
+            empty.className = 'phon-manner-row';
+            const lbl = document.createElement('span');
+            lbl.className = 'phon-manner';
+            lbl.textContent = '—';
+            const ph = document.createElement('span');
+            ph.className = 'phon-phonemes';
+            ph.style.fontStyle = 'italic';
+            ph.style.color = 'var(--taupe)';
+            ph.textContent = 'Type into a page to see the inventory.';
+            empty.append(lbl, ph);
+            mannerList.appendChild(empty);
+          } else {
+            // Articulation-chart conventional order: voiced/voiceless
+            // pairs together within manner; vowels last.
+            const MANNER_ORDER = [
+              'stop',
+              'nasal',
+              'fricative',
+              'affricate',
+              'liquid',
+              'glide',
+              'vowel',
+            ] as const;
+            const byManner = new Map<string, typeof inv>();
+            for (const p of inv) {
+              const arr = byManner.get(p.manner) ?? [];
+              arr.push(p);
+              byManner.set(p.manner, arr);
+            }
+            for (const manner of MANNER_ORDER) {
+              const arr = byManner.get(manner);
+              if (!arr || arr.length === 0) continue;
+              // Within a manner: sort by place first (mouth-front → back),
+              // then voiceless before voiced for cleaner column-like rows.
+              const PLACE_ORDER = [
+                'bilabial',
+                'labiodental',
+                'dental',
+                'alveolar',
+                'postalveolar',
+                'palatal',
+                'velar',
+                'glottal',
+              ];
+              arr.sort((a, b) => {
+                const pa = PLACE_ORDER.indexOf(a.place);
+                const pb = PLACE_ORDER.indexOf(b.place);
+                if (pa !== pb) return pa - pb;
+                if (a.voicing !== b.voicing) {
+                  return a.voicing === 'voiceless' ? -1 : 1;
+                }
+                return a.phoneme.localeCompare(b.phoneme);
+              });
+              const li = document.createElement('li');
+              li.className = 'phon-manner-row';
+              const label = document.createElement('span');
+              label.className =
+                manner === 'vowel' ? 'phon-manner vowels' : 'phon-manner';
+              label.textContent = manner === 'vowel' ? 'vowels' : `${manner}s`;
+              const ph = document.createElement('span');
+              ph.className = 'phon-phonemes';
+              for (const p of arr) ph.appendChild(buildPhonemeChip(p));
+              li.append(label, ph);
+              mannerList.appendChild(li);
+            }
           }
         }
 
@@ -1865,6 +1962,17 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      const REACH_REASON_LABEL: Record<ReachWord['reason'], string> = {
+        'low-frequency':
+          'Low frequency — not in the Dolch + Fry sight-word lists',
+        'tier-2':
+          'Tier 2 (Beck/McKeown/Kucan) — high-frequency for mature readers',
+        'tier-3':
+          'Tier 3 (Beck/McKeown/Kucan) — low-frequency, domain-specific',
+        'morphologically-complex':
+          'Morphologically complex — prefix/suffix/inflection raises difficulty',
+      };
+
       function renderReachWords(reach: ReachWord[]): void {
         const list = byId('reach-list');
         const empty = byId('reach-empty');
@@ -1877,6 +1985,10 @@ const SAMPLES: Record<string, Sample> = {
         empty.style.display = 'none';
         for (const r of reach) {
           const li = document.createElement('li');
+          const reasonText = REACH_REASON_LABEL[r.reason] ?? r.reason;
+          // Native tooltip — explains why this word is flagged and
+          // where it first appears. Cheap, no JS overhead.
+          li.title = `${r.word} · ${reasonText} · first appears on spread ${r.spread}`;
           const word = document.createElement('span');
           word.className = 'word';
           word.textContent = r.word;
@@ -2328,7 +2440,7 @@ const SAMPLES: Record<string, Sample> = {
 
       // Phoneme chip clicks (event delegation — chips are re-rendered
       // on every analyze pass, so binding per-element would leak).
-      byId('phoneme-by-age')?.addEventListener('click', (e) => {
+      function onPhonemeChipClick(e: Event): void {
         const target = e.target as HTMLElement | null;
         const chip = target?.closest?.('.phon-chip') as HTMLElement | null;
         if (!chip) return;
@@ -2340,12 +2452,23 @@ const SAMPLES: Record<string, Sample> = {
           activePhonemes.add(phoneme);
         }
         const isActive = activePhonemes.has(phoneme);
-        chip.classList.toggle('active', isActive);
-        chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        // Sync state across both views (by-age and by-manner). The
+        // clicked chip updates its own aria-pressed; the other view's
+        // chip for the same phoneme re-renders on the next analyze
+        // pass which we trigger via applyPhonemeHighlights → no need
+        // to manually walk siblings here.
+        for (const c of document.querySelectorAll<HTMLElement>(
+          `.phon-chip[data-phoneme="${CSS.escape(phoneme)}"]`,
+        )) {
+          c.classList.toggle('active', isActive);
+          c.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        }
         const clearBtn = byId('phon-clear');
         if (clearBtn) clearBtn.hidden = activePhonemes.size === 0;
         applyPhonemeHighlights();
-      });
+      }
+      byId('phoneme-by-age')?.addEventListener('click', onPhonemeChipClick);
+      byId('phoneme-by-manner')?.addEventListener('click', onPhonemeChipClick);
 
       byId('phon-clear')?.addEventListener('click', () => {
         activePhonemes.clear();
