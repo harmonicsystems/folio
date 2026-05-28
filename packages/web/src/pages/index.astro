@@ -818,6 +818,40 @@ const SAMPLES: Record<string, Sample> = {
         padding: 0 0 0 1em;
       }
 
+      /* ---- guessed pronunciations list ---- */
+      .guessed-list {
+        list-style: none;
+        padding: 0.3rem 0 0 1em;
+        margin: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 0.4rem;
+      }
+      .guessed-list li {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.75rem;
+        color: var(--ochre);
+        padding: 0.1rem 0.4rem;
+        background: var(--cream);
+        border: 1px solid var(--rule);
+        border-radius: 2px;
+      }
+      .guessed-list li.guessed-empty {
+        color: var(--taupe);
+        font-style: italic;
+        background: transparent;
+        border: none;
+        padding: 0;
+        font-family: inherit;
+      }
+      .guessed-count {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.7em;
+        color: var(--ochre);
+        margin-left: 0.4em;
+      }
+      .guessed-count:empty { display: none; }
+
       .reach-list { list-style: none; padding: 0; margin: 0; }
       .reach-list li {
         padding: 0.3rem 0; border-bottom: 1px solid var(--rule);
@@ -1375,6 +1409,17 @@ const SAMPLES: Record<string, Sample> = {
           </p>
         </details>
 
+        <details class="phon-details">
+          <summary>Guessed pronunciations <span class="guessed-count" id="guessed-count" aria-hidden="true"></span></summary>
+          <ul class="guessed-list" id="guessed-list"></ul>
+          <p class="phon-source">
+            These words aren't in the curated CMU dict subset.
+            Decodability, syllable shapes, and phoneme inventory
+            for them are estimated from spelling — best-effort,
+            not authoritative.
+          </p>
+        </details>
+
         <h3>Prosody</h3>
         <div class="metric-row">
           <span class="label">Dominant meter</span>
@@ -1515,7 +1560,11 @@ const SAMPLES: Record<string, Sample> = {
     ></script>
 
     <script>
-      import { analyze, getWordPhonemes } from '@harmonic-systems/early-literacy';
+      import {
+        analyze,
+        getGuessedWords,
+        getWordPhonemes,
+      } from '@harmonic-systems/early-literacy';
       import type {
         AgeBand,
         ReachWord,
@@ -1544,7 +1593,50 @@ const SAMPLES: Record<string, Sample> = {
       );
 
       // ---- persistence ----
+      // Two buckets, distinct lifecycles:
+      // - folio.draft.v1  : the manuscript content (text, placements,
+      //                     ageBand, trim). Cleared by Reset.
+      // - folio.prefs.v1  : workspace preferences (body font, view
+      //                     mode, sidebar state). Persist independent
+      //                     of any single manuscript; Reset does NOT
+      //                     touch them.
       const DRAFT_KEY = 'folio.draft.v1';
+      const PREFS_KEY = 'folio.prefs.v1';
+      interface SavedPrefs {
+        version: 1;
+        bodyFont?: string;
+        viewMode?: 'grid' | 'book';
+        sidebarCollapsed?: boolean;
+      }
+      function loadPrefs(): SavedPrefs | null {
+        try {
+          const raw = localStorage.getItem(PREFS_KEY);
+          if (!raw) return null;
+          const parsed = JSON.parse(raw);
+          if (parsed?.version !== 1) return null;
+          return parsed as SavedPrefs;
+        } catch {
+          return null;
+        }
+      }
+      function savePrefs(): void {
+        try {
+          const fontSel = byId('body-font') as HTMLSelectElement | null;
+          const surface = byId('editor-surface');
+          const prefs: SavedPrefs = {
+            version: 1,
+            bodyFont: fontSel?.value ?? 'caslon',
+            viewMode:
+              (surface?.getAttribute('data-view') as 'grid' | 'book' | null) ??
+              'grid',
+            sidebarCollapsed:
+              document.body.classList.contains('sidebar-collapsed'),
+          };
+          localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+        } catch {
+          /* ignore */
+        }
+      }
       interface SavedDraft {
         version: 1;
         ageBand: string;
@@ -1627,8 +1719,29 @@ const SAMPLES: Record<string, Sample> = {
       // Refresh the relative-time label so "12s ago" → "42s ago" etc.
       setInterval(updateSavedIndicator, 30_000);
 
-      // Restore controls immediately so the editors hydrate against the
-      // right age band / trim. Per-page content restores in the
+      // Restore preferences first so the editors hydrate against the
+       // right font and view, and the sidebar doesn't pop open/closed
+       // after first paint.
+      const restoredPrefs = loadPrefs();
+      if (restoredPrefs) {
+        const fontSel = byId('body-font') as HTMLSelectElement | null;
+        if (fontSel && restoredPrefs.bodyFont) {
+          fontSel.value = restoredPrefs.bodyFont;
+        }
+        if (restoredPrefs.sidebarCollapsed) {
+          document.body.classList.add('sidebar-collapsed');
+          const btn = byId('sidebar-toggle');
+          if (btn) btn.textContent = 'Show';
+        }
+        // View mode is applied after editors mount (book mode scrolls
+        // to spread 1 which needs the surface laid out). Stash it for
+        // the post-ready handler below.
+        if (restoredPrefs.viewMode === 'book') {
+          (window as unknown as { __pendingViewMode?: 'grid' | 'book' }).__pendingViewMode = 'book';
+        }
+      }
+
+      // Restore manuscript controls. Per-page content restores in the
       // page-editor-ready handler below as each Lexical instance mounts.
       const restoredDraft = loadDraft();
       if (restoredDraft) {
@@ -2245,10 +2358,32 @@ const SAMPLES: Record<string, Sample> = {
         highlights.set('reach-word', highlight);
       }
 
+      function renderGuessedWords(engineText: string): void {
+        const list = byId('guessed-list');
+        const count = byId('guessed-count');
+        if (!list) return;
+        list.innerHTML = '';
+        const words = getGuessedWords(engineText);
+        if (count) count.textContent = words.length > 0 ? `· ${words.length}` : '';
+        if (words.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'guessed-empty';
+          li.textContent = 'None — every word is in the dict.';
+          list.appendChild(li);
+          return;
+        }
+        for (const w of words) {
+          const li = document.createElement('li');
+          li.textContent = w;
+          list.appendChild(li);
+        }
+      }
+
       function runAnalysis(): void {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
         const profile = analyze(engine);
+        const engineText = engine.spreads.map((s) => s.text).join('\n\n');
         // Vocabulary may have shifted — bust the per-word cache.
         wordPhonemeCache.clear();
         markEmptySpreads(web);
@@ -2262,6 +2397,7 @@ const SAMPLES: Record<string, Sample> = {
         updateStatusBar(profile);
         applyReachWordHighlights(profile);
         applyPhonemeHighlights();
+        renderGuessedWords(engineText);
         saveDraft();
       }
 
@@ -2442,7 +2578,10 @@ const SAMPLES: Record<string, Sample> = {
         }
       });
 
-      byId('body-font')?.addEventListener('change', applyBodyFont);
+      byId('body-font')?.addEventListener('change', () => {
+        applyBodyFont();
+        savePrefs();
+      });
 
       byId('layout-preset')?.addEventListener('change', (e) => {
         const sel = e.target as HTMLSelectElement;
@@ -2456,6 +2595,7 @@ const SAMPLES: Record<string, Sample> = {
         const collapsed = document.body.classList.toggle('sidebar-collapsed');
         const btn = byId('sidebar-toggle');
         if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
+        savePrefs();
       });
 
       // Phoneme chip clicks (event delegation — chips are re-rendered
@@ -3016,7 +3156,16 @@ const SAMPLES: Record<string, Sample> = {
       )) {
         btn.addEventListener('click', () => {
           setViewMode(btn.dataset.viewSet as 'grid' | 'book');
+          savePrefs();
         });
+      }
+
+      // Apply restored book-view mode once editors are mounted enough
+      // that the surface has its grid laid out.
+      const pendingView = (window as unknown as { __pendingViewMode?: 'grid' | 'book' }).__pendingViewMode;
+      if (pendingView === 'book') {
+        // Defer past the initial runAnalysis pass.
+        requestAnimationFrame(() => requestAnimationFrame(() => setViewMode('book')));
       }
       // Keep aria-pressed in sync whenever view changes.
       const observer = new MutationObserver(() => {
