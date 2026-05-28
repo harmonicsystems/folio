@@ -12,7 +12,7 @@ Outputs a JSON `ReadabilityProfile`.
 
 ## Status
 
-Pre-alpha. Help text works; analysis is not yet wired up. See `../../ARCHITECTURE.md`.
+Working. `folio analyze <file> [--age-band <band>]` emits a complete `ReadabilityProfile` JSON to stdout including vocabulary, phonology, prosody, per-spread breakdown, reach words, and warnings. Manuscripts are read from a `.txt` file with one spread per blank-line-separated block (matching the `/paste` web surface's convention).
 
 ## Development
 

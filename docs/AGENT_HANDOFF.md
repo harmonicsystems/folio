@@ -1,85 +1,158 @@
 # Agent Handoff
 
-This repo sometimes runs two Claude Code sessions in parallel, each in its own git worktree, each owning a specific track of work. This doc is the rules of the road so a fresh agent can read it cold and stay in its lane.
+If you're picking this up cold: read **this file first**, then [`CLAUDE.md`](../CLAUDE.md) and [`ARCHITECTURE.md`](../ARCHITECTURE.md). Skim the last ten commits to see recent direction. Open `https://folio.harmonic-systems.org/` to see the working software.
 
-If you are starting a fresh session in a worktree, read this first.
+This doc replaces the parallel-agent rules of the road that the early multi-track phase needed. The repo now lives on `main` only; there are no parallel sessions. **Most of the originally planned build is done.** The next phase is observation — what users actually do with what shipped — not a feature list.
 
-## Current parallel session
+## Where the project is right now
 
-One track is in flight. Confirm by branch name (`spread-editor`) before doing anything else.
+- **Live deployment:** `https://folio.harmonic-systems.org/` (auto-deploys on push to `main` via GitHub Actions → GitHub Pages).
+- **Engine:** Milestones 0 → 4 complete (`@harmonic-systems/early-literacy`). 118 unit tests + 43 corpus regression tests, all green.
+- **Web routes:**
+  - `/` — spread-first editor (16 spreads, two facing pages each, Lexical rich text, in-line reach-word + phoneme highlighting, book view, layout presets, font picker, persistence, export to .txt / .md / PDF, sidebar with manuscript metrics + phonology + per-spread bars + prosody + guessed-pronunciations + warnings)
+  - `/paste` — paste-and-analyze fallback (single textarea, four sample loaders, analysis output)
+  - `/about` — landing page for cold visitors arriving from links / tweets
+- **CI:** Typecheck + test on every push and PR. Green right now. See `.github/workflows/ci.yml`.
+- **CD:** Build + deploy to Pages on every push to `main`. See `.github/workflows/deploy.yml`.
+- **Analytics:** Plausible loaded on all three routes (cookieless). Domain needs to be registered in the Plausible dashboard at folio.harmonic-systems.org for counts to appear — script ships harmlessly until then.
 
-Earlier tracks — phonology (Track 1) and web alpha + corpus (Track 2) — landed on `main` as commits `b5c67fe..23cfc22`. Their sections have been removed per the lifecycle convention below; consult `git log` for the history.
+## The thesis (don't drift from this)
 
-### Track 3 — Spread-First Editor
+The engine measures. **It does not author.** Folio is anti-slop infrastructure for children's literature. Every linguistic claim cites its source; metrics that can't be cited are documented as engine choices, not norms.
 
-**Status:** In flight, pre-work only. A throwaway visual prototype exists at `prototypes/spread-editor/` and can be iterated on freely. Production work in `packages/web/` is gated on the open questions below — the spec proposes engine-API changes that need ADRs ratified before code lands.
+Two products from one engine: (1) a TypeScript readability package SLPs / clinicians / educators can use, and (2) a spread-first authoring surface for picture-book writers. Both shipped. The thesis the tool itself teaches — *restraint creates creative flow* — is also the thesis behind how it was built: every constraint we accepted is what let the project move fast without becoming slop.
 
-**Goal:** ship the spread-first editor — 16 spread tiles with per-spread placement zones, in-context reach-word decoration, and a live readability sidebar driven by `analyze()`. Replaces the paste-and-analyze UI in `packages/web/src/pages/index.astro` as the primary editor surface once it reaches parity.
+## Hard rules (do not violate without explicit user OK)
 
-**Owns:**
-- `packages/web/` — sole owner.
-- `prototypes/spread-editor/` — delete when the production editor reaches feature parity.
-- `docs/decisions/0002-spread-first-editing.md` and `docs/decisions/0003-spread-native-engine-api.md` — to be written.
-- `packages/engine/src/types.ts` — only the extensions ratified by ADR 0003 (e.g., `SpreadProfile`, optional `perSpread` on `ReadabilityProfile`). No other type changes.
-- Engine module signatures changed per ADR 0003.
+1. **No LLM generation of manuscript text.** This applies to corpus fixtures too — synthetic fixtures are *human-authored test stand-ins*, deliberately written, not generated. The LLM may suggest dialogic prompts, illustrator briefs, and refactoring help; it may not write the manuscript.
+2. **Cite or omit.** Every linguistic claim in the codebase must trace to an entry in [`docs/linguistics/SOURCES.md`](linguistics/SOURCES.md). Engine choices (e.g., the 0.7/0.3 decodability formula) are documented as choices, not norms.
+3. **Engine portability.** No Node-only APIs in `packages/engine/src/`. File I/O lives in the CLI, in tests, or in the web layer. Data files are TypeScript modules under `src/data/`, never JSON read from disk. This keeps the future Swift / WASM port viable.
+4. **Engine API stability.** `packages/engine/src/types.ts` is the public contract. Internal implementations can change; the type surface should stay stable across minor versions. Type changes need an ADR.
+5. **Integrity surface.** When the engine makes a best-effort guess (grapheme-heuristic pronunciations, default vowel acquisition ages, uncalibrated decodability), that guess is **visible** to the user. See `getGuessedWords()` in the engine and the "Guessed pronunciations" sidebar section. Do not add silent estimation.
 
-**Cannot touch:** `packages/engine/src/phonology|vocabulary|syntax|prosody/`, `packages/engine/src/data/`, `packages/cli/`, `packages/corpus-tests/`, `corpora/`.
+## What makes Folio Folio (the integrity story)
 
-**Open questions blocking production start (need human decisions):**
-1. Do `TrimSize` and `SpreadPlacement` live on the engine's `Manuscript`/`Spread`, or on a web-side wrapper type? (Recommendation: wrapper — the engine measures, composition is the UI's job.)
-2. Does `analyze()` return `perSpread: SpreadProfile[]`, or does the web filter the manuscript-level profile? (Recommendation: engine returns; filtering on the web duplicates internal engine logic.)
-3. Are per-spread word-count targets a cited norm or a descriptive heuristic? (Recommendation: heuristic — picture books distribute words unevenly by design.)
-4. Editor library for caret-safe reach-word decoration: Lexical, TipTap, ProseMirror, or roll our own controlled `contentEditable`? (Recommendation: Lexical.)
+These are not features. They are the load-bearing decisions that distinguish Folio from every other "readability tool" on the market:
 
-## Hard boundaries
+- **CSS Custom Highlight API** for reach-word / phoneme / find highlighting. No DOM mutation, so no caret bugs. This is why the editor can be both a real authoring surface and a real clinical-evaluation surface at the same time.
+- **Spread-first surface with two facing pages.** Picture books compose at the page level. The two-page model is non-negotiable and shipped after first-user testing exposed the spread-level abstraction as wrong.
+- **Phoneme-by-articulation view** + click-to-highlight. No other tool in the space (Lexile, F&P, ATOS, DRA) can see articulation. This is the SLP product.
+- **Engine-as-package.** Same `analyze()` runs in the CLI, the web alpha, and any future native or third-party app. Web composition concerns stay in `packages/web/src/types.ts`; the engine never sees `TrimSize` or `SpreadPlacement`.
+- **Local-first.** No server, no account, no manuscript content leaves the browser. Drafts autosave to `folio.draft.v1` in localStorage; workspace prefs to `folio.prefs.v1`.
 
-| Path | Track 3 |
-|---|---|
-| `packages/web/` | owns |
-| `prototypes/` | owns |
-| `docs/decisions/0002-*.md`, `0003-*.md` | owns (to be written) |
-| `packages/engine/src/types.ts` | extends per ADR 0003 only |
-| `packages/engine/src/readability/index.ts` | may change `analyze()` signature per ADR 0003 |
-| `packages/engine/src/phonology|vocabulary|syntax|prosody/` | off-limits |
-| `packages/engine/src/data/` | off-limits |
-| `packages/engine/src/index.ts` (barrel) | coordinate via main thread |
-| `packages/cli/`, `packages/corpus-tests/` | off-limits |
-| `corpora/` | off-limits |
-| `package.json` (root), `pnpm-workspace.yaml`, `.github/workflows/` | coordinate via main thread |
+## Open decisions (genuinely undecided)
 
-"Coordinate via main thread" means: do not edit without checking with the human running the main Claude Code session. These files affect downstream consumers.
+| Decision | Why blocked | Cost of choosing |
+|---|---|---|
+| Tier 1 word list (Beck/McKeown/Kucan don't publish one) | Need to pick a sourced proxy: General Service List (West 1953), Children's Printed Word Database (Masterson 2010), or derive from a corpus and document the methodology | ~1–2 hours to wire once chosen. Unblocks `tier1Coverage`, `tier2Words`, `tier3Words`, *and* reach-word reason tooltips that currently always say "low-frequency" |
+| Decodability calibration | First-cut formula `0.7 × phoneme_ease + 0.3 × syllable_ease` produces a mild inversion (Peter Rabbit 0.866 vs synthetic board book 0.854). Documented as engine choice in `ARCHITECTURE.md` open questions | Wait for more corpora across age bands to give calibration signal |
+| Vowel acquisition norms | Crowe & McLeod (2020) covers consonants only. All 15 vowels currently default to age 3 | Candidates: Otomo & Stoel-Gammon (1992), Donegan (2013), longitudinal infant-speech corpus. One row of `cmu-phonemes.ts` to swap in |
+| Meter detection anacrusis | Engine matches offsets-0-only for determinism (iambic vs trochaic ambiguates otherwise). Real verse with line-initial unstressed pickup scores in "mixed" instead of its true meter | Could allow one syllable of anacrusis with a slight scoring penalty; needs careful design to avoid re-ambiguating |
+| Reading Kit (clinical PDF export) | Strategic, not technical. External review framing: ship first, observe `/paste` vs `/` engagement, then decide | Half-day to first cut if SLP audience signals up |
 
-## Shared contracts — do not break these
+## Things deliberately NOT done
 
-- **`types.ts` is the integration point.** Track 3 may extend it only with changes ratified by ADR 0003. Any other type change needs a new ADR and human sign-off — propose it, do not merge it. Downstream consumers (`packages/cli/`, `packages/web/`, `packages/corpus-tests/`) all depend on the surface staying stable.
-- **Citation discipline.** Every linguistic claim must trace to an entry in `docs/linguistics/SOURCES.md`, or be removed. No new norms, thresholds, or word lists without a corresponding citation. Phoneme-acquisition norms, vocabulary tiers, prosody templates, corpus fixture constraints — all the same rule.
-- **Engine portability.** No Node-only APIs in `packages/engine/src/`. File IO lives in CLI, tests, or web. Data files are TypeScript modules under `src/data/`, not JSON read from disk.
-- **No LLM-generated manuscript text.** Per `CLAUDE.md`. The engine measures; it does not author. This applies to corpus fixtures too — synthetic fixtures are *human-authored test stand-ins*, written deliberately, not generated.
+Don't redo these without a reason:
 
-## Workflow
+- **Phone-mode responsiveness.** Tablet+ only. Floating selection toolbars and 340px tile minimums don't translate to phone screens. Documented in the tablet-responsiveness commit.
+- **Vocabulary tier classification.** Engineering is easy; sourcing is the blocker (above).
+- **Dialogic-reading prompts.** Deferred per external review's "ship before adding more" advice.
+- **OG image (PNG).** Current state: favicon + descriptive title + description in social previews. Needs a designed 1200×630 image; can't easily generate one programmatically.
+- **In-line tooltips on highlighted reach words.** CSS Custom Highlight API paint layers don't accept hover events. The sidebar list already has tooltips; in-text would need mousemove + caretRangeFromPoint, deliberately deferred.
+- **Per-client phoneme acquisition profiles (SLP).** Mentioned in `Coming soon` sidebar; deferred until real SLP feedback shapes the interface.
 
-1. **Confirm your branch first.** `git branch --show-current`. If you are on `main`, stop — you are in the wrong worktree.
-2. **Commit at logical breakpoints**, not at the end of the whole track. Smaller commits review better and revert cleaner.
-3. **Do not push to `main`.** Push to your own branch: `git push -u origin <your-branch>`.
-4. **Do not merge or rebase against `main` mid-track** unless the human asks you to. The whole point of the worktree is independence.
-5. **When the track is done**, open a PR (`gh pr create`) and wait for review. Do not auto-merge.
-6. **Run `pnpm typecheck` and `pnpm test` from the repo root before each commit.** A green tree is a soft contract.
+## The audience question (from external review)
 
-## Track lifecycle
+The single most important next move is **not building**. It's seeing which audience shows up.
 
-Tracks are **queued**, **in flight**, or **landed**. When a track lands on `main`, remove its section *and* its boundaries-table column in the same commit — this doc is for current parallel work, not history. Use git for history.
+- If `/paste` engagement > `/`: clinical evaluation is the primary use case. Build toward **Reading Kit export** — a PDF that bundles the analysis, phoneme inventory, articulation view, and dialogic prompts for a session-prep document.
+- If `/` engagement > `/paste`: authoring is the primary use case. Build toward **trope-template overlay** and **manuscript import**.
 
-A queued track stays queued until its blockers clear. The first agent to start work flips the status to in-flight in the same commit as their first real change.
+Both branches reuse the existing engine and data flow. The audience question decides which one earns the next half-day of work.
 
-## If you have to leave your lane
+Plausible page views are loaded but no custom goals are wired. Adding `goal=analyze_clicked` (on `/paste`'s analyze button) and `goal=text_typed` (on `/`'s first input) takes ~10 min and would give a signal. Not necessary on day 1 — page-view ratio is a usable first proxy.
 
-If completing your track *requires* touching a file outside your ownership column, **stop and ask the human**. Do not silently expand scope. Lane expansion is exactly the cause of merge pain that worktrees are supposed to prevent. The human will either grant a one-time exception, re-scope the track, or coordinate with the other agent.
+## Suggested next-move ladder (if user signal arrives)
 
-## Voice and style
+1. **Watch.** Send the URL to a small set of SLPs and a small set of picture-book authors. Note which route they spend time on and what they say.
+2. **Plausible goals.** Add `analyze_clicked` + `text_typed` events when ready to quantify.
+3. **Reading Kit OR trope overlay** depending on signal.
+4. **Tier 1 sourcing decision** if author-side signal warrants vocabulary tier work.
+5. **Calibration pass** for decodability once there's enough corpus signal.
 
-Keep the existing aesthetic — readers should not be able to tell which agent wrote which file.
+If no clear signal in two weeks: pick one and ship it anyway. The branches are reversible.
 
-- **TypeScript:** ESM, strict mode, JSDoc on exported functions, no `any` without a `// TODO: type` comment.
+## Things worth manually testing
+
+The user is doing this themselves; these are the items most likely to surface a real issue:
+
+- **Print to PDF in Chrome and Safari**, with each body font selected. Does the chosen font embed in the PDF or fall back to default?
+- **iPad landscape and portrait**, actual touch input. Floating selection toolbar behavior, scroll-snap in book view, soft hyphen / nbsp shortcut access.
+- **Persistence across sessions.** Type a manuscript, change preferences, refresh, close browser, reopen.
+- **`/paste` vs `/`** with the same content. The numbers should match exactly.
+- **All three highlight layers** stacked on one word (reach-word + phoneme-match + find-current). Visual readability when the three overlap.
+- **The "Guessed pronunciations" list** on a Lear or Potter sample. Are the words it surfaces actually the ones you'd want flagged?
+
+## Dev loop
+
+```bash
+pnpm install
+pnpm -r build        # build engine before downstream packages typecheck
+pnpm typecheck       # all packages
+pnpm test            # all packages (engine unit + corpus regression)
+pnpm --filter @harmonic-systems/folio-web dev   # local at http://localhost:4321
+```
+
+CI runs `pnpm install --frozen-lockfile`, `pnpm -r build`, `pnpm typecheck`, `pnpm test` on every push and PR. Deploy runs the same build and uploads `packages/web/dist/` to GitHub Pages.
+
+## Directory map
+
+```
+packages/
+  engine/          @harmonic-systems/early-literacy — pure TS, browser-portable
+    src/
+      readability/   orchestrator
+      vocabulary/    tokenize, sight-words (Dolch + Fry), reach-word detection
+      phonology/     CMU dict, syllabify, phoneme inventory, decodability,
+                     getWordPhonemes, isInCmuDict, getGuessedWords
+      syntax/        stubs only (sentence types, clause depth — not implemented)
+      prosody/       meter + rhyme detection (Milestone 4, shipped)
+      data/          CMU dict subset + phoneme metadata tables
+    tests/
+  cli/             folio analyze <file> — emits JSON ReadabilityProfile
+  web/             Astro spread-first editor + paste + about pages
+    src/
+      pages/         index.astro (editor), paste.astro, about.astro
+      components/    PageEditor.tsx — per-page Lexical React island
+      types.ts       WebManuscript / WebSpread / PageContent / TrimSize / toEngineManuscript
+    public/
+      favicon.svg, CNAME (folio.harmonic-systems.org)
+  corpus-tests/    Regression gate — walks corpora/*.meta.json against engine
+
+corpora/           Public-domain + synthetic test fixtures + meta.json constraints
+docs/
+  AGENT_HANDOFF.md   this file
+  decisions/         ADRs (0002 spread-first editing, 0003 spread-native engine API)
+  linguistics/SOURCES.md   every cited source
+ARCHITECTURE.md    Roadmap + module layout + open questions
+CLAUDE.md          Per-repo Claude instructions (the integrity rules)
+README.md          Project front door
+```
+
+## Git workflow
+
+The multi-track parallel-agent phase is over. Current state:
+
+- One branch: `main`. Push → CI runs → Deploy runs → live in ~1 minute.
+- Commit messages explain the **why**, not just the what. See recent log for the established voice.
+- Smaller commits review better than big ones; ship at logical breakpoints.
+- For substantial new work, open a PR even when solo — gives a review surface.
+
+## Voice & style
+
+Keep the existing aesthetic. A reader should not be able to tell which agent wrote which file.
+
+- **TypeScript:** ESM, strict mode (`noUncheckedIndexedAccess` is on), JSDoc on exported functions, no `any` without a `// TODO: type` comment.
 - **Comments:** only when the WHY is non-obvious. Never write self-referential comments (`// added in track 1`, `// see PR #42`). Code rots, and so do those.
 - **Markdown:** warm but not chatty. No emojis unless the user requests them. Use tables where they earn their keep; avoid bullet-heavy lists.
 - **Errors and warnings:** match the existing tone in `readability/index.ts` — terse, specific, actionable.
@@ -92,7 +165,7 @@ Leave the work reviewable:
 - All tests passing (`pnpm test` at repo root)
 - Typecheck clean (`pnpm typecheck` at repo root)
 - Tree clean (no uncommitted half-finished files)
-- A PR open against `main` with a clear summary of what changed
-- If the track is incomplete, say so explicitly in the PR description — do not pretend it's done
+- Commit messages explain why each change was made
+- If something is partial, say so explicitly in the commit — do not pretend it's done
 
-The human running the main session will review, merge, and clean up the worktree.
+The single most important thing you can do as a fresh agent: **be honest about what's shipped vs. what's aspirational**. Folio's whole value proposition is that it doesn't lie. Don't let the tool itself start lying about its own state.

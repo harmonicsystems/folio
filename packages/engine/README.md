@@ -4,14 +4,15 @@ Developmental linguistic analysis for children's literature (ages 0–10).
 
 ## Status
 
-Pre-alpha. API surfaces are defined in `src/types.ts`; implementations are in progress. See `../../ARCHITECTURE.md` for the full roadmap.
+Public alpha. Milestones 0–4 shipped (vocabulary + sight words, phonology + decodability, web alpha, prosody). Syntax stubbed. Vocabulary tier classification (Beck/McKeown/Kucan) is gated on the Tier 1 word list sourcing decision documented in `../../ARCHITECTURE.md` open questions. 118 unit tests + 43 corpus regression tests, all green.
 
 ## Modules
 
-- `readability/` — top-level orchestration
-- `vocabulary/` — Beck/McKeown/Kucan tiers, sight word coverage (Dolch/Fry)
-- `phonology/` — phoneme inventory, syllabification, decodability
-- `prosody/` — stress patterns, meter
+- `readability/` — top-level orchestration; emits a complete `ReadabilityProfile`
+- `vocabulary/` — tokenizer, sight word coverage (Dolch + Fry), reach-word detection, TTR. Beck/McKeown/Kucan tiers are stubbed pending sourcing
+- `phonology/` — CMU dict (curated ~320-word subset + grapheme heuristic fallback), syllabification, phoneme inventory with first-spread attribution, acquisition-age weighting (Crowe & McLeod 2020), decodability scoring, `getWordPhonemes` (IPA per word), `getGuessedWords` (OOV integrity surface), `isInCmuDict` (dict-hit primitive)
+- `syntax/` — stubs only; not implemented
+- `prosody/` — binary stress sequence from CMU markers, dominant meter detection (iambic / trochaic / anapestic / dactylic / mixed), rhyme scheme extraction with cot-caught vowel normalization
 
 ## Linguistic grounding
 

@@ -108,16 +108,43 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Paste-and-analyze UI consuming `analyze()` in the browser
 - [x] Visual report (no auth, no persistence v1) — word count vs. target, sight-word coverage, TTR, reach words by spread, warnings
 
-### Milestone 4: Prosody
+### Milestone 4: Prosody ✓ (first cut)
 
-- [ ] Stress pattern detection from CMU dict
-- [ ] Meter analysis for rhyming text
+- [x] Stress pattern detection from CMU dict (binary; secondary collapses to stressed)
+- [x] Meter analysis — iambic / trochaic / anapestic / dactylic, with `mixed` and `undefined` fallbacks
+- [x] Rhyme scheme detection via last-stressed-vowel suffix; AA / ABAB / etc. with spreadsheet-style overflow past Z
+- [x] AA / AO vowel normalization for rhyme (cot-caught merger) so dog/log rhyme
+- [ ] Anacrusis handling — verse with line-initial unstressed pickup currently scores as `mixed`; offset-0-only kept for deterministic iambic/trochaic discrimination
 - [ ] Read-aloud rhythm scoring (interface for VoiceKit later)
 
-### Future
+### Shipped beyond the original roadmap
 
-- Reach-word interactive review UI
-- Dialogic reading prompt generator
+The editor surface grew well past the original Milestone 3 "paste-and-analyze" scope. Tracked here so it doesn't get re-implemented:
+
+- Spread-first editor at `/` — 16 spreads, two facing pages each, per-page composition (text-only / text-top / text-bottom / illustration-only)
+- Grid view + Book view (CSS scroll-snap, trim-driven aspect ratio, gutter hairline)
+- Lexical-based rich text — bold / italic / underline / strikethrough, floating selection toolbar, markdown shortcuts (`**bold**`, `*italic*`, `~~strike~~`), soft hyphen + nbsp keyboard shortcuts
+- Three-layer highlight stack via CSS Custom Highlight API: reach words (wavy rust), active phonemes (ochre tint), find matches (green)
+- Phoneme inventory views — by acquisition age (Crowe & McLeod 2020 color-coded), by articulation manner; click any phoneme chip to highlight all words containing it
+- Guessed-pronunciations sidebar surface — integrity signal for OOV words
+- Layout presets (Classic facing, Mirror, Text top, Full text) and body-font picker (Libre Caslon, Futura, Futura Bold, Atkinson Hyperlegible)
+- Find & replace (Cmd+F) with current-match navigation and replace-all
+- Persistence — manuscript draft autosaves to `folio.draft.v1`; workspace prefs (font, view mode, sidebar state) to `folio.prefs.v1`
+- Export — `.txt` (plain) / `.md` (formatting preserved via `$convertToMarkdownString`) / PDF (via `window.print()` with a print stylesheet)
+- Onboarding card for first-time visitors + About dialog with shortcuts cheatsheet
+- Browser-compat banner when CSS Custom Highlight API is missing
+- Accessibility pass — aria-pressed on toggle buttons, focus-visible rings, WCAG-AA contrast on muted states
+- Tablet-aware responsiveness (iPad portrait + landscape; phone deliberately out of scope)
+- `/about` landing page for cold visitors
+- Plausible analytics (cookieless) on all three routes
+
+### Future (genuinely future, not "any minute")
+
+- Reading Kit export — clinical PDF bundling analysis + dialogic prompts per spread
+- Dialogic reading prompt generator (Whitehurst & Lonigan PEER/CROWD framework)
+- Trope-template overlay for authoring
+- Per-client phoneme acquisition profiles for SLP workflows
+- Manuscript import (the open question from CLAUDE.md)
 - Illustrator brief generator
 - Native SwiftUI app
 - Pop-up paper engineering library

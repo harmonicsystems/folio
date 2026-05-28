@@ -15,7 +15,9 @@ The LLM does the boring legibility work in the background (constraint checking, 
 
 ## Status
 
-Pre-alpha. Building the engine first as a TypeScript monorepo package, with a CLI for validation against a canonical book corpus.
+Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–4 complete (vocabulary + sight words, phonology + decodability, web alpha, prosody). Syntax stubbed. Web alpha ships three routes: `/` spread-first editor with Lexical rich text + in-line reach-word / phoneme / find highlighting + persistence + .txt/.md/PDF export, `/paste` analyze-only fallback, `/about` landing page.
+
+Next phase is **user signal**, not the next feature. See [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) for the full picture and the open decisions ladder.
 
 ## Tech stack
 
@@ -47,9 +49,11 @@ All metrics must cite their source. See `docs/linguistics/SOURCES.md`. Anchors: 
 4. **No LLM generation of manuscript content.** LLM is allowed for: dialogic prompt suggestions, illustrator brief generation, refactoring help.
 5. **Cite or omit.** Every linguistic claim in the codebase must trace to a citation in `SOURCES.md`, or be removed.
 
-## First milestone
+## Milestones shipped
 
-CLI that ingests a `.txt` manuscript and outputs a JSON `ReadabilityProfile`. Validated against 10 canonical books in `corpora/`.
+- M0 Scaffolding · M1 Word-level engine (Tier 1 classification still blocked on sourcing) · M2 Phonology · M3 Web alpha · M4 Prosody (meter + rhyme detection, all four canonical feet, AABB / ABAB schemes via CMU dict stress markers).
+- 118 engine unit tests + 43 corpus regression tests, all green.
+- Auto-deploy on every push to `main` via GitHub Actions → Pages.
 
 ## Conventions
 
