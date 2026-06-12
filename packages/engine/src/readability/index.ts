@@ -4,8 +4,10 @@
  * and prosody modules.
  *
  * Status: vocabulary (partial — see vocabulary/index.ts scope note on
- * tier classification) and phonology are implemented. Syntax and prosody
- * return empty profiles and will be implemented later. See ARCHITECTURE.md.
+ * tier classification), phonology, syntax, and prosody are implemented.
+ * `sentenceCount`, `averageSentenceLength`, and `syntax.*` all derive
+ * from a single `segmentSentences` pass. No syntax warnings or
+ * developmental thresholds are emitted — see syntax/index.ts for why.
  */
 
 import type {
@@ -14,7 +16,6 @@ import type {
   ReachWord,
   ReadabilityProfile,
   SpreadProfile,
-  SyntaxProfile,
   Warning,
 } from '../types.js';
 import { tokenizeWords } from '../vocabulary/tokenize.js';
@@ -25,6 +26,10 @@ import {
 import { sightWordCoverage } from '../vocabulary/sight-words.js';
 import { analyzePhonologyBySpread } from '../phonology/index.js';
 import { analyzeProsody } from '../prosody/index.js';
+import {
+  analyzeSyntaxFromSentences,
+  segmentSentences,
+} from '../syntax/index.js';
 
 /** Word-count targets per age band, from SCBWI / Mary Kole guidance. */
 const WORD_COUNT_TARGETS: Record<AgeBand, { min: number; max: number }> = {
@@ -38,7 +43,7 @@ const WORD_COUNT_TARGETS: Record<AgeBand, { min: number; max: number }> = {
 export function analyze(manuscript: Manuscript): ReadabilityProfile {
   const fullText = manuscript.spreads.map((s) => s.text).join('\n\n');
   const tokens = tokenizeWords(fullText);
-  const sentences = splitSentences(fullText);
+  const sentences = segmentSentences(fullText);
 
   const vocabulary = analyzeVocabulary(fullText);
   const phonology = analyzePhonologyBySpread(manuscript.spreads);
@@ -54,7 +59,7 @@ export function analyze(manuscript: Manuscript): ReadabilityProfile {
       sentences.length === 0 ? 0 : tokens.length / sentences.length,
     vocabulary,
     phonology,
-    syntax: emptySyntaxProfile(),
+    syntax: analyzeSyntaxFromSentences(sentences),
     prosody: analyzeProsody(fullText),
     reachWords,
     warnings: buildWarnings(tokens.length, wordCountTarget, manuscript.ageBand),
@@ -105,15 +110,6 @@ function buildPerSpread(
   });
 }
 
-/** Naive sentence segmenter — split on `.`, `!`, `?` followed by whitespace
- *  or end of string. Real segmentation is a Milestone-3 / `syntax/` concern. */
-function splitSentences(text: string): string[] {
-  return text
-    .split(/[.!?]+(?:\s+|$)/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
 function buildWarnings(
   wordCount: number,
   target: { min: number; max: number },
@@ -135,12 +131,4 @@ function buildWarnings(
     });
   }
   return warnings;
-}
-
-function emptySyntaxProfile(): SyntaxProfile {
-  return {
-    meanClausesPerSentence: 0,
-    sentenceLengthStdev: 0,
-    sentenceTypes: { declarative: 0, interrogative: 0, exclamatory: 0, imperative: 0 },
-  };
 }

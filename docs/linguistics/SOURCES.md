@@ -52,6 +52,35 @@ Every linguistic claim in Folio traces to a citation. This file is the canonical
 
 - **Bus, A. G., van IJzendoorn, M. H., & Pellegrini, A. D. (1995).** "Joint book reading makes for success in learning to read: A meta-analysis on intergenerational transmission of literacy." *Review of Educational Research*, 65(1), 1–21.
 
+## Syntax
+
+- **Hunt, K. W. (1965).** *Grammatical Structures Written at Three Grade Levels.* NCTE Research Report No. 3. National Council of Teachers of English.
+  — Finite-clause definition (a subject with its finite verb; coordinated predicates sharing a subject are the same clause) and clauses-per-unit as a syntactic maturity index. Anchors the clause construct behind `meanClausesPerSentence`. The engine counts per orthographic sentence, not per T-unit, and its estimator is an explicit lower bound (see `syntax/clauses.ts`).
+
+- **Loban, W. (1976).** *Language Development: Kindergarten Through Grade Twelve.* NCTE Research Report No. 18.
+  — Subordination as a developmental index. Construct cross-reference only; Loban's numeric norms describe child *production* and are NOT applied as input-text thresholds.
+
+- **Quirk, R., Greenbaum, S., Leech, G., & Svartvik, J. (1985).** *A Comprehensive Grammar of the English Language.* Longman.
+  — The four clause types (declarative, interrogative, imperative, exclamative); declarative as the unmarked default; closed-class memberships (subordinators, coordinators, relative pronouns, auxiliaries) used by `data/syntax-words.ts`. Anchors `SentenceTypeBreakdown` semantics and the carrier-clause classification of tagged quotations.
+
+- **National Governors Association Center for Best Practices & Council of Chief State School Officers (2010).** *Common Core State Standards for English Language Arts*, Standard L.1.1.j.
+  — The declarative / interrogative / imperative / exclamatory taxonomy as the K–2 pedagogical convention; motivates punctuation-first classification for this audience.
+
+- **Nunberg, G. (1990).** *The Linguistics of Punctuation.* CSLI Lecture Notes 18.
+  — The text-sentence as an orthographic unit delimited by terminal punctuation; the segmentation target construct in `syntax/segment.ts`.
+
+- **Grefenstette, G., & Tapanainen, P. (1994).** "What is a word, what is a sentence? Problems of tokenisation." *Proceedings of COMPLEX '94*, Budapest.
+  — The period–abbreviation ambiguity motivating the closed honorific/abbreviation guard list. The list contents are engine data, not a claim.
+
+- **The Chicago Manual of Style (17th ed., 2017).** University of Chicago Press, ch. 13.
+  — Editorial convention: a lowercase dialogue tag after a quotation ending in `?` or `!` continues the sentence. Convention source for quote-attribution segmentation, not a linguistic claim.
+
+- **Flesch, R. (1948).** "A new readability yardstick." *Journal of Applied Psychology*, 32(3), 221–233.
+  — Words-per-sentence as the conventional length unit for written-text difficulty (used for sentence length and its dispersion).
+
+- **Brown, R. (1973).** *A First Language: The Early Stages.* Harvard University Press.
+  — MLU in morphemes. **Considered and not used**: a speech-production measure over child utterances, morpheme-based; wrong construct for written input text. Recorded here so the decision isn't re-litigated.
+
 ## Readability frameworks (for cross-reference, not core algorithms)
 
 - **Fountas, I. C., & Pinnell, G. S.** F&P Text Level Gradient. Heinemann (proprietary).

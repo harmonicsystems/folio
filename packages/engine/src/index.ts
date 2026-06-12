@@ -33,5 +33,12 @@ export {
 } from './phonology/index.js';
 
 export { analyzeProsody } from './prosody/index.js';
-// Module re-exports — uncomment as implementations land.
-// export { analyzeSyntax } from './syntax/index.js';
+
+export {
+  analyzeSyntax,
+  analyzeSyntaxFromSentences,
+  classifySentence,
+  countClauses,
+  segmentSentences,
+} from './syntax/index.js';
+export type { Sentence, SentenceType } from './syntax/index.js';
