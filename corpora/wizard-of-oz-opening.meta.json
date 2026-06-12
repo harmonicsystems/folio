@@ -7,10 +7,17 @@
   "ageBand": "chapter",
   "trope": "home-away",
   "note": "Verbatim opening: 'The Cyclone' + 'The Council with the Munchkins' + 'How Dorothy Saved the Scarecrow'. One chapter per spread, paragraph blanks collapsed within each chapter so spread-level reach-word attribution is by chapter. Sits cleanly inside the 5,000–10,000 chapter-band target.",
+  "syntaxNote": "Syntax bounds (M5) audited, not fully hand-counted: engine segments 288 sentences; all 22 sentences with internal !/? were individually verified as legitimate dialogue-tag merges ('Quick, Dorothy!' she screamed), and chapter starts were spot-checked. Known artifact: the three unterminated chapter headings merge into their first sentence (documented segmentation limitation). Bounds are regression bands around the audited values, sized to absorb small guard-list refinements without hiding real segmentation changes.",
   "expected": {
     "wordCount": { "min": 5000, "max": 5300 },
     "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.7 },
     "vocabulary.typeTokenRatio": { "min": 0.18, "max": 0.25 },
-    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 }
+    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 },
+    "sentenceCount": { "min": 280, "max": 295 },
+    "averageSentenceLength": { "min": 17, "max": 18.5 },
+    "syntax.meanClausesPerSentence": { "min": 1.55, "max": 1.85 },
+    "syntax.sentenceLengthStdev": { "min": 9.5, "max": 11.5 },
+    "syntax.sentenceTypes.declarative": { "min": 260, "max": 280 },
+    "syntax.sentenceTypes.interrogative": { "min": 10, "max": 16 }
   }
 }

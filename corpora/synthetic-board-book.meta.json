@@ -3,10 +3,19 @@
   "ageBand": "board",
   "trope": "opposites",
   "note": "Synthetic fixture. Designed to exercise high repetition + 100% sight-word coverage at the board-book scale (<100 words).",
+  "syntaxNote": "Syntax expectations hand-derived (M5): 11 sentences (2 wh-questions, 9 statements), every sentence one clause (sentence-initial wh skipped as question word), lengths 4×9/5/3 so population stdev = √(2/11) ≈ 0.4264.",
   "expected": {
     "wordCount": { "min": 20, "max": 100 },
     "vocabulary.sightWordCoverage": { "min": 1.0 },
     "vocabulary.typeTokenRatio": { "max": 0.55 },
-    "prosody.meterConsistency": { "min": 0.65, "max": 0.78 }
+    "prosody.meterConsistency": { "min": 0.65, "max": 0.78 },
+    "sentenceCount": { "min": 11, "max": 11 },
+    "averageSentenceLength": { "min": 3.9, "max": 4.1 },
+    "syntax.meanClausesPerSentence": { "min": 1.0, "max": 1.0 },
+    "syntax.sentenceLengthStdev": { "min": 0.35, "max": 0.5 },
+    "syntax.sentenceTypes.declarative": { "min": 9, "max": 9 },
+    "syntax.sentenceTypes.interrogative": { "min": 2, "max": 2 },
+    "syntax.sentenceTypes.exclamatory": { "max": 0 },
+    "syntax.sentenceTypes.imperative": { "max": 0 }
   }
 }

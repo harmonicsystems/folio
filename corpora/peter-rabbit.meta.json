@@ -7,10 +7,19 @@
   "ageBand": "picture",
   "trope": "transgression",
   "note": "Public-domain opening (through Peter squeezing under the gate). Tier-2-rich vocabulary (mischief, naughty, currant, umbrella) gives a realistic picture-book reach-word profile — contrast with the synthetic board-book fixture.",
+  "syntaxNote": "Syntax expectations hand-derived (M5): 9 sentences with Mrs./Mr. guarded and the colon/semicolon spread-3 monster intact; 14 clauses total (spread 3 = 3: lower bound, colon clause missed by design); types 7 declarative / 1 imperative (Now run along…) / 1 exclamatory (…under the gate!); lengths sum 154, population stdev ≈ 9.83.",
   "expected": {
     "wordCount": { "min": 140, "max": 180 },
     "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.75 },
     "vocabulary.typeTokenRatio": { "min": 0.6, "max": 0.75 },
-    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 }
+    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 },
+    "sentenceCount": { "min": 9, "max": 9 },
+    "averageSentenceLength": { "min": 16.8, "max": 17.5 },
+    "syntax.meanClausesPerSentence": { "min": 1.5, "max": 1.6 },
+    "syntax.sentenceLengthStdev": { "min": 9.5, "max": 10.2 },
+    "syntax.sentenceTypes.declarative": { "min": 7, "max": 7 },
+    "syntax.sentenceTypes.interrogative": { "max": 0 },
+    "syntax.sentenceTypes.exclamatory": { "min": 1, "max": 1 },
+    "syntax.sentenceTypes.imperative": { "min": 1, "max": 1 }
   }
 }

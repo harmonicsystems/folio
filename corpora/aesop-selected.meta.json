@@ -8,10 +8,19 @@
   "ageBand": "early-reader",
   "trope": "episodic",
   "note": "Eight verbatim fables stitched into one early-reader-band fixture: Crow & Pitcher, Fox & Grapes, Dog in the Manger, Shepherd's Boy & Wolf, Lion & Mouse, Hare & Tortoise, Wolf & Lamb, Town Mouse & Country Mouse. One fable per spread. Vernon Jones's 1912 translation has a longer-sentence Edwardian register that exercises the early-reader length path while staying narratively short.",
+  "syntaxNote": "Syntax expectations (M5): sentenceCount and types hand-derived — 48 sentences (per-spread 4/2/2/5/9/11/7/8), all 'Wolf! wolf!' shouts and lowercase attribution tags correctly merged; types 44 declarative / 1 interrogative (how can you endure…?) / 3 imperative (Please let me go; Come, I'll run; Come with me). meanClausesPerSentence and stdev bounds are sanity bands, not full hand counts — the Edwardian register's subordination load lands ~2.0.",
   "expected": {
     "wordCount": { "min": 1050, "max": 1200 },
     "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.7 },
     "vocabulary.typeTokenRatio": { "min": 0.35, "max": 0.45 },
-    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 }
+    "prosody.meterConsistency": { "min": 0.45, "max": 0.6 },
+    "sentenceCount": { "min": 48, "max": 48 },
+    "averageSentenceLength": { "min": 22, "max": 24.5 },
+    "syntax.meanClausesPerSentence": { "min": 1.8, "max": 2.3 },
+    "syntax.sentenceLengthStdev": { "min": 11, "max": 13 },
+    "syntax.sentenceTypes.declarative": { "min": 44, "max": 44 },
+    "syntax.sentenceTypes.interrogative": { "min": 1, "max": 1 },
+    "syntax.sentenceTypes.exclamatory": { "max": 0 },
+    "syntax.sentenceTypes.imperative": { "min": 3, "max": 3 }
   }
 }
