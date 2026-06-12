@@ -7,7 +7,7 @@ This doc replaces the parallel-agent rules of the road that the early multi-trac
 ## Where the project is right now
 
 - **Live deployment:** `https://folio.harmonic-systems.org/` (auto-deploys on push to `main` via GitHub Actions → GitHub Pages).
-- **Engine:** Milestones 0 → 4 complete (`@harmonic-systems/early-literacy`). 118 unit tests + 43 corpus regression tests, all green.
+- **Engine:** Milestones 0 → 5 complete (`@harmonic-systems/early-literacy`) — syntax (M5) shipped 2026-06-10: real sentence segmentation, Hunt-1965 clause estimation, four-way sentence typing. 183 unit tests + 114 corpus regression tests, all green.
 - **Web routes:**
   - `/` — spread-first editor (16 spreads, two facing pages each, Lexical rich text, in-line reach-word + phoneme highlighting, book view, layout presets, font picker, persistence, export to .txt / .md / PDF, sidebar with manuscript metrics + phonology + per-spread bars + prosody + guessed-pronunciations + warnings)
   - `/paste` — paste-and-analyze fallback (single textarea, four sample loaders, analysis output)
@@ -44,7 +44,7 @@ These are not features. They are the load-bearing decisions that distinguish Fol
 
 | Decision | Why blocked | Cost of choosing |
 |---|---|---|
-| Tier 1 word list (Beck/McKeown/Kucan don't publish one) | Need to pick a sourced proxy: General Service List (West 1953), Children's Printed Word Database (Masterson 2010), or derive from a corpus and document the methodology | ~1–2 hours to wire once chosen. Unblocks `tier1Coverage`, `tier2Words`, `tier3Words`, *and* reach-word reason tooltips that currently always say "low-frequency" |
+| ~~Tier 1 word list~~ — **DECIDED 2026-06-10: Dale-Chall 3000** (Chall & Dale 1995 "familiar words"; child-normed — known by ~80% of 4th graders — and the classic readability-formula vocabulary base) | Wiring still pending: transcribe/source the list with provenance, add the SOURCES.md entry + licensing rationale (word lists are factual data per Feist, but document the reasoning), then wire tier classification | ~1–2 hours to wire + sourcing diligence. Unblocks `tier1Coverage`, `tier2Words`, `tier3Words`, *and* reach-word reason tooltips that currently always say "low-frequency" |
 | Decodability calibration | First-cut formula `0.7 × phoneme_ease + 0.3 × syllable_ease` produces a mild inversion (Peter Rabbit 0.866 vs synthetic board book 0.854). Documented as engine choice in `ARCHITECTURE.md` open questions | Wait for more corpora across age bands to give calibration signal |
 | Vowel acquisition norms | Crowe & McLeod (2020) covers consonants only. All 15 vowels currently default to age 3 | Candidates: Otomo & Stoel-Gammon (1992), Donegan (2013), longitudinal infant-speech corpus. One row of `cmu-phonemes.ts` to swap in |
 | Meter detection anacrusis | Engine matches offsets-0-only for determinism (iambic vs trochaic ambiguates otherwise). Real verse with line-initial unstressed pickup scores in "mixed" instead of its true meter | Could allow one syllable of anacrusis with a slight scoring penalty; needs careful design to avoid re-ambiguating |
@@ -115,7 +115,8 @@ packages/
       vocabulary/    tokenize, sight-words (Dolch + Fry), reach-word detection
       phonology/     CMU dict, syllabify, phoneme inventory, decodability,
                      getWordPhonemes, isInCmuDict, getGuessedWords
-      syntax/        stubs only (sentence types, clause depth — not implemented)
+      syntax/        segment (orthographic sentences w/ offsets), clauses
+                     (Hunt-1965 lower bound), classify (4 types) — M5, shipped
       prosody/       meter + rhyme detection (Milestone 4, shipped)
       data/          CMU dict subset + phoneme metadata tables
     tests/

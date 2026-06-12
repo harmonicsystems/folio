@@ -117,6 +117,17 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [ ] Anacrusis handling — verse with line-initial unstressed pickup currently scores as `mixed`; offset-0-only kept for deterministic iambic/trochaic discrimination
 - [ ] Read-aloud rhythm scoring (interface for VoiceKit later)
 
+### Milestone 5: Syntax ✓ (first cut)
+
+- [x] Sentence segmentation — orthographic text-sentence scanner (Nunberg 1990): abbreviation/initial/decimal guards, dialogue-tag continuation after `!`/`?`/`…` (CMOS ch. 13), verse spanning newlines, paragraph flushes. `Sentence{text, start, end}` spans exported for future editor highlighting
+- [x] Clause counting — Hunt (1965) finite-clause construct via guarded closed-class markers (`data/syntax-words.ts`); documented lower bound (`that`-complements excluded by design)
+- [x] Sentence-type classification — declarative / interrogative / exclamatory / imperative (Quirk et al. 1985; CCSS L.1.1.j convention), punctuation-first with a conservative imperative form test
+- [x] Sentence-length standard deviation (population) from the shared tokenizer
+- [x] `sentenceCount` / `averageSentenceLength` re-sourced from the same segmentation pass (naive regex splitter deleted)
+- [x] 65 unit tests + syntax expectations on all five corpus fixtures (hand-derived; Oz bounds audited — see meta `syntaxNote` fields)
+- [ ] Quote-aware utterance typing for dialogic prompts (PEER / CROWD) — needs new contract fields → ADR first
+- [ ] Sentence-complexity thresholds by age band — blocked on a citable *comprehension-side* source; Hunt/Loban production norms would be a category error (see SOURCES.md, Syntax)
+
 ### Shipped beyond the original roadmap
 
 The editor surface grew well past the original Milestone 3 "paste-and-analyze" scope. Tracked here so it doesn't get re-implemented:

@@ -15,7 +15,7 @@ The LLM does the boring legibility work in the background (constraint checking, 
 
 ## Status
 
-Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–4 complete (vocabulary + sight words, phonology + decodability, web alpha, prosody). Syntax stubbed. Web alpha ships three routes: `/` spread-first editor with Lexical rich text + in-line reach-word / phoneme / find highlighting + persistence + .txt/.md/PDF export, `/paste` analyze-only fallback, `/about` landing page.
+Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–5 complete (vocabulary + sight words, phonology + decodability, web alpha, prosody, syntax). Web alpha ships three routes: `/` spread-first editor with Lexical rich text + in-line reach-word / phoneme / find highlighting + persistence + .txt/.md/PDF export, `/paste` analyze-only fallback, `/about` landing page.
 
 Next phase is **user signal**, not the next feature. See [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) for the full picture and the open decisions ladder.
 
@@ -39,7 +39,7 @@ See `packages/engine/src/types.ts` for current definitions.
 
 ## Linguistic grounding
 
-All metrics must cite their source. See `docs/linguistics/SOURCES.md`. Anchors: Beck/McKeown/Kucan (vocabulary tiers), Crowe & McLeod 2020 (phoneme acquisition norms), Whitehurst (dialogic reading), Vygotsky (ZPD), Krashen (i+1), Rayner (reading eye movement), Tomasello (joint attention), Smit et al. (Iowa-Nebraska articulation norms).
+All metrics must cite their source. See `docs/linguistics/SOURCES.md`. Anchors: Beck/McKeown/Kucan (vocabulary tiers), Crowe & McLeod 2020 (phoneme acquisition norms), Whitehurst (dialogic reading), Vygotsky (ZPD), Krashen (i+1), Rayner (reading eye movement), Tomasello (joint attention), Smit et al. (Iowa-Nebraska articulation norms), Hunt 1965 (finite-clause index), Quirk et al. 1985 (sentence types), Nunberg 1990 (orthographic sentence).
 
 ## Working principles
 
@@ -51,8 +51,8 @@ All metrics must cite their source. See `docs/linguistics/SOURCES.md`. Anchors: 
 
 ## Milestones shipped
 
-- M0 Scaffolding · M1 Word-level engine (Tier 1 classification still blocked on sourcing) · M2 Phonology · M3 Web alpha · M4 Prosody (meter + rhyme detection, all four canonical feet, AABB / ABAB schemes via CMU dict stress markers).
-- 118 engine unit tests + 43 corpus regression tests, all green.
+- M0 Scaffolding · M1 Word-level engine (Tier 1 sourcing decided 2026-06-10: Dale-Chall 3000 — wiring pending) · M2 Phonology · M3 Web alpha · M4 Prosody (meter + rhyme detection, all four canonical feet, AABB / ABAB schemes via CMU dict stress markers) · M5 Syntax (orthographic sentence segmentation with offsets, Hunt-1965 lower-bound clause estimation, four-way sentence typing — structural metrics only, no developmental thresholds).
+- 183 engine unit tests + 114 corpus regression tests, all green.
 - Auto-deploy on every push to `main` via GitHub Actions → Pages.
 
 ## Conventions
