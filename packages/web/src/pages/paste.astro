@@ -36,6 +36,15 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
       data-domain="folio.harmonic-systems.org"
       src="https://plausible.io/js/script.js"
     ></script>
+    <script is:inline>
+      // Plausible custom-event queue: goals fired before script.js
+      // loads are buffered and flushed when it arrives.
+      window.plausible =
+        window.plausible ||
+        function () {
+          (window.plausible.q = window.plausible.q || []).push(arguments);
+        };
+    </script>
     <style>
       :root {
         --cream: #f7f1e6;
@@ -546,8 +555,16 @@ A Town Mouse and a Country Mouse were cousins, and very good friends, and the Co
         render(profile);
       }
 
+      /** Cookieless audience-signal goal (Plausible custom event). */
+      function trackGoal(event: string): void {
+        const w = window as Window & { plausible?: (event: string) => void };
+        w.plausible?.(event);
+      }
+
       document.getElementById('analyze-form')?.addEventListener('submit', (e) => {
         e.preventDefault();
+        // Explicit submit only — sample-button auto-fills don't count.
+        trackGoal('analyze_clicked');
         runAnalysis();
       });
 

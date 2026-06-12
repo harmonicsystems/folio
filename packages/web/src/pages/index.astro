@@ -90,6 +90,15 @@ const SAMPLES: Record<string, Sample> = {
       data-domain="folio.harmonic-systems.org"
       src="https://plausible.io/js/script.js"
     ></script>
+    <script is:inline>
+      // Plausible custom-event queue: goals fired before script.js
+      // loads are buffered and flushed when it arrives.
+      window.plausible =
+        window.plausible ||
+        function () {
+          (window.plausible.q = window.plausible.q || []).push(arguments);
+        };
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -2414,6 +2423,31 @@ const SAMPLES: Record<string, Sample> = {
           scheduleAnalysis();
         }
       });
+
+      /** Cookieless audience-signal goal (Plausible custom event). */
+      function trackGoal(event: string): void {
+        const w = window as Window & { plausible?: (event: string) => void };
+        w.plausible?.(event);
+      }
+
+      // Fire once per pageview on the first real keystroke/paste in a
+      // page editor. Native input events come only from user editing —
+      // Lexical's programmatic setText (draft restore on load) fires
+      // none, so returning visitors don't count until they type.
+      // Capture phase is required: Lexical's root-level input listener
+      // stops propagation, so bubble listeners on document never fire.
+      let textTypedSent = false;
+      document.addEventListener(
+        'input',
+        (e) => {
+          if (textTypedSent) return;
+          const t = e.target;
+          if (!(t instanceof HTMLElement) || !t.isContentEditable) return;
+          textTypedSent = true;
+          trackGoal('text_typed');
+        },
+        { capture: true },
+      );
 
       // Lexical editors dispatch this on every editor-state change;
       // covers typing, paste, undo/redo, programmatic setText.
