@@ -114,7 +114,7 @@ The Swift/SwiftData/CloudKit native app is out of scope for this repo. The engin
 - [x] Meter analysis — iambic / trochaic / anapestic / dactylic, with `mixed` and `undefined` fallbacks
 - [x] Rhyme scheme detection via last-stressed-vowel suffix; AA / ABAB / etc. with spreadsheet-style overflow past Z
 - [x] AA / AO vowel normalization for rhyme (cot-caught merger) so dog/log rhyme
-- [ ] Anacrusis handling — verse with line-initial unstressed pickup currently scores as `mixed`; offset-0-only kept for deterministic iambic/trochaic discrimination
+- [x] Anacrusis handling — per-line template scoring (verse line as metrical unit, Attridge 1982) with one unstressed extrametrical pickup allowed per line; the skipped syllable stays in the denominator, so offset-0 wins ties and iambic/trochaic discrimination stays deterministic. Line breaks also no longer phase-flip odd-length lines
 - [ ] Read-aloud rhythm scoring (interface for VoiceKit later)
 
 ### Milestone 5: Syntax ✓ (first cut)

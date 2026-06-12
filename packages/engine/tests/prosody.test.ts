@@ -119,6 +119,61 @@ describe('analyzeProsody — rhyme scheme', () => {
   });
 });
 
+describe('analyzeProsody — per-line scoring and anacrusis', () => {
+  it('resets template phase at line breaks (odd-length trochaic lines)', () => {
+    // Whole-stream matching phase-flips after a 7-syllable line and
+    // scored two perfect trochaic lines at 0.5; per-line scoring
+    // (the verse line is the metrical unit) restores ~1.0.
+    const text = [
+      'tyger tyger burning bright',
+      'tyger tyger burning bright',
+    ].join('\n');
+    const profile = analyzeProsody(text);
+    expect(profile.dominantMeter).toBe('trochaic');
+    expect(profile.meterConsistency).toBeGreaterThan(0.9);
+  });
+
+  it('keeps a trochaic poem trochaic when one line opens with a pickup', () => {
+    // 'a' (AH0) is an unstressed extrametrical anacrusis before the
+    // first beat. Expected: 7+7+7 matches on the clean lines, 7 of 8
+    // on the pickup line (the skipped syllable still counts in the
+    // denominator) — 28/29 ≈ 0.97 trochaic.
+    const text = [
+      'tyger tyger burning bright',
+      'tyger tyger burning bright',
+      'tyger tyger burning bright',
+      'a tyger tyger burning bright',
+    ].join('\n');
+    const profile = analyzeProsody(text);
+    expect(profile.dominantMeter).toBe('trochaic');
+    expect(profile.meterConsistency).toBeGreaterThan(0.9);
+    expect(profile.meterConsistency).toBeLessThanOrEqual(1);
+  });
+
+  it('keeps pure iambic lines iambic across line breaks', () => {
+    const text = [
+      'the cat is on the mat the dog is in the bog',
+      'the cat is on the mat the dog is in the bog',
+    ].join('\n');
+    const profile = analyzeProsody(text);
+    expect(profile.dominantMeter).toBe('iambic');
+  });
+
+  it('reads an all-pickup poem as iambic, never trochaic-with-anacrusis', () => {
+    // Every line [0 1 0 1 …] is orthographically perfect iambic
+    // (8/8); the trochaic-with-skip reading caps at 7/8. The
+    // automatic one-syllable penalty keeps the sibling meters
+    // deterministic.
+    const text = [
+      'a tyger tyger burning bright',
+      'a tyger tyger burning bright',
+    ].join('\n');
+    const profile = analyzeProsody(text);
+    expect(profile.dominantMeter).toBe('iambic');
+    expect(profile.meterConsistency).toBe(1);
+  });
+});
+
 describe('analyzeProsody — integration', () => {
   it('returns a complete profile shape on every input', () => {
     const profile = analyzeProsody('');

@@ -14,10 +14,20 @@
  *   collapse to "stressed"; only 0 is "unstressed". Picture-book
  *   meter detection doesn't usually benefit from the secondary /
  *   primary distinction at this scale.
- * - **Best-offset match.** For each meter, every starting offset
- *   within the template's period is tried; the highest-scoring
- *   offset wins for that meter. Picks the meter with the highest
- *   score across all candidates.
+ * - **Per-line matching.** The verse line is the metrical unit
+ *   (Attridge 1982): each newline-separated line restarts the
+ *   template at its first syllable, so odd-length lines don't
+ *   phase-flip the rest of the text. Prose (no newlines) is one
+ *   line — whole-stream behavior. Scores are syllable-weighted
+ *   across lines: total matches / total syllables.
+ * - **Anacrusis.** One unstressed line-initial syllable may be
+ *   skipped as an extrametrical pickup (Attridge 1982). The skipped
+ *   syllable still counts in the denominator, so the skip carries an
+ *   automatic one-syllable penalty per line and the offset-0 reading
+ *   wins ties — pure iambic text can never be mis-read as
+ *   trochaic-with-anacrusis. At most one syllable, only when
+ *   unstressed; a stressed opening is an inverted foot, not
+ *   anacrusis, and is out of scope.
  * - **Thresholds.** consistency >= 0.6 surfaces as a named meter;
  *   0.4–0.6 surfaces as 'mixed' (some structure but no winner);
  *   below 0.4 leaves dominantMeter undefined — prose.
@@ -30,6 +40,8 @@
  *
  * @see Crowe & McLeod (2020), AJSLP — phoneme acquisition norms
  * @see Hayes (1995), Metrical Stress Theory — foot templates
+ * @see Attridge (1982), The Rhythms of English Poetry — verse line
+ *      as metrical unit; anacrusis as initial extrametrical offbeat
  * @see docs/linguistics/SOURCES.md
  */
 
@@ -82,30 +94,62 @@ interface MeterResult {
   consistency: number;
 }
 
-function detectMeter(stress: readonly number[]): MeterResult {
-  if (stress.length < MIN_SYLLABLES_FOR_METER) {
+/** Template matches in one line, with the template starting at `start`. */
+function lineMatchesFrom(
+  line: readonly number[],
+  template: readonly number[],
+  start: number,
+): number {
+  let matches = 0;
+  for (let i = start; i < line.length; i++) {
+    const s = line[i];
+    const t = template[(i - start) % template.length];
+    if (s !== undefined && s === t) matches++;
+  }
+  return matches;
+}
+
+/**
+ * Best template match for one line: the offset-0 reading, or — when
+ * the line opens with an unstressed syllable — the anacrusis reading
+ * that treats that pickup as extrametrical. The skipped syllable can
+ * never match, so the anacrusis reading caps at (n-1)/n and offset-0
+ * wins ties; only the first beat's *position* moves, the template
+ * itself never rotates, so iambic/trochaic (and anapestic/dactylic)
+ * stay distinguishable.
+ */
+function bestLineMatches(
+  line: readonly number[],
+  template: readonly number[],
+): number {
+  const base = lineMatchesFrom(line, template, 0);
+  if (line.length >= 2 && line[0] === 0) {
+    return Math.max(base, lineMatchesFrom(line, template, 1));
+  }
+  return base;
+}
+
+function detectMeter(lines: readonly (readonly number[])[]): MeterResult {
+  const totalSyllables = lines.reduce((sum, l) => sum + l.length, 0);
+  if (totalSyllables < MIN_SYLLABLES_FOR_METER) {
     return { meter: undefined, consistency: 0 };
   }
 
   let bestName: NamedMeter | undefined;
   let bestScore = 0;
 
-  // Offset 0 only — the first beat IS the distinguishing feature
-  // between iambic and trochaic (and between anapestic and
-  // dactylic). Allowing offset variation collapses each meter into
-  // its sibling and makes detection non-deterministic. Picture-book
-  // text rarely uses anacrusis as a dominant feature; if a line
-  // starts with an unstressed pickup, we accept the small score
-  // penalty rather than mis-label the dominant pattern.
+  // The template restarts at offset 0 on every line — the first beat
+  // IS the distinguishing feature between iambic and trochaic (and
+  // between anapestic and dactylic). Allowing arbitrary offsets would
+  // collapse each meter into its sibling; the one sanctioned
+  // exception is the single-syllable anacrusis skip in
+  // bestLineMatches, whose built-in penalty preserves determinism.
   for (const c of METER_TEMPLATES) {
-    const period = c.template.length;
     let matches = 0;
-    for (let i = 0; i < stress.length; i++) {
-      const s = stress[i];
-      const t = c.template[i % period];
-      if (s !== undefined && s === t) matches++;
+    for (const line of lines) {
+      matches += bestLineMatches(line, c.template);
     }
-    const score = matches / stress.length;
+    const score = matches / totalSyllables;
     if (score > bestScore) {
       bestScore = score;
       bestName = c.name;
@@ -227,8 +271,12 @@ function detectRhymeScheme(text: string): string | undefined {
 }
 
 export function analyzeProsody(text: string): ProsodyProfile {
-  const stress = buildStressSequence(text);
-  const { meter, consistency } = detectMeter(stress);
+  const stressByLine = text
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0)
+    .map((l) => buildStressSequence(l));
+  const { meter, consistency } = detectMeter(stressByLine);
   const rhymeScheme = detectRhymeScheme(text);
 
   const profile: ProsodyProfile = { meterConsistency: consistency };

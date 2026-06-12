@@ -51,8 +51,8 @@ All metrics must cite their source. See `docs/linguistics/SOURCES.md`. Anchors: 
 
 ## Milestones shipped
 
-- M0 Scaffolding · M1 Word-level engine (Tier 1 sourcing decided 2026-06-10: Dale-Chall 3000 — wiring pending) · M2 Phonology · M3 Web alpha · M4 Prosody (meter + rhyme detection, all four canonical feet, AABB / ABAB schemes via CMU dict stress markers) · M5 Syntax (orthographic sentence segmentation with offsets, Hunt-1965 lower-bound clause estimation, four-way sentence typing — structural metrics only, no developmental thresholds).
-- 183 engine unit tests + 114 corpus regression tests, all green.
+- M0 Scaffolding · M1 Word-level engine (Tier 1 sourcing decided 2026-06-10: Dale-Chall 3000 — wiring pending) · M2 Phonology · M3 Web alpha · M4 Prosody (meter + rhyme detection, all four canonical feet, AABB / ABAB schemes via CMU dict stress markers; M4.1: per-line scoring + anacrusis handling, Attridge 1982) · M5 Syntax (orthographic sentence segmentation with offsets, Hunt-1965 lower-bound clause estimation, four-way sentence typing — structural metrics only, no developmental thresholds).
+- 187 engine unit tests + 114 corpus regression tests, all green.
 - Auto-deploy on every push to `main` via GitHub Actions → Pages.
 
 ## Conventions

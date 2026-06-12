@@ -52,6 +52,14 @@ Every linguistic claim in Folio traces to a citation. This file is the canonical
 
 - **Bus, A. G., van IJzendoorn, M. H., & Pellegrini, A. D. (1995).** "Joint book reading makes for success in learning to read: A meta-analysis on intergenerational transmission of literacy." *Review of Educational Research*, 65(1), 1–21.
 
+## Prosody
+
+- **Hayes, B. (1995).** *Metrical Stress Theory: Principles and Case Studies.* University of Chicago Press.
+  — Canonical metrical foot inventory (iamb, trochee, anapest, dactyl) behind the meter templates in `prosody/index.ts`. (Cited in the module since M4; entry added here during the M4.1 anacrusis pass.)
+
+- **Attridge, D. (1982).** *The Rhythms of English Poetry.* Longman (English Language Series).
+  — The verse line as the metrical unit, and anacrusis: optional unstressed syllable(s) before a line's first beat, treated as extrametrical. Anchors per-line template scoring and the single-syllable pickup skip. The one-syllable cap and the skipped-syllable-counts-in-denominator penalty are engine choices, not claims.
+
 ## Syntax
 
 - **Hunt, K. W. (1965).** *Grammatical Structures Written at Three Grade Levels.* NCTE Research Report No. 3. National Council of Teachers of English.
