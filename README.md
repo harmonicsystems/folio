@@ -16,10 +16,11 @@ In between, there's a CLI (`packages/cli/`) and a web alpha (`packages/web/`) �
 
 ## Status
 
-Pre-alpha. The engine and CLI are the first deliverables.
+Public alpha — live at [folio.harmonic-systems.org](https://folio.harmonic-systems.org). Engine milestones 0–5 shipped (vocabulary, phonology, web alpha, prosody with anacrusis handling, syntax).
 
 ## Where to start
 
+- `docs/FEATURES.md` — the consolidated inventory of everything shipped
 - `CLAUDE.md` — persistent brief for Claude Code sessions
 - `ARCHITECTURE.md` — design rationale and module structure
 - `docs/decisions/` — architectural decision records (spread editor: ADRs 0002 + 0003)
