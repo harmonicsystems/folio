@@ -1,0 +1,351 @@
+---
+// "How to read the analysis" — a plain-language guide to every metric
+// the editor and /paste surface. Static, no client JS. The audience is
+// a writer or SLP seeing the sidebar for the first time; the register
+// is descriptive, never evaluative — the engine measures, it doesn't
+// grade. Metric explanations must stay consistent with the engine's
+// documented conventions (see docs/linguistics/SOURCES.md); when a
+// number is an engine convention rather than a published norm, this
+// page says so in user words.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A plain-language guide to Folio's analysis: word-count targets, sight-word coverage, reach words, decodability, phoneme inventory, meter and rhyme — what each number means and what to do with it."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="canonical" href="https://folio.harmonic-systems.org/guide" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Folio" />
+    <meta property="og:title" content="Folio — how to read the analysis" />
+    <meta property="og:description" content="What each number in Folio's sidebar means, where it comes from, and what to do with it. Written for authors and speech-language pathologists." />
+    <meta property="og:url" content="https://folio.harmonic-systems.org/guide" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Folio — how to read the analysis" />
+    <meta name="twitter:description" content="What each number in Folio's sidebar means, where it comes from, and what to do with it." />
+    <script
+      is:inline
+      defer
+      data-domain="folio.harmonic-systems.org"
+      src="https://plausible.io/js/script.js"
+    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+    />
+    <title>Folio — how to read the analysis</title>
+    <style>
+      :root {
+        --cream: #f7f1e6;
+        --beige: #ece2cf;
+        --taupe: #8a7c66;
+        --ink: #2c2620;
+        --rule: #d9cdb4;
+        --ochre: #a37828;
+        --rust: #9a4a2a;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0;
+        background: var(--cream); color: var(--ink);
+        font-family: 'Libre Caslon Text', Georgia, serif;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 44rem;
+        margin: 0 auto;
+        padding: 4rem 1.5rem 6rem;
+      }
+      header.hero { margin-bottom: 3rem; }
+      h1 {
+        font-size: 2.4rem;
+        font-weight: 500;
+        margin: 0 0 0.5rem;
+        letter-spacing: -0.015em;
+      }
+      .tagline {
+        font-size: 1.15rem;
+        font-style: italic;
+        color: var(--taupe);
+        margin: 0 0 2rem;
+      }
+      .cta-row {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+      }
+      .cta {
+        display: inline-block;
+        padding: 0.7rem 1.4rem;
+        font-size: 1rem;
+        text-decoration: none;
+        border-radius: 3px;
+        border: 1px solid transparent;
+      }
+      .cta.primary {
+        background: var(--ink);
+        color: var(--cream);
+        border-color: var(--ink);
+      }
+      .cta.primary:hover { background: #1a1612; }
+      .cta.secondary {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--rule);
+      }
+      .cta.secondary:hover { background: #fff; border-color: var(--taupe); }
+
+      section { margin: 3rem 0; }
+      h2 {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0 0 1rem;
+        letter-spacing: -0.005em;
+      }
+      h3 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        margin: 2rem 0 0.5rem;
+      }
+      p { margin: 0 0 1.1rem; font-size: 1.02rem; }
+
+      .use {
+        font-size: 0.95rem;
+        font-style: italic;
+        color: var(--taupe);
+        border-left: 2px solid var(--rule);
+        padding-left: 0.9rem;
+      }
+
+      table.bands {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0 0 1.5rem;
+        font-size: 0.95rem;
+      }
+      table.bands th, table.bands td {
+        text-align: left;
+        padding: 0.45rem 0.6rem;
+        border-bottom: 1px solid var(--rule);
+      }
+      table.bands th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--taupe);
+        font-weight: 600;
+      }
+      table.bands td:last-child { color: var(--taupe); }
+
+      .honesty-card {
+        padding: 1.5rem;
+        background: #fff;
+        border: 1px solid var(--rule);
+        border-left: 3px solid var(--ochre);
+        border-radius: 4px;
+      }
+      .honesty-card p:last-child { margin-bottom: 0; }
+
+      footer {
+        margin-top: 4rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--rule);
+        font-size: 0.9rem;
+        color: var(--taupe);
+      }
+      footer a { color: var(--taupe); }
+      footer a:hover { color: var(--ink); }
+
+      code {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        background: var(--beige);
+        padding: 0.1rem 0.35rem;
+        border-radius: 3px;
+        font-size: 0.88em;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <h1>How to read the analysis</h1>
+        <p class="tagline">What the sidebar is telling you — and what it isn't.</p>
+        <div class="cta-row">
+          <a href="/" class="cta primary">Open the editor →</a>
+          <a href="/paste" class="cta secondary">Paste-and-analyze</a>
+        </div>
+      </header>
+
+      <section>
+        <p>
+          Folio describes your manuscript. It never grades you. Every number in the sidebar is a
+          measurement against the <em>age band you chose</em> — change the band and the same text
+          reads differently, because the reader changed, not the writing.
+        </p>
+        <p>
+          Where a metric rests on published research, the source is named below. Where it's a
+          working convention of the engine, we say that too. The sections follow the sidebar,
+          top to bottom.
+        </p>
+      </section>
+
+      <section>
+        <h2>Length</h2>
+        <p>
+          Word count, measured against the publishing conventions for your band
+          (SCBWI guidance; Mary Kole's length guidelines):
+        </p>
+        <table class="bands">
+          <thead>
+            <tr><th>Band</th><th>Ages</th><th>Words</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Board</td><td>0–3</td><td>up to 100</td></tr>
+            <tr><td>Early picture</td><td>0–3</td><td>up to 400</td></tr>
+            <tr><td>Picture</td><td>3–7</td><td>up to 600</td></tr>
+            <tr><td>Early reader</td><td>5–9</td><td>1,000–2,500</td></tr>
+            <tr><td>Chapter</td><td>7–10</td><td>5,000–10,000</td></tr>
+          </tbody>
+        </table>
+        <p>
+          Sentence counts use real segmentation — <em>"Now run along," said Mrs. Rabbit.</em> is
+          one sentence, despite the period in <em>Mrs.</em> — and average sentence length tracks
+          the breath of your prose read aloud.
+        </p>
+        <p class="use">Targets are conventions, not laws. But editors feel them, and the youngest readers feel them most.</p>
+      </section>
+
+      <section>
+        <h2>Vocabulary</h2>
+        <h3>Sight-word coverage</h3>
+        <p>
+          The share of your words on the Dolch and Fry lists — the high-frequency words beginning
+          readers learn to recognize whole, without sounding out. High coverage means an early
+          reader moves through your text on recognition; lower coverage shifts the work to decoding.
+        </p>
+        <h3>Unique words &amp; type-token ratio</h3>
+        <p>
+          Unique words divided by total words. In a board book, a <em>low</em> ratio is usually
+          craft — repetition is how the youngest readers participate. In a chapter opening, a
+          higher ratio is normal. There is no good score; there is only the question of whether
+          the repetition you see is the repetition you meant.
+        </p>
+      </section>
+
+      <section>
+        <h2>Reach words</h2>
+        <p>
+          Words likely to sit just past your target reader's current mastery — flagged because they
+          fall outside the core sight-word lists. In the editor they underline where they live, and
+          the sidebar attributes each one to the spread where it first appears, so you can see
+          clustering at a glance.
+        </p>
+        <p>
+          Some reach words are the point. The zone just past mastery is where vocabulary grows —
+          educators call it the zone of proximal development (Vygotsky) — and shared reading is how
+          children cross it. A handful per spread invites growth. A pile-up on one spread turns
+          reading into work.
+        </p>
+        <p class="use">Today every reach word is flagged as "low-frequency"; finer reasons (everyday word vs. rare-but-rich) arrive with vocabulary tiers.</p>
+      </section>
+
+      <section>
+        <h2>Phonology</h2>
+        <h3>Decodability</h3>
+        <p>
+          A 0–1 estimate of how kindly your text treats an emerging reader who is sounding words
+          out. It weights how early each speech sound is typically mastered (consonant norms from
+          Crowe &amp; McLeod, 2020 — the research base SLPs already use) and how complex each
+          syllable's shape is. The exact weighting is an engine convention, documented in the
+          source.
+        </p>
+        <h3>Syllables</h3>
+        <p>
+          Average syllables per word, plus the shapes: <code>CV</code> ("go") and
+          <code>CVC</code> ("cat") are the friendly ones; consonant clusters
+          (<code>CCVC</code>, "stop") arrive later in development.
+        </p>
+        <h3>Phoneme inventory</h3>
+        <p>
+          Every speech sound your manuscript uses, grouped by the age most children produce it
+          accurately — later-acquired sounds (<em>r</em>, <em>th</em>) tint warmer. Click any
+          phoneme to light up every word containing it, in place. Useful for spotting a sound your
+          text leans on, or for matching a text to a child's current inventory.
+        </p>
+        <h3>Guessed pronunciations</h3>
+        <div class="honesty-card">
+          <p>
+            Folio's pronouncing dictionary covers the core early-reading vocabulary. Anything
+            outside it — invented names, rare words — gets an <em>estimated</em> pronunciation,
+            and this list names those words. It's the engine being honest: phoneme and meter
+            readings for these words rest on guesses. If your manuscript stars a Snorfblat,
+            weigh the phonology numbers accordingly.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Prosody</h2>
+        <p>
+          <strong>Dominant meter</strong> is the stress pattern your lines lean toward: iambic
+          (da-DUM), trochaic (DUM-da), anapestic (da-da-DUM), dactylic (DUM-da-da).
+          <strong>Meter consistency</strong> is how much of the text fits that pattern, and the
+          <strong>rhyme scheme</strong> letters (AABB, ABAB) mark which line endings rhyme.
+        </p>
+        <p>
+          Prose reads "—" or "mixed", and that is not a defect — most picture books aren't metered.
+          Verse with a deliberately loose beat reads "mixed" too, and so can verse built on words
+          the dictionary had to guess. Lines are read the way you broke them: the meter starts
+          fresh on each line, and an unstressed pickup syllable before a line's first beat is
+          understood, not penalized.
+        </p>
+        <p class="use">If you write metered verse, watch consistency while you revise — a dip often points at the exact line where the beat stumbles.</p>
+      </section>
+
+      <section>
+        <h2>Per spread</h2>
+        <p>
+          The pacing strip. Each bar is one spread's word count against a soft ceiling — the
+          manuscript target spread across your non-wordless spreads, with headroom. The ceiling is
+          a documented heuristic, not a rule: picture books distribute words unevenly on purpose.
+          The strip exists so the unevenness is a choice you can see.
+        </p>
+      </section>
+
+      <section>
+        <h2>Warnings</h2>
+        <p>
+          Folio currently warns about two things: total word count over your band's maximum, and
+          under its minimum where one exists. "Info" severity means <em>noted</em>, not
+          <em>fix it</em>.
+        </p>
+      </section>
+
+      <section>
+        <h2>What Folio doesn't do</h2>
+        <p>
+          It doesn't score you, rank you, or compare you to anyone. It will never write or rewrite
+          your text — not a word. And your manuscript never leaves your browser: analysis runs
+          locally, drafts save to your device, and there's no account and no server.
+        </p>
+      </section>
+
+      <footer>
+        <a href="/about">About Folio</a> · built by
+        <a href="https://harmonic-systems.org">Harmonic Systems</a> · open source on
+        <a href="https://github.com/harmonicsystems/folio" target="_blank" rel="noopener">GitHub</a>.
+      </footer>
+    </main>
+  </body>
+</html>
