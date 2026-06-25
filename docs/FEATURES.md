@@ -1,6 +1,6 @@
 # Folio — Feature Inventory
 
-Everything shipped, in one scannable place. Last updated **2026-06-12** (post-M5, post-M4.1).
+Everything shipped, in one scannable place. Last updated **2026-06-15** (post-M5, post-M4.1, post-Tier-1).
 
 > Canonical sources: [`ARCHITECTURE.md`](../ARCHITECTURE.md) for milestone detail, [`docs/linguistics/SOURCES.md`](linguistics/SOURCES.md) for every citation, [`docs/AGENT_HANDOFF.md`](AGENT_HANDOFF.md) for open decisions. This file is the consolidated view — when it disagrees with those, those win.
 

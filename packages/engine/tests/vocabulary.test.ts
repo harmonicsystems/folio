@@ -11,6 +11,7 @@ import {
   tier1Coverage,
   typeTokenRatio,
 } from '../src/vocabulary/index.js';
+import { DALE_CHALL } from '../src/data/dale-chall.js';
 
 describe('isSightWord', () => {
   it('recognizes Dolch pre-primer words', () => {
@@ -76,11 +77,24 @@ describe('typeTokenRatio', () => {
 
 describe('isDaleChall / isTier1', () => {
   it('recognizes Dale–Chall familiar words that are not sight words', () => {
-    // "umbrella" and "morning" are outside Dolch+Fry but on Dale–Chall.
-    expect(isSightWord('umbrella')).toBe(false);
-    expect(isDaleChall('umbrella')).toBe(true);
-    expect(isTier1('umbrella')).toBe(true);
-    expect(isTier1('morning')).toBe(true);
+    // "umbrella", "absent", "adventure" are outside Dolch+Fry but on
+    // Dale–Chall — they exercise the Dale–Chall-only path. (Avoid words
+    // like "morning" that are also Dolch sight words: those would pass
+    // via isSightWord and mask an isDaleChall regression.)
+    for (const w of ['umbrella', 'absent', 'adventure']) {
+      expect(isSightWord(w)).toBe(false);
+      expect(isDaleChall(w)).toBe(true);
+      expect(isTier1(w)).toBe(true);
+    }
+  });
+
+  it('classifies courtesy titles Mr/Mrs as Tier 1 (period-stripped entries)', () => {
+    // Regression guard: the source list stores "mr."/"mrs." as
+    // abbreviations; the tokenizer strips the period, so the data file
+    // normalizes them to "mr"/"mrs". If that regresses, "Mr."/"Mrs."
+    // in a manuscript would be misflagged as reach words.
+    expect(isTier1('mr')).toBe(true);
+    expect(isTier1('mrs')).toBe(true);
   });
 
   it('treats sight words as Tier 1 even if not on Dale–Chall', () => {
@@ -94,9 +108,27 @@ describe('isDaleChall / isTier1', () => {
     expect(isDaleChall('hippopotamus')).toBe(false);
   });
 
-  it('is case-insensitive', () => {
+  it('is case-insensitive (Dale–Chall lookup)', () => {
+    // "umbrella"/"absent" are Dale–Chall-only, so these exercise
+    // case-insensitive DC lookup specifically, not the sight-word path.
     expect(isDaleChall('Umbrella')).toBe(true);
-    expect(isTier1('MORNING')).toBe(true);
+    expect(isTier1('ABSENT')).toBe(true);
+  });
+});
+
+describe('DALE_CHALL data hygiene', () => {
+  it('contains only matchable entries (lowercase letters + straight apostrophe)', () => {
+    // Every entry must be a possible tokenizer output: the tokenizer
+    // lowercases, splits hyphens, and strips boundary punctuation. An
+    // entry with any other character (period, space, hyphen) can never
+    // match a token — this guard would have caught "mr."/"mrs.".
+    const malformed = DALE_CHALL.filter((w) => /[^a-z']/.test(w));
+    expect(malformed).toEqual([]);
+  });
+
+  it('has no empty entries and no duplicates', () => {
+    expect(DALE_CHALL.some((w) => w.length === 0)).toBe(false);
+    expect(new Set(DALE_CHALL).size).toBe(DALE_CHALL.length);
   });
 });
 

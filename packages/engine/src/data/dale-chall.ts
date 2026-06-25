@@ -26,7 +26,13 @@
  *     tokenizer convention (e.g. "good-looking" → "good", "looking"),
  *     consistent with dolch.ts — a hyphenated entry would otherwise
  *     never match a token, since the tokenizer splits on hyphens;
- *   - deduplicated and sorted.
+ *   - trailing periods stripped from the two abbreviation entries
+ *     ("mr." → "mr", "mrs." → "mrs") for the same reason: the tokenizer
+ *     strips boundary punctuation, so a period-bearing entry could never
+ *     match the token "mr"/"mrs". These are the only non-[a-z'] entries
+ *     in the source;
+ *   - deduplicated and sorted. No entry contains any character outside
+ *     [a-z'] after normalization (guarded by a unit test).
  *   Source entries: 2942. After split + dedupe: 2939.
  *
  * @see docs/linguistics/SOURCES.md (Vocabulary)
@@ -200,7 +206,7 @@ export const DALE_CHALL: readonly string[] = [
   'mistake', 'misty', 'mitt', 'mitten', 'mix', 'moment', 'monday', 'money', 'monkey', 'month',
   'moo', 'moon', 'moonlight', 'moose', 'mop', 'more', 'morning', 'morrow', 'moss', 'most',
   'mostly', 'mother', 'motor', 'mount', 'mountain', 'mouse', 'mouth', 'move', 'movie', 'movies',
-  'moving', 'mow', 'mr.', 'mrs.', 'much', 'mud', 'muddy', 'mug', 'mule', 'multiply',
+  'moving', 'mow', 'mr', 'mrs', 'much', 'mud', 'muddy', 'mug', 'mule', 'multiply',
   'murder', 'music', 'must', 'my', 'myself', 'nail', 'name', 'nap', 'napkin', 'narrow',
   'nasty', 'naughty', 'navy', 'near', 'nearby', 'nearly', 'neat', 'neck', 'necktie', 'need',
   'needle', 'needn\'t', 'negro', 'neighbor', 'neighborhood', 'neither', 'nerve', 'nest', 'net', 'never',
