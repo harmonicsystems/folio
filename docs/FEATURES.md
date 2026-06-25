@@ -8,16 +8,17 @@ Everything shipped, in one scannable place. Last updated **2026-06-12** (post-M5
 
 ## The engine — `@harmonic-systems/early-literacy`
 
-Pure portable TypeScript, zero runtime dependencies, no Node-only APIs (ports to Swift later). Every metric cites a source in SOURCES.md or is explicitly documented as an engine choice with known error modes. **187 unit tests + 114 corpus regression tests**, all green.
+Pure portable TypeScript, zero runtime dependencies, no Node-only APIs (ports to Swift later). Every metric cites a source in SOURCES.md or is explicitly documented as an engine choice with known error modes. **195 unit tests + 123 corpus regression tests**, all green.
 
 `analyze(manuscript)` returns a `ReadabilityProfile` covering:
 
 ### Vocabulary (M1)
 - Word tokenization tuned for children's text — contractions and possessives stay whole, hyphenated compounds split, Unicode letters supported, offsets preserved for editor highlighting
-- Sight-word coverage against **Dolch** (220 service words + 95 picture nouns) and **Fry** (first 100)
+- **Tier-1 (familiar-word) coverage** — share of words a young reader likely already knows, measured against the **Dale–Chall (1995)** familiar-word list (~2,939 normalized entries) ∪ Dolch/Fry sight words, as a sourced proxy for Beck/McKeown/Kucan Tier 1
+- Sight-word coverage against **Dolch** (220 service words + 95 picture nouns) and **Fry** (first 100) — the narrower instant-recognition measure
 - Type-token ratio (vocabulary diversity)
-- Reach-word identification (currently structural: outside Dolch + Fry), attributed to the spread where each first appears
-- ⏳ Tier 1/2/3 classification (Beck/McKeown/Kucan) — **sourcing decided** (Dale-Chall 3000, 2026-06-10), wiring pending
+- Reach-word identification — words outside Tier 1, attributed to the spread where each first appears, flagged `tier-2`; the false-positive fix means familiar words like "umbrella" no longer flag
+- ⏳ Tier-2 vs Tier-3 split (needs a frequency band) and stem-aware reach detection (so "bunnies"/proper nouns stop counting) — future work
 
 ### Phonology (M2)
 - CMU Pronouncing Dictionary subset (~315 curated words) with grapheme-heuristic fallback for everything else
@@ -93,7 +94,9 @@ Five public-domain fixtures spanning all five age bands (synthetic board book, A
 
 | Not built | Why |
 |---|---|
-| Vocabulary tier UI | Dale-Chall 3000 wiring pending — fields exist, zeroed |
+| Tier-2 vs Tier-3 reach-word split | Needs a frequency band wider than Dale–Chall; all reach words currently labeled `tier-2` |
+| Stem-aware reach detection | "bunnies"/"squeezed" and proper nouns read as reach words; needs morphology (reason `morphologically-complex`) |
+| Syntax surfacing in the web UI | Engine computes it (M5); deliberately not shown yet — pre-signal feature churn |
 | Syntax thresholds/warnings by age | No citable comprehension-side source; cite-or-omit |
 | Quote-aware utterance typing (dialogic prompts) | Needs new contract fields → ADR first |
 | Dialogic-reading prompt generator | "Ship before adding more" — awaits audience signal |

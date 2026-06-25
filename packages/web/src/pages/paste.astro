@@ -310,6 +310,10 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         <h2>Vocabulary</h2>
         <ul class="rows">
           <li>
+            <span class="label">Familiar words (Tier 1)</span>
+            <span class="value" id="tier1-coverage"></span>
+          </li>
+          <li>
             <span class="label">Sight-word coverage</span>
             <span class="value" id="sight-coverage"></span>
           </li>
@@ -328,8 +332,9 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
 
         <h2>Reach words by spread</h2>
         <p class="empty" id="reach-help">
-          Tokens outside the Dolch + Fry sight-word lists. Each word is
-          shown on the spread it first appears.
+          Words beyond the familiar Tier-1 core (Dale–Chall familiar list
+          plus Dolch/Fry sight words). Each is shown on the spread it
+          first appears — some reach words are the point.
         </p>
         <div id="reach-container"></div>
       </section>
@@ -486,11 +491,12 @@ A Town Mouse and a Country Mouse were cousins, and very good friends, and the Co
         if (!container || !help) return;
         if (reach.length === 0) {
           container.innerHTML = '';
-          help.textContent = 'No reach words — every token is in Dolch or Fry.';
+          help.textContent =
+            'No reach words — every token is a familiar Tier-1 word.';
           return;
         }
         help.textContent =
-          'Tokens outside the Dolch + Fry sight-word lists. Each word is shown on the spread it first appears.';
+          'Words beyond the familiar Tier-1 core (Dale–Chall plus Dolch/Fry). Each is shown on the spread it first appears — some reach words are the point.';
         const bySpread = new Map<number, string[]>();
         for (const r of reach) {
           const list = bySpread.get(r.spread) ?? [];
@@ -533,6 +539,7 @@ A Town Mouse and a Country Mouse were cousins, and very good friends, and the Co
 
         setText('sentence-count', String(profile.sentenceCount));
         setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
+        setText('tier1-coverage', fmtPercent(profile.vocabulary.tier1Coverage));
         setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
         setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
         setText('unique-words', String(profile.vocabulary.uniqueWords));

@@ -7,7 +7,7 @@ This doc replaces the parallel-agent rules of the road that the early multi-trac
 ## Where the project is right now
 
 - **Live deployment:** `https://folio.harmonic-systems.org/` (auto-deploys on push to `main` via GitHub Actions → GitHub Pages).
-- **Engine:** Milestones 0 → 5 complete (`@harmonic-systems/early-literacy`) — syntax (M5) shipped 2026-06-10: real sentence segmentation, Hunt-1965 clause estimation, four-way sentence typing. 183 unit tests + 114 corpus regression tests, all green.
+- **Engine:** Milestones 0 → 5 complete (`@harmonic-systems/early-literacy`) — syntax (M5) shipped 2026-06-10; M4.1 prosody anacrusis 2026-06-12; vocabulary Tier-1 classification (Dale–Chall proxy) 2026-06-15. 195 unit tests + 123 corpus regression tests, all green.
 - **Web routes:**
   - `/` — spread-first editor (16 spreads, two facing pages each, Lexical rich text, in-line reach-word + phoneme highlighting, book view, layout presets, font picker, persistence, export to .txt / .md / PDF, sidebar with manuscript metrics + phonology + per-spread bars + prosody + guessed-pronunciations + warnings)
   - `/paste` — paste-and-analyze fallback (single textarea, four sample loaders, analysis output)
@@ -44,7 +44,7 @@ These are not features. They are the load-bearing decisions that distinguish Fol
 
 | Decision | Why blocked | Cost of choosing |
 |---|---|---|
-| ~~Tier 1 word list~~ — **DECIDED 2026-06-10: Dale-Chall 3000** (Chall & Dale 1995 "familiar words"; child-normed — known by ~80% of 4th graders — and the classic readability-formula vocabulary base) | Wiring still pending: transcribe/source the list with provenance, add the SOURCES.md entry + licensing rationale (word lists are factual data per Feist, but document the reasoning), then wire tier classification | ~1–2 hours to wire + sourcing diligence. Unblocks `tier1Coverage`, `tier2Words`, `tier3Words`, *and* reach-word reason tooltips that currently always say "low-frequency" |
+| ~~Tier 1 word list~~ — **SHIPPED 2026-06-15: Dale–Chall (1995) familiar words** (∪ Dolch/Fry sight words), 2,939 normalized entries from the MIT-packaged `words/dale-chall` | Done: `data/dale-chall.ts` (provenance + Feist rationale), `vocabulary/tiers.ts`, `tier1Coverage`/`tier2Words` populated, reach reason now `tier-2`, surfaced in editor + /paste + /guide, corpus bounds added | Resolved. Follow-ons: split tier-2 vs tier-3 (needs a wider frequency band) and stem-aware reach detection so "bunnies"/proper nouns stop counting (reason `morphologically-complex`) |
 | Decodability calibration | First-cut formula `0.7 × phoneme_ease + 0.3 × syllable_ease` produces a mild inversion (Peter Rabbit 0.866 vs synthetic board book 0.854). Documented as engine choice in `ARCHITECTURE.md` open questions | Wait for more corpora across age bands to give calibration signal |
 | Vowel acquisition norms | Crowe & McLeod (2020) covers consonants only. All 15 vowels currently default to age 3 | Candidates: Otomo & Stoel-Gammon (1992), Donegan (2013), longitudinal infant-speech corpus. One row of `cmu-phonemes.ts` to swap in |
 | ~~Meter detection anacrusis~~ — **RESOLVED 2026-06-12** | Per-line template scoring (verse line = metrical unit, Attridge 1982) + one unstressed extrametrical pickup per line. Skipped syllable counts in the denominator → automatic penalty → offset-0 wins ties, so iambic/trochaic never re-ambiguate. Bonus fix: odd-length lines no longer phase-flip the stream | Done. All five corpus fixtures stayed inside their existing meterConsistency bands; the verse fixture (Owl & Pussycat) gained most (0.516 → 0.580) while prose barely moved |
@@ -55,7 +55,7 @@ These are not features. They are the load-bearing decisions that distinguish Fol
 Don't redo these without a reason:
 
 - **Phone-mode responsiveness.** Tablet+ only. Floating selection toolbars and 340px tile minimums don't translate to phone screens. Documented in the tablet-responsiveness commit.
-- **Vocabulary tier classification.** Engineering is easy; sourcing is the blocker (above).
+- **Vocabulary tier classification.** Shipped 2026-06-15 (Dale–Chall proxy — see resolved row above). Open follow-ons: tier-2/tier-3 split and stem-aware reach detection.
 - **Dialogic-reading prompts.** Deferred per external review's "ship before adding more" advice.
 - **OG image (PNG).** Current state: favicon + descriptive title + description in social previews. Needs a designed 1200×630 image; can't easily generate one programmatically.
 - **In-line tooltips on highlighted reach words.** CSS Custom Highlight API paint layers don't accept hover events. The sidebar list already has tooltips; in-text would need mousemove + caretRangeFromPoint, deliberately deferred.
@@ -112,7 +112,8 @@ packages/
   engine/          @harmonic-systems/early-literacy — pure TS, browser-portable
     src/
       readability/   orchestrator
-      vocabulary/    tokenize, sight-words (Dolch + Fry), reach-word detection
+      vocabulary/    tokenize, sight-words (Dolch + Fry), tiers (Dale–Chall
+                     Tier-1 proxy), reach-word detection
       phonology/     CMU dict, syllabify, phoneme inventory, decodability,
                      getWordPhonemes, isInCmuDict, getGuessedWords
       syntax/        segment (orthographic sentences w/ offsets), clauses
