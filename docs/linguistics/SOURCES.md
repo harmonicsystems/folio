@@ -5,7 +5,10 @@ Every linguistic claim in Folio traces to a citation. This file is the canonical
 ## Vocabulary
 
 - **Beck, I. L., McKeown, M. G., & Kucan, L. (2013).** *Bringing Words to Life: Robust Vocabulary Instruction* (2nd ed.). Guilford Press.
-  — Tier 1 / Tier 2 / Tier 3 vocabulary framework.
+  — Tier 1 / Tier 2 / Tier 3 vocabulary framework. Beck/McKeown/Kucan describe the tiers conceptually but publish **no canonical tier word lists**, so the engine uses Dale–Chall (below) as a sourced proxy for Tier 1.
+
+- **Chall, J. S., & Dale, E. (1995).** *Readability Revisited: The New Dale–Chall Readability Formula.* Brookline Books.
+  — The ~3,000-word list of "familiar words" (words ~80% of US fourth-graders recognize in print). Folio treats membership as a **proxy for Beck/McKeown/Kucan Tier 1**: a word on the list (∪ the Dolch/Fry sight words) is "familiar"; words outside are reach words. **Proxy limits, documented as engine choices:** (1) the list is normed at the *top* of our age range (grade 4), so it discriminates best for early-reader/chapter bands and saturates near 1.0 for board books; (2) we do **not** yet distinguish Tier 2 (high-utility literary words) from Tier 3 (rare/specialized) — every reach word is reported as `tier-2` and `tier3Words` stays empty, pending a frequency band or Tier-3 list; (3) proper nouns and inflected forms with familiar stems read as reach words (morphological awareness is future work). List sourced via the MIT-packaged `words/dale-chall` (retrieved 2026-06-15); word lists are factual data (*Feist v. Rural*, 1991). See `packages/engine/src/data/dale-chall.ts`.
 
 - **Dolch, E. W. (1948).** *Problems in Reading*. Garrard Press.
   — Dolch Sight Word List (220 service words + 95 nouns).

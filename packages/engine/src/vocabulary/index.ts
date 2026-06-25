@@ -1,25 +1,26 @@
 /**
  * Vocabulary analysis: tokenization, sight-word coverage (Dolch + Fry),
- * type-token ratio, and reach-word detection.
+ * type-token ratio, Tier-1 classification, and reach-word detection.
  *
- * Scope note: tier classification (Beck/McKeown/Kucan Tier 1/2/3) is
- * NOT yet implemented. Tier 1 lacks a canonical published word list;
- * the sourcing decision is tracked in ARCHITECTURE.md open questions.
- * For now `tier2Words` and `tier3Words` are returned as empty arrays
- * and `tier1Coverage` is 0. Reach-word detection uses a structural
- * definition (see {@link identifyReachWords}) instead of tier membership.
+ * Tier 1 is operationalized as the Dale–Chall familiar-word list ∪ the
+ * Dolch/Fry sight words (see {@link ./tiers}). `tier1Coverage` is the
+ * share of familiar tokens; `tier2Words` holds the reach words (tokens
+ * outside Tier 1). `tier3Words` stays empty — tier-2 vs tier-3 isn't yet
+ * distinguished (documented in tiers.ts and SOURCES.md).
  *
  * @see Beck, McKeown, & Kucan (2013), Bringing Words to Life
- * @see Dolch (1948), Fry (1980)
+ * @see Dolch (1948), Fry (1980), Chall & Dale (1995)
  * @see docs/linguistics/SOURCES.md
  */
 
 import type { ReachWord, Spread, VocabularyProfile } from '../types.js';
 import { tokenizeWords } from './tokenize.js';
 import { isSightWord, sightWordCoverage } from './sight-words.js';
+import { isTier1, tier1Coverage, reachVocabulary } from './tiers.js';
 
 export { tokenize, tokenizeWords } from './tokenize.js';
 export { isSightWord, sightWordCoverage } from './sight-words.js';
+export { isDaleChall, isTier1, tier1Coverage, reachVocabulary } from './tiers.js';
 
 /**
  * Analyze a single text blob. For spread-aware reach-word attribution,
@@ -29,8 +30,8 @@ export { isSightWord, sightWordCoverage } from './sight-words.js';
 export function analyzeVocabulary(text: string): VocabularyProfile {
   const tokens = tokenizeWords(text);
   return {
-    tier1Coverage: 0,
-    tier2Words: [],
+    tier1Coverage: tier1Coverage(tokens),
+    tier2Words: reachVocabulary(tokens),
     tier3Words: [],
     sightWordCoverage: sightWordCoverage(tokens),
     uniqueWords: new Set(tokens).size,
@@ -39,14 +40,13 @@ export function analyzeVocabulary(text: string): VocabularyProfile {
 }
 
 /**
- * Reach words: tokens not present in any tracked sight-word list.
+ * Reach words: tokens outside Tier 1 (Dale–Chall familiar list ∪
+ * Dolch/Fry sight words). A reach word sits at or beyond the reader's
+ * expected mastery — the productive ZPD zone a good picture book
+ * intentionally visits.
  *
- * Structural definition, not a tier claim — a word being outside
- * Dolch + Fry first 100 doesn't make it Tier 2. But it does mean an
- * emerging reader can't decode it as a whole-word unit. Useful signal
- * on its own.
- *
- * Each reach word is reported once at the spread it first appears on.
+ * Reported once at the spread each word first appears on, with reason
+ * `tier-2` (see tiers.ts on why tier-2 vs tier-3 isn't yet split).
  */
 export function identifyReachWords(
   tokens: readonly string[],
@@ -57,8 +57,8 @@ export function identifyReachWords(
   for (const token of tokens) {
     if (seen.has(token)) continue;
     seen.add(token);
-    if (!isSightWord(token)) {
-      out.push({ word: token, spread, reason: 'low-frequency' });
+    if (!isTier1(token)) {
+      out.push({ word: token, spread, reason: 'tier-2' });
     }
   }
   return out;
@@ -78,8 +78,8 @@ export function identifyReachWordsBySpread(
     for (const token of tokens) {
       if (seen.has(token)) continue;
       seen.add(token);
-      if (!isSightWord(token)) {
-        out.push({ word: token, spread: spread.index, reason: 'low-frequency' });
+      if (!isTier1(token)) {
+        out.push({ word: token, spread: spread.index, reason: 'tier-2' });
       }
     }
   }

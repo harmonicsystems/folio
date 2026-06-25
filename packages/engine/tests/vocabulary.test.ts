@@ -3,8 +3,12 @@ import {
   analyzeVocabulary,
   identifyReachWords,
   identifyReachWordsBySpread,
+  isDaleChall,
   isSightWord,
+  isTier1,
+  reachVocabulary,
   sightWordCoverage,
+  tier1Coverage,
   typeTokenRatio,
 } from '../src/vocabulary/index.js';
 
@@ -70,10 +74,57 @@ describe('typeTokenRatio', () => {
   });
 });
 
+describe('isDaleChall / isTier1', () => {
+  it('recognizes Dale–Chall familiar words that are not sight words', () => {
+    // "umbrella" and "morning" are outside Dolch+Fry but on Dale–Chall.
+    expect(isSightWord('umbrella')).toBe(false);
+    expect(isDaleChall('umbrella')).toBe(true);
+    expect(isTier1('umbrella')).toBe(true);
+    expect(isTier1('morning')).toBe(true);
+  });
+
+  it('treats sight words as Tier 1 even if not on Dale–Chall', () => {
+    expect(isTier1('the')).toBe(true);
+    expect(isTier1('cat')).toBe(true);
+  });
+
+  it('rejects genuinely rare words', () => {
+    expect(isTier1('sirrah')).toBe(false);
+    expect(isTier1('compunction')).toBe(false);
+    expect(isDaleChall('hippopotamus')).toBe(false);
+  });
+
+  it('is case-insensitive', () => {
+    expect(isDaleChall('Umbrella')).toBe(true);
+    expect(isTier1('MORNING')).toBe(true);
+  });
+});
+
+describe('tier1Coverage / reachVocabulary', () => {
+  it('returns 0 coverage for empty input', () => {
+    expect(tier1Coverage([])).toBe(0);
+  });
+
+  it('measures the familiar-word share', () => {
+    // the, cat, in, the (all Tier 1) + hippopotamus (reach) = 4/5.
+    expect(tier1Coverage(['the', 'cat', 'in', 'the', 'hippopotamus'])).toBe(0.8);
+  });
+
+  it('lists unique reach words in first-appearance order', () => {
+    // "sees" is a reach word (only the stem "see" is familiar); "the"
+    // is Tier 1; the repeat of "hippopotamus" is deduplicated.
+    expect(
+      reachVocabulary(['the', 'hippopotamus', 'sees', 'the', 'hippopotamus']),
+    ).toEqual(['hippopotamus', 'sees']);
+  });
+});
+
 describe('identifyReachWords', () => {
-  it('flags only non-sight-words', () => {
-    const reach = identifyReachWords(['the', 'cat', 'sees', 'hippopotamus']);
-    expect(reach.map((r) => r.word)).toEqual(['sees', 'hippopotamus']);
+  it('flags only non-Tier-1 words — familiar words now pass', () => {
+    // "umbrella" is familiar (Dale–Chall) and must NOT be flagged, even
+    // though it is not a Dolch/Fry sight word — the false-positive fix.
+    const reach = identifyReachWords(['the', 'cat', 'umbrella', 'hippopotamus']);
+    expect(reach.map((r) => r.word)).toEqual(['hippopotamus']);
   });
 
   it('deduplicates — each reach word is reported once', () => {
@@ -84,12 +135,12 @@ describe('identifyReachWords', () => {
     expect(reach[0]?.word).toBe('hippopotamus');
   });
 
-  it('returns ReachWord shape with default spread=1', () => {
+  it('returns ReachWord shape with default spread=1 and reason tier-2', () => {
     const [first] = identifyReachWords(['hippopotamus']);
     expect(first).toEqual({
       word: 'hippopotamus',
       spread: 1,
-      reason: 'low-frequency',
+      reason: 'tier-2',
     });
   });
 });
@@ -101,11 +152,12 @@ describe('identifyReachWordsBySpread', () => {
       { index: 2, text: 'A hippopotamus appeared.' },
       { index: 3, text: 'The hippopotamus left.' }, // reappearance
     ]);
+    // "sat" and "left" are familiar (Dale–Chall Tier 1) and no longer
+    // flagged — only genuinely beyond-Tier-1 words remain. "appeared"
+    // stays (only the stem "appear" is listed; inflection undercount).
     expect(reach).toEqual([
-      { word: 'sat', spread: 1, reason: 'low-frequency' }, // "sat" not in Dolch/Fry first 100
-      { word: 'hippopotamus', spread: 2, reason: 'low-frequency' },
-      { word: 'appeared', spread: 2, reason: 'low-frequency' },
-      { word: 'left', spread: 3, reason: 'low-frequency' },
+      { word: 'hippopotamus', spread: 2, reason: 'tier-2' },
+      { word: 'appeared', spread: 2, reason: 'tier-2' },
     ]);
   });
 });
@@ -138,5 +190,13 @@ describe('analyzeVocabulary', () => {
     const p = analyzeVocabulary('go cat go. go cat go. go cat go.');
     // 2 unique ("go", "cat"), 9 tokens — TTR = 2/9 ≈ 0.22
     expect(p.typeTokenRatio).toBeCloseTo(2 / 9, 5);
+  });
+
+  it('populates Tier-1 coverage and reach words (tier2Words)', () => {
+    // the, big, cat, ran (all Tier 1) + hippopotamus (reach) = 4/5.
+    const p = analyzeVocabulary('the big cat ran hippopotamus');
+    expect(p.tier1Coverage).toBe(0.8);
+    expect(p.tier2Words).toEqual(['hippopotamus']);
+    expect(p.tier3Words).toEqual([]);
   });
 });

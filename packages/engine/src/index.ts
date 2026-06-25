@@ -18,6 +18,10 @@ export {
   tokenizeWords,
   isSightWord,
   sightWordCoverage,
+  isDaleChall,
+  isTier1,
+  tier1Coverage,
+  reachVocabulary,
 } from './vocabulary/index.js';
 
 export {
