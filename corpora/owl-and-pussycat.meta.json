@@ -11,6 +11,7 @@
   "expected": {
     "wordCount": { "min": 200, "max": 250 },
     "vocabulary.sightWordCoverage": { "min": 0.6, "max": 0.75 },
+    "vocabulary.tier1Coverage": { "min": 0.87, "max": 0.93 },
     "vocabulary.typeTokenRatio": { "min": 0.45, "max": 0.6 },
     "prosody.meterConsistency": { "min": 0.45, "max": 0.6 },
     "sentenceCount": { "min": 10, "max": 10 },
