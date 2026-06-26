@@ -7,7 +7,7 @@ This doc replaces the parallel-agent rules of the road that the early multi-trac
 ## Where the project is right now
 
 - **Live deployment:** `https://folio.harmonic-systems.org/` (auto-deploys on push to `main` via GitHub Actions → GitHub Pages).
-- **Engine:** Milestones 0 → 5 complete (`@harmonic-systems/early-literacy`) — syntax (M5) shipped 2026-06-10; M4.1 prosody anacrusis 2026-06-12; vocabulary Tier-1 classification (Dale–Chall proxy) 2026-06-15. 195 unit tests + 123 corpus regression tests, all green.
+- **Engine:** Milestones 0 → 5 complete (`@harmonic-systems/early-literacy`) — syntax (M5) shipped 2026-06-10; M4.1 prosody anacrusis 2026-06-12; vocabulary Tier-1 classification (Dale–Chall proxy) 2026-06-15; corpus doubled to 10 PD fixtures (two per band) 2026-06-15. 195 unit tests + 230 corpus regression tests, all green.
 - **Web routes:**
   - `/` — spread-first editor (16 spreads, two facing pages each, Lexical rich text, in-line reach-word + phoneme highlighting, book view, layout presets, font picker, persistence, export to .txt / .md / PDF, sidebar with manuscript metrics + phonology + per-spread bars + prosody + guessed-pronunciations + warnings)
   - `/paste` — paste-and-analyze fallback (single textarea, four sample loaders, analysis output)

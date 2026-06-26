@@ -8,7 +8,7 @@ Everything shipped, in one scannable place. Last updated **2026-06-15** (post-M5
 
 ## The engine — `@harmonic-systems/early-literacy`
 
-Pure portable TypeScript, zero runtime dependencies, no Node-only APIs (ports to Swift later). Every metric cites a source in SOURCES.md or is explicitly documented as an engine choice with known error modes. **195 unit tests + 123 corpus regression tests**, all green.
+Pure portable TypeScript, zero runtime dependencies, no Node-only APIs (ports to Swift later). Every metric cites a source in SOURCES.md or is explicitly documented as an engine choice with known error modes. **195 unit tests + 230 corpus regression tests** (10 public-domain fixtures, two per age band), all green.
 
 `analyze(manuscript)` returns a `ReadabilityProfile` covering:
 

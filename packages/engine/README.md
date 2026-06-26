@@ -4,7 +4,7 @@ Developmental linguistic analysis for children's literature (ages 0–10).
 
 ## Status
 
-Public alpha. Milestones 0–5 shipped (vocabulary + sight words + Tier-1 classification, phonology + decodability, web alpha, prosody, syntax). Vocabulary Tier 1 uses the Dale–Chall familiar-word list (∪ Dolch/Fry) as a sourced proxy for Beck/McKeown/Kucan; tier-2 vs tier-3 isn't yet split. 195 unit tests + 123 corpus regression tests, all green.
+Public alpha. Milestones 0–5 shipped (vocabulary + sight words + Tier-1 classification, phonology + decodability, web alpha, prosody, syntax). Vocabulary Tier 1 uses the Dale–Chall familiar-word list (∪ Dolch/Fry) as a sourced proxy for Beck/McKeown/Kucan; tier-2 vs tier-3 isn't yet split. 195 unit tests + 230 corpus regression tests (10 fixtures, two per age band), all green.
 
 ## Modules
 
