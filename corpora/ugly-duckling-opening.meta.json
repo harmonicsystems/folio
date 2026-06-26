@@ -1,0 +1,23 @@
+{
+  "title": "The Ugly Duckling (opening excerpt)",
+  "author": "Hans Christian Andersen",
+  "year": 1843,
+  "edition": "Hans Andersen's Fairy Tales, First Series (English translation)",
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #32571",
+  "ageBand": "early-reader",
+  "trope": "outsider",
+  "note": "Verbatim opening — from 'It was so beautiful in the country…' through the duckling fleeing the farmyard to the moor ('…feeling very sorrowful.'), preserving source paragraphs as spreads. The full tale is ~3,940 words (over the early-reader ceiling), so this is the complete rejection/outsider arc; the swan-transformation payoff is the tale's ending and is NOT in this excerpt — hence trope 'outsider', not 'transformation'. (For a complete transformation tale at this scale, Kipling's 'The Elephant's Child' fits whole.) A second early-reader fixture alongside aesop, with longer connected narrative.",
+  "expected": {
+    "wordCount": { "min": 1550, "max": 1650 },
+    "vocabulary.tier1Coverage": { "min": 0.84, "max": 0.90 },
+    "vocabulary.sightWordCoverage": { "min": 0.68, "max": 0.74 },
+    "vocabulary.typeTokenRatio": { "min": 0.28, "max": 0.35 },
+    "phonology.decodabilityScore": { "min": 0.84, "max": 0.89 },
+    "prosody.meterConsistency": { "min": 0.50, "max": 0.58 },
+    "sentenceCount": { "min": 82, "max": 90 },
+    "syntax.meanClausesPerSentence": { "min": 1.8, "max": 2.1 },
+    "syntax.sentenceTypes.declarative": { "min": 64, "max": 76 },
+    "syntax.sentenceTypes.imperative": { "min": 8, "max": 14 }
+  }
+}

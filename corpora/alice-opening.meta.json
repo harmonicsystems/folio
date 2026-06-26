@@ -1,0 +1,24 @@
+{
+  "title": "Alice's Adventures in Wonderland (chapters I–III)",
+  "author": "Lewis Carroll",
+  "year": 1865,
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #11",
+  "ageBand": "chapter",
+  "trope": "portal-fantasy",
+  "note": "Verbatim opening three chapters ('Down the Rabbit-Hole', 'The Pool of Tears', 'A Caucus-Race and a Long Tale'), one chapter per spread with paragraph blanks collapsed (mirrors the wizard-of-oz fixture's structure). Sits cleanly inside the 5,000–10,000 chapter-band target. A second chapter-band fixture alongside Oz, distinct register: dialogue- and exclamation-dense.",
+  "syntaxNote": "Notably exclamation-heavy — engine counts ~75 exclamatory of ~260 sentences (Alice's many 'Oh dear!' / 'Curiouser and curiouser!' outbursts), by far the highest exclamatory COUNT in the corpus (and the highest share among the prose fixtures; owl-and-pussycat's 3/10 share is marginally higher but a small-sample artifact). A useful counterpoint to Oz's declarative-dominant prose. Bounds are regression bands around the audited values.",
+  "expected": {
+    "wordCount": { "min": 5900, "max": 6100 },
+    "vocabulary.tier1Coverage": { "min": 0.81, "max": 0.87 },
+    "vocabulary.sightWordCoverage": { "min": 0.62, "max": 0.69 },
+    "vocabulary.typeTokenRatio": { "min": 0.17, "max": 0.22 },
+    "phonology.decodabilityScore": { "min": 0.84, "max": 0.89 },
+    "prosody.meterConsistency": { "min": 0.50, "max": 0.57 },
+    "sentenceCount": { "min": 250, "max": 270 },
+    "syntax.meanClausesPerSentence": { "min": 1.85, "max": 2.1 },
+    "syntax.sentenceTypes.declarative": { "min": 135, "max": 160 },
+    "syntax.sentenceTypes.interrogative": { "min": 18, "max": 32 },
+    "syntax.sentenceTypes.exclamatory": { "min": 65, "max": 85 }
+  }
+}

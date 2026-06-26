@@ -1,0 +1,23 @@
+{
+  "title": "The House That Jack Built",
+  "author": "Traditional (illustrated by Randolph Caldecott)",
+  "year": 1878,
+  "edition": "R. Caldecott's Picture Book, Frederick Warne & Co., 1878",
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #12109",
+  "ageBand": "early-picture",
+  "trope": "cumulative",
+  "note": "Verbatim — the complete cumulative rhyme, one cumulative verse per spread (11 spreads, House → Malt → Rat → … → Farmer). Line breaks follow the Caldecott edition's picture-book typesetting (some poetic lines wrap mid-phrase); words are unaltered. Fills the cumulative-trope gap in the corpus.",
+  "vocabNote": "Extreme repetition gives a distinctively low type-token ratio (~0.11) — by far the lowest in the corpus — because each verse restates every prior clause. A strong regression signal for the repetition path.",
+  "expected": {
+    "wordCount": { "min": 375, "max": 390 },
+    "vocabulary.tier1Coverage": { "min": 0.75, "max": 0.83 },
+    "vocabulary.sightWordCoverage": { "min": 0.62, "max": 0.69 },
+    "vocabulary.typeTokenRatio": { "min": 0.09, "max": 0.14 },
+    "phonology.decodabilityScore": { "min": 0.81, "max": 0.86 },
+    "prosody.meterConsistency": { "min": 0.52, "max": 0.60 },
+    "sentenceCount": { "min": 11, "max": 11 },
+    "syntax.meanClausesPerSentence": { "min": 1.0, "max": 1.2 },
+    "syntax.sentenceTypes.declarative": { "min": 11, "max": 11 }
+  }
+}

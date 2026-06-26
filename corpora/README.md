@@ -58,15 +58,20 @@ Books in the corpus should be:
 
 ## In the repo
 
-| Slug | Age band | Words | Source |
-|---|---|---|---|
-| `synthetic-board-book` | board | 20–100 | Synthetic stand-in (opposites, max repetition). |
-| `owl-and-pussycat` | early-picture | ~210 | Edward Lear (1871) — Project Gutenberg #13650. |
-| `peter-rabbit` | picture | ~155 | Beatrix Potter (1902) — Project Gutenberg #14838. |
-| `aesop-selected` | early-reader | ~1,100 | Vernon Jones's translation of Aesop (1912) — Project Gutenberg #11339. |
-| `wizard-of-oz-opening` | chapter | ~5,100 | L. Frank Baum (1900) — Project Gutenberg #55. |
+| Slug | Age band | Words | Trope | Source |
+|---|---|---|---|---|
+| `synthetic-board-book` | board | 20–100 | opposites | Synthetic stand-in (max repetition). |
+| `stevenson-bed-in-summer` | board | ~88 | lyric | R. L. Stevenson, *A Child's Garden of Verses* (1885) — Project Gutenberg #19722. |
+| `owl-and-pussycat` | early-picture | ~210 | rhymed-quest | Edward Lear (1871) — Project Gutenberg #13650. |
+| `house-that-jack-built` | early-picture | ~383 | cumulative | Traditional, R. Caldecott's Picture Book (1878) — Project Gutenberg #12109. |
+| `peter-rabbit` | picture | ~155 | transgression | Beatrix Potter (1902) — Project Gutenberg #14838. |
+| `jemima-puddle-duck` | picture | ~186 | departure | Beatrix Potter (1908), opening excerpt — Project Gutenberg #14814. |
+| `aesop-selected` | early-reader | ~1,100 | episodic | Vernon Jones's translation of Aesop (1912) — Project Gutenberg #11339. |
+| `ugly-duckling-opening` | early-reader | ~1,600 | outsider | H. C. Andersen, opening excerpt — Project Gutenberg #32571. |
+| `wizard-of-oz-opening` | chapter | ~5,100 | home-away | L. Frank Baum (1900) — Project Gutenberg #55. |
+| `alice-opening` | chapter | ~6,000 | portal-fantasy | Lewis Carroll (1865), ch. I–III — Project Gutenberg #11. |
 
-All five age bands have at least one fixture. The constraint-validator in `packages/corpus-tests/` reads every `.meta.json` here and asserts the engine's output against the declared `expected` block.
+Every age band now has **two** fixtures — a synthetic/older anchor plus a contrasting public-domain text — giving the constraint-validator multiple data points per band (important for decodability calibration, which needs cross-band signal). Trope coverage now spans opposites, lyric, rhymed-quest, cumulative, transgression, departure, episodic, outsider, home-away, and portal-fantasy. Excerpt fixtures are labeled by what the *excerpt* contains, not the whole work (e.g. `ugly-duckling-opening` is `outsider`, not `transformation`, because the swan payoff is past the cut). The constraint-validator in `packages/corpus-tests/` reads every `.meta.json` here and asserts the engine's output against the declared `expected` block.
 
 ## Starter corpus (Milestone 1)
 

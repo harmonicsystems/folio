@@ -1,0 +1,23 @@
+{
+  "title": "The Tale of Jemima Puddle-Duck (excerpt)",
+  "author": "Beatrix Potter",
+  "year": 1908,
+  "publicDomain": true,
+  "source": "Project Gutenberg eBook #14814",
+  "ageBand": "picture",
+  "trope": "departure",
+  "note": "Verbatim opening — from 'What a funny sight…' through Jemima reaching the wood ('…a safe quiet spot.'), one short paragraph per spread. Trope is 'departure' (the naïve protagonist setting out), matching what the EXCERPT contains: the full tale is cautionary, but the foxy-whiskered gentleman, the peril, and the lesson all come after this cut — so, like ugly-duckling, the trope reflects the excerpt, not the whole work. A second picture-band Potter narrative alongside peter-rabbit, comparable scale (~155 vs ~185 words).",
+  "expected": {
+    "wordCount": { "min": 180, "max": 192 },
+    "vocabulary.tier1Coverage": { "min": 0.82, "max": 0.90 },
+    "vocabulary.sightWordCoverage": { "min": 0.63, "max": 0.71 },
+    "vocabulary.typeTokenRatio": { "min": 0.57, "max": 0.66 },
+    "phonology.decodabilityScore": { "min": 0.86, "max": 0.91 },
+    "prosody.meterConsistency": { "min": 0.51, "max": 0.59 },
+    "sentenceCount": { "min": 12, "max": 12 },
+    "syntax.meanClausesPerSentence": { "min": 1.5, "max": 1.85 },
+    "syntax.sentenceTypes.declarative": { "min": 9, "max": 9 },
+    "syntax.sentenceTypes.exclamatory": { "min": 2, "max": 2 },
+    "syntax.sentenceTypes.imperative": { "min": 1, "max": 1 }
+  }
+}
