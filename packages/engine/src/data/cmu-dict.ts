@@ -351,6 +351,13 @@ export const CMU_DICT: ReadonlyMap<string, readonly string[]> = new Map([
   ['wood',      ['W', 'UH1', 'D']],
 
   // Common children's-book extras (not in Dolch but frequent).
+  // "mr"/"mrs" are the tokenizer's period-stripped forms of Mr./Mrs.
+  // (CMU: MR. → M IH1 S T ER0, MRS. → M IH1 S IH0 Z). Without these,
+  // both fell to the letterwise grapheme fallback, which produced a
+  // vowel-less M-R-S guess (0 syllables) and skewed decodability on
+  // honorific-heavy fixtures like Peter Rabbit.
+  ['mr',        ['M', 'IH1', 'S', 'T', 'ER0']],
+  ['mrs',       ['M', 'IH1', 'S', 'IH0', 'Z']],
   ['moon',      ['M', 'UW1', 'N']],
   ['star',      ['S', 'T', 'AA1', 'R']],
   ['book',      ['B', 'UH1', 'K']],

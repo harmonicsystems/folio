@@ -101,9 +101,27 @@ export function analyzePhonology(text: string): PhonologyProfile {
  *
  * The 70/30 split favors phoneme-level signal because that's where the
  * acquisition-norm evidence is strongest. The syllable weights are an
- * engine choice based on the standard decoding-difficulty progression
- * taught in structured-literacy curricula (CV/VC simplest, clusters
- * harder).
+ * uncited engine convention (CV/VC treated as simplest, clusters
+ * harder); no SOURCES.md anchor exists for the table or the split.
+ *
+ * Known error modes (diagnosed against the 10-fixture corpus, 2026-06;
+ * see docs/decisions/0004-decodability-construct-scoping.md):
+ * - Sight words are scored as decoding load. "the/that/this" are built
+ *   on DH (acquisition age 6.5 → ease 0.30), so high-repetition
+ *   sight-word text — the register of board books — is scored *harder*
+ *   to sound out, even though emerging readers are taught those words
+ *   as wholes. This is the dominant driver of cross-fixture variance.
+ * - Per-phoneme/per-syllable averaging normalizes word length away:
+ *   "curiosity" can out-score "cat". Length is not a factor.
+ * - Acquisition ages are speech-PRODUCTION norms (Crowe & McLeod 2020),
+ *   used here as a proxy for decoding difficulty — a construct gap the
+ *   score's consumers should know about.
+ * The scoping consequence: the score is most meaningful when the child
+ * is the reader (early-reader band); for adult-read-aloud bands the
+ * phoneme inventory is the better surface. The planned fix (score only
+ * non-sight-word tokens) is gated on CMU dict coverage beyond the
+ * sight-word lists — today's non-sight tokens are ~97–100% grapheme-
+ * guessed, so the "fixed" number would be computed from guesses.
  */
 export function analyzePhonologyBySpread(
   spreads: readonly Spread[],

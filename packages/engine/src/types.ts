@@ -130,9 +130,14 @@ export interface PhonologyProfile {
   syllableTypes: SyllableTypeBreakdown;
   averageSyllablesPerWord: number;
   /**
-   * 0–1 score reflecting how decodable the text is for an emerging reader.
-   * Weighted by phoneme acquisition age (Crowe & McLeod 2020) and syllable
-   * complexity.
+   * 0–1 score weighting phoneme acquisition age (Crowe & McLeod 2020 —
+   * speech-production norms, used as a proxy for decoding difficulty)
+   * and syllable-shape complexity. Most meaningful when the child is
+   * the reader (early-reader band); read-aloud bands should lean on
+   * `phonemeInventory` instead. Known scope limits: sight words are
+   * scored as decoding load even though emerging readers learn them
+   * whole, and word length is normalized away. See
+   * docs/decisions/0004-decodability-construct-scoping.md.
    */
   decodabilityScore: number;
 }

@@ -26,7 +26,7 @@ Pure portable TypeScript, zero runtime dependencies, no Node-only APIs (ports to
 - Syllabification (max-onset principle over ARPABET, legal English onset clusters)
 - Phoneme inventory per manuscript — IPA, place/manner/voicing, first-spread attribution, and acquisition ages from **Crowe & McLeod (2020)** (consonants; vowels default to age 3 as a documented convention pending a citable vowel norm)
 - Syllable-type breakdown (V / CV / VC / CVC / CCVC / CVCC / other)
-- Decodability score 0–1 (engine-choice formula: 70% phoneme ease + 30% syllable ease; calibration pass pending more corpus signal)
+- Decodability score 0–1 (engine-choice formula: 70% phoneme ease + 30% syllable ease; construct diagnosed and scoped 2026-06-26 — most meaningful for the early-reader band; sight-word and length error modes documented in ADR 0004)
 
 ### Prosody (M4, refined M4.1)
 - Stress sequences from CMU stress markers (binary: primary+secondary collapse to stressed)
@@ -103,6 +103,6 @@ Five public-domain fixtures spanning all five age bands (synthetic board book, A
 | Reading Kit (clinical PDF export) | Awaits SLP-side signal (`/paste` engagement) |
 | Trope-template overlay, manuscript import | Awaits author-side signal (`/` engagement) |
 | Phone-mode responsiveness | Tablet+ only by design for now |
-| Decodability recalibration | Needs more corpus across age bands |
+| Decodability formula change (sight-word exclusion) | Gated on CMU dict expansion — non-sight tokens are ~97–100% grapheme-guessed today; diagnosis + plan in ADR 0004 |
 
 The full future list (native SwiftUI app, illustrator briefs, paper engineering, eye-movement simulation) lives in `ARCHITECTURE.md`.
