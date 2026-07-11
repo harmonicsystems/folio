@@ -126,6 +126,9 @@ const SAMPLES: Record<string, Sample> = {
         --ochre: #a37828;
         --rust: #9a4a2a;
         --surface: #ffffff;
+        --hairline: #eee4d0; /* inspector row hairlines + progress track */
+        --callout-ink: #6b5f4e; /* handoff token; ≥4.5:1 on white at small sizes */
+        --ochre-deep: #8a6420; /* ochre darkened one step for small text/badges (WCAG AA) */
       }
       * { box-sizing: border-box; }
       html, body {
@@ -366,12 +369,14 @@ const SAMPLES: Record<string, Sample> = {
       .lex-tool-underline { text-decoration: underline; }
       .lex-tool-strike { text-decoration: line-through; }
 
-      /* ---- in-line reach-word highlighting (CSS Custom Highlight API) ---- */
+      /* ---- in-line reach-word highlighting (CSS Custom Highlight API) ----
+         Soft ochre wash + dotted underline: the old rust WAVY underline
+         borrowed the spellchecker idiom, so flagged words read as typos.
+         A wash + dotted line reads as "noted" (design handoff 1c). */
       ::highlight(reach-word) {
-        text-decoration: underline wavy;
-        text-decoration-color: var(--rust);
+        background-color: rgba(163, 120, 40, 0.16);
+        text-decoration: underline dotted #a37828;
         text-underline-offset: 0.18em;
-        text-decoration-thickness: 1.5px;
       }
       .page-illustration {
         flex: 1;
@@ -394,7 +399,7 @@ const SAMPLES: Record<string, Sample> = {
 
       .sidebar {
         background: var(--surface); border: 1px solid var(--rule);
-        border-radius: 4px; padding: 1rem;
+        border-radius: 4px; padding: 0; /* inspector panels own their padding */
         position: sticky; top: 5rem; align-self: start;
         max-height: calc(100vh - 6rem); overflow-y: auto;
       }
@@ -406,13 +411,84 @@ const SAMPLES: Record<string, Sample> = {
       .sidebar h3:not(:first-child) { margin-top: 1.5rem; }
       .metric-row {
         display: flex; justify-content: space-between; align-items: baseline;
-        padding: 0.4rem 0; border-bottom: 1px solid var(--rule);
-        font-size: 0.85rem;
+        padding: 7px 0; border-bottom: 1px solid var(--hairline);
+        font-size: 13px;
       }
-      .metric-row .label { color: var(--taupe); }
+      .metric-row .label {
+        color: var(--taupe);
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+      }
       .metric-row .value { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
-      .metric-row .value.over { color: var(--rust); }
-      .metric-row .value.under { color: var(--ochre); }
+
+      /* ---- tabbed inspector (studio dashboard slice 1, ADR 0005) ---- */
+      .inspector-tabs {
+        display: grid; grid-template-columns: repeat(4, 1fr);
+        border-bottom: 1px solid var(--rule);
+        position: sticky; top: 0; background: var(--surface); z-index: 2;
+      }
+      .inspector-tabs [role='tab'] {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        /* --callout-ink (not the spec's taupe): 11px inactive labels on
+           white need ≥4.5:1 — taupe is 4.07:1, this handoff token is
+           6.3:1. Recorded as an a11y spec deviation in ADR 0005. */
+        font-size: 11px; padding: 10px 4px;
+        background: transparent; border: none;
+        border-bottom: 2px solid transparent;
+        color: var(--callout-ink); cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+        gap: 4px;
+      }
+      .inspector-tabs [role='tab']:hover { color: var(--ink); }
+      .inspector-tabs [role='tab'][aria-selected='true'] {
+        color: var(--ink); border-bottom-color: var(--ink);
+      }
+      .inspector-tabs [role='tab']:focus-visible {
+        /* Inset ring: the sticky strip sits flush with the scrollport
+           top, so the default +2px offset ring clips on its top edge. */
+        outline-offset: -2px;
+      }
+      .tab-badge {
+        /* --ochre-deep: white-on-ochre is 3.98:1 at 9px; darkened one
+           step to pass AA (5.3:1). ADR 0005. */
+        background: var(--ochre-deep); color: #fff;
+        font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 999px;
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      }
+      .tab-badge[hidden] { display: none; }
+      .inspector-panel { padding: 18px 16px; }
+      .inspector-panel[hidden] { display: none; }
+
+      .length-hero { padding: 2px 0 12px; }
+      .length-hero-num .value {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 34px; line-height: 1.1;
+      }
+      /* setText() writes over/under onto #total-words — keep the
+         pre-redesign severity distinction on the hero number:
+         rust = over target (error), ochre = under (warning). */
+      .length-hero-num .value.over { color: var(--rust); }
+      .length-hero-num .value.under { color: var(--ochre); }
+      .length-hero-sub {
+        margin: 2px 0 10px; font-size: 12px; color: var(--taupe);
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+      }
+      .length-hero-sub .value {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+      }
+      .length-hero-sub.off-target,
+      .length-hero-sub.off-target .value { color: var(--ochre-deep); } /* AA at 12px */
+      .length-progress {
+        height: 6px; background: var(--hairline);
+        border-radius: 3px; overflow: hidden;
+      }
+      .length-progress-fill {
+        height: 100%; width: 0; background: var(--ochre);
+        border-radius: 3px; transition: width 0.15s ease;
+      }
+      .length-progress-fill.in-range { background: var(--taupe); }
+      @media (prefers-reduced-motion: reduce) {
+        .length-progress-fill { transition: none; }
+      }
 
       .per-spread-list {
         list-style: none; padding: 0; margin: 0;
@@ -576,8 +652,10 @@ const SAMPLES: Record<string, Sample> = {
       .phon-clear[hidden] { display: none; }
 
       /* In-text highlight for words containing active phonemes —
-         background tint, distinct from reach-word's wavy underline so
-         the two can stack on the same word without conflict. */
+         stronger background tint, distinct from reach-word's softer
+         wash + dotted underline so the two can stack on the same word
+         (they alpha-composite; if that ever reads muddy, the sanctioned
+         fallback is demoting this to a border-only style — ADR 0005). */
       ::highlight(phoneme-match) {
         background-color: rgba(163, 120, 40, 0.22);
         border-radius: 2px;
@@ -994,23 +1072,6 @@ const SAMPLES: Record<string, Sample> = {
       .status-val.under { color: var(--ochre); }
       .status-sub { color: var(--taupe); font-size: 0.8rem; }
 
-      /* ---- coming soon list ---- */
-      .coming-soon {
-        list-style: none; padding: 0; margin: 0;
-        font-size: 0.8rem;
-      }
-      .coming-soon li {
-        padding: 0.35rem 0;
-        color: var(--taupe);
-        border-bottom: 1px dashed var(--rule);
-        font-style: italic;
-      }
-      .coming-soon li:last-child { border-bottom: none; }
-      .coming-soon li::before {
-        content: '·'; margin-right: 0.4rem;
-        opacity: 0.5; font-style: normal;
-      }
-
       /* ---- floating prev/next + spread counter (book mode only) ---- */
       .nav-prev, .nav-next, .spread-counter { display: none; }
       body.book-mode .nav-prev,
@@ -1370,130 +1431,151 @@ const SAMPLES: Record<string, Sample> = {
       </section>
 
       <aside class="sidebar" aria-label="Readability profile">
-        <h3>Length</h3>
-        <div class="metric-row">
-          <span class="label">Word count</span>
-          <span class="value" id="total-words">0</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Target</span>
-          <span class="value" id="total-target">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Sentences</span>
-          <span class="value" id="total-sentences">0</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Avg sentence length</span>
-          <span class="value" id="avg-sentence">—</span>
-        </div>
-
-        <h3>Vocabulary</h3>
-        <div class="metric-row">
-          <span class="label">Familiar words (Tier 1)</span>
-          <span class="value" id="tier1-coverage">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Sight-word coverage</span>
-          <span class="value" id="sight-coverage">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Type-token ratio</span>
-          <span class="value" id="ttr">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Unique words</span>
-          <span class="value" id="unique-words">0</span>
-        </div>
-
-        <h3>Phonology</h3>
-        <div class="metric-row">
-          <span class="label">Decodability</span>
-          <span class="value" id="decodability">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Avg syllables / word</span>
-          <span class="value" id="avg-syllables">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Top syllable type</span>
-          <span class="value" id="top-syllable">—</span>
-        </div>
-
-        <details class="phon-details">
-          <summary>Syllable shapes</summary>
-          <ul class="syll-list" id="syll-list"></ul>
-        </details>
-
-        <details class="phon-details">
-          <summary>Phonemes by acquisition age</summary>
-          <ul class="phoneme-by-age" id="phoneme-by-age"></ul>
-          <button type="button" class="phon-clear" id="phon-clear" hidden>
-            Clear phoneme highlights
+        <!-- Tabbed inspector (studio dashboard slice 1, ADR 0005).
+             Every pre-existing element id is preserved verbatim so the
+             render functions stay untouched; hidden panels keep
+             rendering (byId works under display:none). NOTE: setText()
+             rewrites className on #total-words/#total-target — never
+             add styling classes to those elements; hero styling keys
+             off the .length-hero* wrappers. -->
+        <div class="inspector-tabs" role="tablist" aria-label="Readability inspector">
+          <button role="tab" type="button" id="tab-length" data-tab="length"
+            aria-selected="true" aria-controls="panel-length">Length</button>
+          <button role="tab" type="button" id="tab-vocab" data-tab="vocab"
+            aria-selected="false" tabindex="-1" aria-controls="panel-vocab">Vocab</button>
+          <button role="tab" type="button" id="tab-phonics" data-tab="phonics"
+            aria-selected="false" tabindex="-1" aria-controls="panel-phonics">Phonics</button>
+          <button role="tab" type="button" id="tab-issues" data-tab="issues"
+            aria-selected="false" tabindex="-1" aria-controls="panel-issues">
+            Issues <span class="tab-badge" id="issues-badge" hidden>0</span>
           </button>
-          <p class="phon-source">
-            Click any phoneme to highlight words that contain it.
-            Consonant ages: Crowe &amp; McLeod (2020), AJSLP.
-            Vowels default to age 3 pending norm sourcing.
-          </p>
-        </details>
-
-        <details class="phon-details">
-          <summary>Phonemes by articulation</summary>
-          <ul class="phoneme-by-manner" id="phoneme-by-manner"></ul>
-          <p class="phon-source">
-            Grouped by manner of articulation. Same chips —
-            click to highlight; the chip state syncs across both
-            views.
-          </p>
-        </details>
-
-        <details class="phon-details">
-          <summary>Guessed pronunciations <span class="guessed-count" id="guessed-count" aria-hidden="true"></span></summary>
-          <ul class="guessed-list" id="guessed-list"></ul>
-          <p class="phon-source">
-            These words aren't in the curated CMU dict subset.
-            Decodability, syllable shapes, and phoneme inventory
-            for them are estimated from spelling — best-effort,
-            not authoritative.
-          </p>
-        </details>
-
-        <h3>Prosody</h3>
-        <div class="metric-row">
-          <span class="label">Dominant meter</span>
-          <span class="value" id="dominant-meter">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Meter consistency</span>
-          <span class="value" id="meter-consistency">—</span>
-        </div>
-        <div class="metric-row">
-          <span class="label">Rhyme scheme</span>
-          <span class="value" id="rhyme-scheme">—</span>
         </div>
 
-        <h3>Per spread</h3>
-        <ol class="per-spread-list" id="per-spread-list"></ol>
+        <div class="inspector-panel" role="tabpanel" id="panel-length" aria-labelledby="tab-length" tabindex="0">
+          <div class="length-hero">
+            <div class="length-hero-num"><span class="value" id="total-words">0</span></div>
+            <p class="length-hero-sub" id="length-hero-sub">
+              words · target <span class="value" id="total-target">—</span>
+            </p>
+            <div class="length-progress" aria-hidden="true">
+              <div class="length-progress-fill" id="length-progress-fill"></div>
+            </div>
+          </div>
+          <div class="metric-row">
+            <span class="label">Sentences</span>
+            <span class="value" id="total-sentences">0</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Avg sentence length</span>
+            <span class="value" id="avg-sentence">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Longest spread</span>
+            <span class="value" id="longest-spread">—</span>
+          </div>
+          <h3>Per spread</h3>
+          <ol class="per-spread-list" id="per-spread-list"></ol>
+        </div>
 
-        <h3>Reach words</h3>
-        <p class="empty" id="reach-empty">
-          Words beyond the familiar Tier-1 core (Dale–Chall plus Dolch/Fry)
-          will appear here.
-        </p>
-        <ul class="reach-list" id="reach-list"></ul>
+        <div class="inspector-panel" role="tabpanel" id="panel-vocab" aria-labelledby="tab-vocab" tabindex="0" hidden>
+          <div class="metric-row">
+            <span class="label">Familiar words (Tier 1)</span>
+            <span class="value" id="tier1-coverage">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Sight-word coverage</span>
+            <span class="value" id="sight-coverage">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Type-token ratio</span>
+            <span class="value" id="ttr">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Unique words</span>
+            <span class="value" id="unique-words">0</span>
+          </div>
+          <h3>Reach words</h3>
+          <p class="empty" id="reach-empty">
+            Words beyond the familiar Tier-1 core (Dale–Chall plus Dolch/Fry)
+            will appear here.
+          </p>
+          <ul class="reach-list" id="reach-list"></ul>
+        </div>
 
-        <h3>Warnings</h3>
-        <p class="empty" id="warnings-empty">None.</p>
-        <ul class="warning-list" id="warning-list"></ul>
+        <div class="inspector-panel" role="tabpanel" id="panel-phonics" aria-labelledby="tab-phonics" hidden>
+          <div class="metric-row">
+            <span class="label">Decodability</span>
+            <span class="value" id="decodability">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Avg syllables / word</span>
+            <span class="value" id="avg-syllables">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Top syllable type</span>
+            <span class="value" id="top-syllable">—</span>
+          </div>
 
-        <h3>Coming soon</h3>
-        <ul class="coming-soon">
-          <li>Syntax · sentence variety, clause depth</li>
-          <li>Reach-word tiers · separating rare words from rich ones</li>
-          <li>Dialogic-reading prompt suggestions</li>
-          <li>Per-client phoneme acquisition profiles (SLP)</li>
-        </ul>
+          <details class="phon-details">
+            <summary>Syllable shapes</summary>
+            <ul class="syll-list" id="syll-list"></ul>
+          </details>
+
+          <details class="phon-details">
+            <summary>Phonemes by acquisition age</summary>
+            <ul class="phoneme-by-age" id="phoneme-by-age"></ul>
+            <button type="button" class="phon-clear" id="phon-clear" hidden>
+              Clear phoneme highlights
+            </button>
+            <p class="phon-source">
+              Click any phoneme to highlight words that contain it.
+              Consonant ages: Crowe &amp; McLeod (2020), AJSLP.
+              Vowels default to age 3 pending norm sourcing.
+            </p>
+          </details>
+
+          <details class="phon-details">
+            <summary>Phonemes by articulation</summary>
+            <ul class="phoneme-by-manner" id="phoneme-by-manner"></ul>
+            <p class="phon-source">
+              Grouped by manner of articulation. Same chips —
+              click to highlight; the chip state syncs across both
+              views.
+            </p>
+          </details>
+
+          <details class="phon-details">
+            <summary>Guessed pronunciations <span class="guessed-count" id="guessed-count" aria-hidden="true"></span></summary>
+            <ul class="guessed-list" id="guessed-list"></ul>
+            <p class="phon-source">
+              These words aren't in the curated CMU dict subset.
+              Decodability, syllable shapes, and phoneme inventory
+              for them are estimated from spelling — best-effort,
+              not authoritative.
+            </p>
+          </details>
+
+          <!-- Temporary home: prosody rows move to the Prosody MODE in
+               slice 4 of the studio-dashboard sequence (ADR 0005). -->
+          <h3>Prosody</h3>
+          <div class="metric-row">
+            <span class="label">Dominant meter</span>
+            <span class="value" id="dominant-meter">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Meter consistency</span>
+            <span class="value" id="meter-consistency">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Rhyme scheme</span>
+            <span class="value" id="rhyme-scheme">—</span>
+          </div>
+        </div>
+
+        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" tabindex="0" hidden>
+          <p class="empty" id="warnings-empty">None.</p>
+          <ul class="warning-list" id="warning-list"></ul>
+        </div>
       </aside>
     </main>
 
@@ -1888,8 +1970,29 @@ const SAMPLES: Record<string, Sample> = {
             ? `${wordCountTarget.min}–${wordCountTarget.max}`
             : `≤${wordCountTarget.max}`;
         setText('total-target', targetLabel);
+        // Length-tab hero: subline color + progress fill (ADR 0005).
+        byId('length-hero-sub')?.classList.toggle('off-target', countClass !== '');
+        const fill = byId('length-progress-fill');
+        if (fill) {
+          const ratio =
+            wordCountTarget.max > 0 ? wordCount / wordCountTarget.max : 0;
+          fill.style.width = `${Math.min(1, ratio) * 100}%`;
+          fill.classList.toggle('in-range', countClass === '' && wordCount > 0);
+        }
         setText('total-sentences', String(profile.sentenceCount));
         setText('avg-sentence', fmtNumber(profile.averageSentenceLength, 1));
+        let longestWc = 0;
+        let longestIdx = 0;
+        for (const sp of profile.perSpread) {
+          if (sp.wordCount > longestWc) {
+            longestWc = sp.wordCount;
+            longestIdx = sp.index;
+          }
+        }
+        setText(
+          'longest-spread',
+          longestWc > 0 ? `${longestWc} (spread ${longestIdx})` : '—',
+        );
         setText('tier1-coverage', fmtPercent(profile.vocabulary.tier1Coverage));
         setText('sight-coverage', fmtPercent(profile.vocabulary.sightWordCoverage));
         setText('ttr', fmtNumber(profile.vocabulary.typeTokenRatio, 3));
@@ -2212,6 +2315,14 @@ const SAMPLES: Record<string, Sample> = {
         if (!list || !empty) return;
         const all: Warning[] = [...profile.warnings];
         for (const sp of profile.perSpread) all.push(...sp.warnings);
+        // Issues-tab badge — before the zero-warning early return so it
+        // also hides when the list clears. Count semantics identical to
+        // sb-warnings in updateStatusBar.
+        const badge = byId('issues-badge');
+        if (badge) {
+          badge.textContent = String(all.length);
+          badge.hidden = all.length === 0;
+        }
         list.innerHTML = '';
         if (all.length === 0) {
           empty.style.display = '';
@@ -2717,6 +2828,54 @@ const SAMPLES: Record<string, Sample> = {
         const btn = byId('sidebar-toggle');
         if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
         savePrefs();
+      });
+
+      // ---- inspector tabs (studio dashboard slice 1, ADR 0005) ----
+      // Full ARIA tabs with roving tabindex + automatic activation on
+      // arrow keys (panel switching is cheap `hidden` toggling). Tab
+      // selection is transient — prefs v2 with persistence is slice 3.
+      type TabName = 'length' | 'vocab' | 'phonics' | 'issues';
+      const TAB_ORDER: readonly TabName[] = ['length', 'vocab', 'phonics', 'issues'];
+
+      function setActiveTab(name: TabName): void {
+        for (const t of TAB_ORDER) {
+          const active = t === name;
+          const tab = byId(`tab-${t}`);
+          const panel = byId(`panel-${t}`);
+          tab?.setAttribute('aria-selected', active ? 'true' : 'false');
+          tab?.setAttribute('tabindex', active ? '0' : '-1');
+          if (panel) panel.hidden = !active;
+        }
+      }
+
+      const inspectorTablist =
+        document.querySelector<HTMLElement>('.inspector-tabs');
+      inspectorTablist?.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement | null)?.closest?.(
+          '[data-tab]',
+        ) as HTMLElement | null;
+        const name = btn?.dataset.tab as TabName | undefined;
+        if (name) setActiveTab(name);
+      });
+      inspectorTablist?.addEventListener('keydown', (e) => {
+        const idx = TAB_ORDER.indexOf(
+          ((document.activeElement as HTMLElement | null)?.dataset.tab ??
+            '') as TabName,
+        );
+        if (idx === -1) return;
+        let next = -1;
+        if (e.key === 'ArrowRight') next = (idx + 1) % TAB_ORDER.length;
+        else if (e.key === 'ArrowLeft') {
+          next = (idx + TAB_ORDER.length - 1) % TAB_ORDER.length;
+        } else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = TAB_ORDER.length - 1;
+        if (next === -1) return;
+        e.preventDefault();
+        const name = TAB_ORDER[next];
+        if (name) {
+          setActiveTab(name);
+          byId(`tab-${name}`)?.focus();
+        }
       });
 
       // Phoneme chip clicks (event delegation — chips are re-rendered
