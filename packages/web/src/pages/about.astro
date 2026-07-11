@@ -30,13 +30,24 @@
     ></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Async font CSS: don't block first paint on a third-party
+         stylesheet; Georgia renders immediately, Caslon swaps in. -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+      />
+    </noscript>
     <title>Folio — about</title>
     <style>
       :root {
+        color-scheme: only light; /* 'only' opts out of Chrome Android Auto Dark; bare 'light' would not */
         --cream: #f7f1e6;
         --beige: #ece2cf;
         --taupe: #8a7c66;

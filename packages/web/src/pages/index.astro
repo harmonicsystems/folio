@@ -101,12 +101,23 @@ const SAMPLES: Record<string, Sample> = {
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Async font CSS: don't block first paint on a third-party
+         stylesheet; the serif stack renders immediately, fonts swap in. -->
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap"
+      />
+    </noscript>
     <style is:global>
       :root {
+        color-scheme: only light; /* 'only' opts out of Chrome Android Auto Dark; bare 'light' would not */
         --cream: #f7f1e6;
         --beige: #ece2cf;
         --taupe: #8a7c66;
@@ -904,6 +915,21 @@ const SAMPLES: Record<string, Sample> = {
       .view-toggle button.active { background: var(--ink); color: var(--cream); }
       .view-toggle button:hover:not(.active) { background: var(--beige); }
 
+      /* Touch devices / narrow viewports: form controls under 16px make
+         iOS Safari zoom the whole page on focus. Floor the interactive
+         controls (page text sizing is trim-driven and out of scope).
+         Placed AFTER every base rule it must beat — same specificity,
+         so source order decides (.view-toggle button lives just above). */
+      @media (max-width: 900px), (pointer: coarse) {
+        .control select,
+        .control button,
+        .view-toggle button,
+        .page-placement,
+        .find-bar input[type="text"] {
+          font-size: 1rem;
+        }
+      }
+
       /* ---- book view: spread-by-spread, scroll-snap ---- */
       .editor-surface[data-view="book"] {
         display: flex; flex-direction: row;
@@ -1614,7 +1640,8 @@ const SAMPLES: Record<string, Sample> = {
       //                     mode, sidebar state). Persist independent
       //                     of any single manuscript; Reset does NOT
       //                     touch them.
-      const DRAFT_KEY = 'folio.draft.v1';
+      const DRAFT_KEY = 'folio.draft.v1'; // legacy plain-text drafts; read-only (migration)
+      const DRAFT_KEY_V2 = 'folio.draft.v2'; // lossless Lexical state per page
       const PREFS_KEY = 'folio.prefs.v1';
       interface SavedPrefs {
         version: 1;
@@ -1652,19 +1679,31 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
       interface SavedDraft {
-        version: 1;
+        /** 1 = legacy plain text; 2 adds lossless per-page Lexical `state`. */
+        version: 1 | 2;
         ageBand: string;
         trimKey: string;
         spreads: Array<{
-          leftPage: { text: string; placement: string };
-          rightPage: { text: string; placement: string };
+          leftPage: { text: string; placement: string; state?: string };
+          rightPage: { text: string; placement: string; state?: string };
         }>;
         savedAt: number;
       }
       let lastSavedAt = 0;
+      let saveFailed = false;
 
       function loadDraft(): SavedDraft | null {
+        // v2 (lossless Lexical state per page) first; fall back to the
+        // legacy v1 plain-text draft, which restores through setText and
+        // upgrades to v2 on the next autosave.
         try {
+          const rawV2 = localStorage.getItem(DRAFT_KEY_V2);
+          if (rawV2) {
+            const parsed = JSON.parse(rawV2);
+            if (parsed?.version === 2 && parsed.ageBand && Array.isArray(parsed.spreads)) {
+              return parsed as SavedDraft;
+            }
+          }
           const raw = localStorage.getItem(DRAFT_KEY);
           if (!raw) return null;
           const parsed = JSON.parse(raw);
@@ -1681,38 +1720,51 @@ const SAMPLES: Record<string, Sample> = {
           const web = readManuscript();
           const trimSel = byId('trim-size') as HTMLSelectElement | null;
           const trimKey = trimSel?.value ?? 'STANDARD_PORTRAIT';
+          const editors = (window as unknown as {
+            __pageEditors?: Record<string, { getStateJSON: () => string }>;
+          }).__pageEditors;
           const draft: SavedDraft = {
-            version: 1,
+            version: 2,
             ageBand: web.ageBand,
             trimKey,
-            spreads: web.spreads.map((s) => ({
+            spreads: web.spreads.map((s, i) => ({
               leftPage: {
                 text: s.leftPage.text,
                 placement: s.leftPage.placement,
+                state: editors?.[`${i + 1}-left`]?.getStateJSON(),
               },
               rightPage: {
                 text: s.rightPage.text,
                 placement: s.rightPage.placement,
+                state: editors?.[`${i + 1}-right`]?.getStateJSON(),
               },
             })),
             savedAt: Date.now(),
           };
-          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+          localStorage.setItem(DRAFT_KEY_V2, JSON.stringify(draft));
+          // The v1 draft is superseded the moment a v2 write lands.
+          localStorage.removeItem(DRAFT_KEY);
           lastSavedAt = draft.savedAt;
+          saveFailed = false;
           updateSavedIndicator();
         } catch {
-          // QuotaExceededError, private-mode restrictions, etc.
-          // — silently degrade; the in-memory editor still works.
+          // QuotaExceededError, private-mode restrictions, etc. The
+          // in-memory editor still works — but say so instead of letting
+          // a stale "saved Xm ago" imply the draft is safe.
+          saveFailed = true;
+          updateSavedIndicator();
         }
       }
 
       function clearDraft(): void {
         try {
           localStorage.removeItem(DRAFT_KEY);
+          localStorage.removeItem(DRAFT_KEY_V2);
         } catch {
           /* ignore */
         }
         lastSavedAt = 0;
+        saveFailed = false;
         updateSavedIndicator();
       }
 
@@ -1726,6 +1778,12 @@ const SAMPLES: Record<string, Sample> = {
       function updateSavedIndicator(): void {
         const el = byId('saved-indicator');
         if (!el) return;
+        if (saveFailed) {
+          // Storage is unavailable (quota, private mode). Don't let a
+          // stale "saved Xm ago" imply the draft is safe.
+          el.textContent = 'not saved — browser storage unavailable';
+          return;
+        }
         el.textContent =
           lastSavedAt === 0 ? '' : `saved ${relativeTime(Date.now() - lastSavedAt)}`;
       }
@@ -2478,12 +2536,13 @@ const SAMPLES: Record<string, Sample> = {
               const spr = restoredDraft.spreads[detail.spread - 1];
               if (spr) {
                 const page = detail.side === 'left' ? spr.leftPage : spr.rightPage;
-                if (page.text || page.placement !== 'text-only') {
+                if (page.text || page.state || page.placement !== 'text-only') {
                   setPage(
                     detail.spread,
                     detail.side,
                     page.text,
                     page.placement as PagePlacement,
+                    page.state,
                   );
                 }
               }
@@ -2516,11 +2575,19 @@ const SAMPLES: Record<string, Sample> = {
         side: 'left' | 'right',
         text: string,
         placement: PagePlacement,
+        stateJSON?: string,
       ): void {
         const handle = (window as unknown as {
-          __pageEditors?: Record<string, { setText: (s: string) => void }>;
+          __pageEditors?: Record<
+            string,
+            { setText: (s: string) => void; setStateJSON: (j: string) => boolean }
+          >;
         }).__pageEditors?.[`${spread}-${side}`];
-        handle?.setText(text);
+        // Lossless restore when a v2 Lexical state is available; plain
+        // text otherwise (v1 drafts, sample loads, reset).
+        if (!(stateJSON && handle?.setStateJSON(stateJSON))) {
+          handle?.setText(text);
+        }
         const sel = document.querySelector(
           `[data-page-placement="${spread}-${side}"]`,
         ) as HTMLSelectElement | null;
@@ -2552,6 +2619,20 @@ const SAMPLES: Record<string, Sample> = {
       byId('sample-loader')?.addEventListener('change', (e) => {
         const sel = e.target as HTMLSelectElement;
         if (sel.value) {
+          // Loading a sample overwrites all 32 pages — confirm when any
+          // page has text the author could lose.
+          const hasContent = readManuscript().spreads.some(
+            (s) => s.leftPage.text.trim() || s.rightPage.text.trim(),
+          );
+          if (
+            hasContent &&
+            !window.confirm(
+              'Load the sample and replace your current manuscript? Your existing text will be overwritten.',
+            )
+          ) {
+            sel.value = '';
+            return;
+          }
           loadSample(sel.value);
           sel.value = '';
         }
@@ -2852,12 +2933,22 @@ const SAMPLES: Record<string, Sample> = {
         const replInput = byId('replace-input') as HTMLInputElement | null;
         const replacement = replInput?.value ?? '';
         const handle = (window as unknown as {
-          __pageEditors?: Record<string, { getText: () => string; setText: (t: string) => void }>;
+          __pageEditors?: Record<
+            string,
+            {
+              getText: () => string;
+              setText: (t: string) => void;
+              replaceRange: (s: number, e: number, r: string) => boolean;
+            }
+          >;
         }).__pageEditors?.[`${m.spread}-${m.side}`];
         if (!handle) return;
-        const text = handle.getText();
-        const next = text.slice(0, m.index) + replacement + text.slice(m.index + m.length);
-        handle.setText(next);
+        // Format-preserving splice inside Lexical. If the offsets can't
+        // be resolved the match is stale — do nothing; refreshFind below
+        // recomputes matches against the current text. (Never fall back
+        // to a plain-text rebuild: that's the formatting-destroying path
+        // this replaced.)
+        handle.replaceRange(m.index, m.index + m.length, replacement);
         // refreshFind will fire after Lexical's OnChangePlugin + the
         // debounced analyze pass; do an immediate pass too so the
         // count is accurate right after the click.
@@ -2873,10 +2964,17 @@ const SAMPLES: Record<string, Sample> = {
         const replInput = byId('replace-input') as HTMLInputElement | null;
         const replacement = replInput?.value ?? '';
         const editors = (window as unknown as {
-          __pageEditors?: Record<string, { getText: () => string; setText: (t: string) => void }>;
+          __pageEditors?: Record<
+            string,
+            {
+              getText: () => string;
+              setText: (t: string) => void;
+              replaceRange: (s: number, e: number, r: string) => boolean;
+            }
+          >;
         }).__pageEditors;
         if (!editors) return;
-        // Group matches by page so we can rebuild each page's text once.
+        // Group matches by page so each page is edited in one pass.
         const byPage = new Map<string, FindMatch[]>();
         for (const m of findMatches) {
           const key = `${m.spread}-${m.side}`;
@@ -2887,13 +2985,16 @@ const SAMPLES: Record<string, Sample> = {
         for (const [key, matches] of byPage) {
           const handle = editors[key];
           if (!handle) continue;
-          let text = handle.getText();
-          // Iterate matches in reverse so earlier offsets stay valid.
+          // Format-preserving: splice each match inside Lexical, in
+          // reverse so earlier offsets stay valid. A failed splice means
+          // the match went stale — skip it; refreshFind below recomputes.
+          // (No plain-text rebuild fallback: that path destroys
+          // formatting, and with partial replacements applied its
+          // original offsets would double-apply.)
           for (let i = matches.length - 1; i >= 0; i--) {
             const m = matches[i];
-            text = text.slice(0, m.index) + replacement + text.slice(m.index + m.length);
+            handle.replaceRange(m.index, m.index + m.length, replacement);
           }
-          handle.setText(text);
         }
         setTimeout(() => {
           refreshFind();
@@ -2956,6 +3057,14 @@ const SAMPLES: Record<string, Sample> = {
       byId('find-close')?.addEventListener('click', closeFindBar);
 
       byId('reset-btn')?.addEventListener('click', () => {
+        // Destroys all 16 spreads AND the stored draft — never silently.
+        if (
+          !window.confirm(
+            'Clear all 16 spreads and delete the saved draft? This cannot be undone.',
+          )
+        ) {
+          return;
+        }
         for (let i = 1; i <= SPREAD_COUNT; i++) {
           setPage(i, 'left', '', 'text-only');
           setPage(i, 'right', '', 'text-only');
@@ -3236,6 +3345,9 @@ const SAMPLES: Record<string, Sample> = {
         const active = document.activeElement;
         const tag = active?.tagName;
         if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
+        // The page editors are contenteditable DIVs — arrow keys there
+        // are caret movement (and Shift+Arrow selection), not navigation.
+        if (active instanceof HTMLElement && active.isContentEditable) return;
         if (e.key === 'ArrowLeft') {
           scrollToSpread(currentSpreadIndex() - 1);
           e.preventDefault();

@@ -4,9 +4,11 @@
  *
  * Communication with the surrounding vanilla Astro script:
  * - **Reads / writes:** each editor registers a handle on
- *   `window.__pageEditors[`${spread}-${side}`]` with `getText` and
- *   `setText` methods. The vanilla `readManuscript()` / `setPage()`
- *   helpers go through this registry.
+ *   `window.__pageEditors[`${spread}-${side}`]` with `getText`,
+ *   `setText`, `getMarkdown`, lossless `getStateJSON`/`setStateJSON`
+ *   (the autosave payload), and offset-addressed `replaceRange` (the
+ *   format-preserving find-and-replace primitive). The vanilla
+ *   `readManuscript()` / `setPage()` helpers go through this registry.
  * - **Change notifications:** every editor-state change dispatches a
  *   `page-text-change` CustomEvent on document with
  *   `{ spread, side, text }` in `detail`. The vanilla script listens
@@ -44,7 +46,13 @@ import {
   $getSelection,
   $isRangeSelection,
   $createParagraphNode,
+  $createRangeSelection,
   $createTextNode,
+  $isElementNode,
+  $isLineBreakNode,
+  $isTextNode,
+  $setSelection,
+  CLEAR_HISTORY_COMMAND,
   FORMAT_TEXT_COMMAND,
   KEY_DOWN_COMMAND,
   SELECTION_CHANGE_COMMAND,
@@ -71,6 +79,25 @@ interface EditorHandle {
   getText: () => string;
   getMarkdown: () => string;
   setText: (text: string) => void;
+  /** Lossless Lexical editor state, JSON-serialized — the autosave payload. */
+  getStateJSON: () => string;
+  /**
+   * Restore a state produced by {@link getStateJSON}. Returns false on
+   * parse failure so callers can fall back to plain-text `setText`.
+   */
+  setStateJSON: (json: string) => boolean;
+  /**
+   * Replace [start, end) — offsets in `getText()` coordinates — with
+   * `replacement`, preserving all formatting outside the range (the
+   * inserted text inherits the format at the anchor). Returns false if
+   * an endpoint can't be resolved to a text position (e.g. a stale
+   * match, or an endpoint landing on a line break or paragraph gap),
+   * in which case nothing changes. A range whose endpoints are valid
+   * but which SPANS a line break will resolve and merge the lines —
+   * find matches can never produce one (queries can't contain "\n"),
+   * so callers passing arbitrary ranges must guard that themselves.
+   */
+  replaceRange: (start: number, end: number, replacement: string) => boolean;
 }
 
 declare global {
@@ -231,6 +258,64 @@ function TypographyShortcuts() {
   return null;
 }
 
+/**
+ * Map every TextNode to its [start, start+len) interval in
+ * `$getRoot().getTextContent()` coordinates. Mirrors Lexical's
+ * serialization exactly: top-level blocks join with "\n\n" and each
+ * LineBreakNode contributes "\n". Must run inside a read/update.
+ */
+interface TextSegment {
+  key: string;
+  start: number;
+  len: number;
+}
+
+function collectTextSegments(): TextSegment[] {
+  const segs: TextSegment[] = [];
+  let pos = 0;
+  $getRoot()
+    .getChildren()
+    .forEach((block, i) => {
+      if (i > 0) pos += 2; // '\n\n' block separator, per getTextContent()
+      if (!$isElementNode(block)) {
+        pos += block.getTextContentSize();
+        return;
+      }
+      for (const child of block.getChildren()) {
+        if ($isTextNode(child)) {
+          const len = child.getTextContentSize();
+          segs.push({ key: child.getKey(), start: pos, len });
+          pos += len;
+        } else if ($isLineBreakNode(child)) {
+          pos += 1; // '\n'
+        } else {
+          pos += child.getTextContentSize();
+        }
+      }
+    });
+  return segs;
+}
+
+/** Resolve a global start offset to (nodeKey, offsetInNode), text nodes only. */
+function resolveStart(segs: TextSegment[], offset: number): { key: string; offset: number } | null {
+  for (const s of segs) {
+    if (s.len > 0 && offset >= s.start && offset < s.start + s.len) {
+      return { key: s.key, offset: offset - s.start };
+    }
+  }
+  return null;
+}
+
+/** Resolve a global end offset (exclusive) to (nodeKey, offsetInNode). */
+function resolveEnd(segs: TextSegment[], offset: number): { key: string; offset: number } | null {
+  for (const s of segs) {
+    if (s.len > 0 && offset > s.start && offset <= s.start + s.len) {
+      return { key: s.key, offset: offset - s.start };
+    }
+  }
+  return null;
+}
+
 function HandleRegister({ spread, side }: { spread: number; side: Side }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
@@ -267,6 +352,38 @@ function HandleRegister({ spread, side }: { spread: number; side: Side }) {
             root.append(p);
           }
         });
+        // Programmatic bulk set (draft restore, sample load, migration):
+        // the pre-set contents must not be reachable via Cmd+Z, or an
+        // undo right after load blanks the page and autosaves the blank.
+        editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
+      },
+      getStateJSON: () => JSON.stringify(editor.getEditorState().toJSON()),
+      setStateJSON: (json: string): boolean => {
+        try {
+          const state = editor.parseEditorState(json);
+          editor.setEditorState(state);
+          editor.dispatchCommand(CLEAR_HISTORY_COMMAND, undefined);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      replaceRange: (start: number, end: number, replacement: string): boolean => {
+        if (end < start) return false;
+        let ok = false;
+        editor.update(() => {
+          const segs = collectTextSegments();
+          const anchor = resolveStart(segs, start);
+          const focus = end === start ? anchor : resolveEnd(segs, end);
+          if (!anchor || !focus) return;
+          const sel = $createRangeSelection();
+          sel.anchor.set(anchor.key, anchor.offset, 'text');
+          sel.focus.set(focus.key, focus.offset, 'text');
+          $setSelection(sel);
+          sel.insertText(replacement);
+          ok = true;
+        });
+        return ok;
       },
     };
     document.dispatchEvent(

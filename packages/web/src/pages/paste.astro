@@ -47,6 +47,7 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
     </script>
     <style>
       :root {
+        color-scheme: only light; /* 'only' opts out of Chrome Android Auto Dark; bare 'light' would not */
         --cream: #f7f1e6;
         --beige: #ece2cf;
         --taupe: #8a7c66;
@@ -80,6 +81,14 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         font-style: italic;
         margin: 0 0 3rem;
       }
+      /* Phones: pull the form above the fold — 6rem of top padding
+         pushed the manuscript field and Analyze below it on 375×667.
+         (Placed AFTER the main/.tagline base rules: same specificity,
+         so source order decides the cascade.) */
+      @media (max-width: 600px) {
+        main { padding-top: 2.25rem; }
+        .tagline { margin-bottom: 1.75rem; }
+      }
       p { margin: 0 0 1.25rem; }
       h2 {
         font-size: 1rem;
@@ -111,7 +120,9 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         border-radius: 2px;
         padding: 0.75rem;
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        font-size: 0.9rem;
+        /* 16px floor: below it, iOS Safari zooms the page on focus —
+           this textarea is the outreach funnel's core interaction. */
+        font-size: 1rem;
         color: var(--ink);
         line-height: 1.5;
       }
@@ -136,17 +147,18 @@ const ageBands: { id: AgeBand; label: string; range: string }[] = [
         border: none;
         padding: 0.65rem 1.25rem;
         font-family: inherit;
-        font-size: 0.95rem;
+        font-size: 1rem; /* 16px floor — avoids iOS zoom-on-focus */
         letter-spacing: 0.01em;
         cursor: pointer;
         border-radius: 2px;
+        min-height: 44px; /* touch-target guideline */
       }
       button:hover { background: #1a1612; }
       button.secondary {
         background: transparent;
         color: var(--taupe);
-        padding: 0.65rem 0;
-        font-size: 0.85rem;
+        padding: 0.65rem 0.5rem; /* horizontal padding = honest tap width */
+        font-size: 1rem;
         text-decoration: underline;
         text-decoration-color: var(--rule);
         text-underline-offset: 0.25rem;
