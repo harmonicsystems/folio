@@ -257,17 +257,44 @@ const SAMPLES: Record<string, Sample> = {
       }
 
       .workspace {
-        display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;
+        display: grid; grid-template-columns: 1fr 320px;
+        /* rows: onboarding / canvas header / surface, with the sidebar
+           spanning rows 2-3 so its top aligns with the canvas header
+           (ADR 0010). ROW gap is 0 with margins doing the vertical
+           rhythm instead: an empty explicit track (onboarding hidden —
+           i.e. every returning visit) contributes no height, but grid
+           GUTTERS around a 0-height track do not collapse and would
+           leave a permanent dead band. */
+        grid-template-rows: auto auto 1fr;
+        gap: 0 1.5rem;
         padding: 1.5rem; max-width: 1400px; margin: 0 auto;
       }
+      .canvas-head {
+        grid-column: 1; grid-row: 2;
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+      .canvas-title {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--callout-ink); margin: 0;
+      }
+      .editor-surface { grid-column: 1; grid-row: 3; }
+      .sidebar { grid-column: 2; grid-row: 2 / 4; }
       /* Narrower sidebar on smaller-tablet landscape (iPad ~1024) so
          the editor surface keeps room for at least two-tile columns. */
       @media (max-width: 1180px) {
-        .workspace { grid-template-columns: 1fr 280px; gap: 1rem; padding: 1rem; }
+        .workspace { grid-template-columns: 1fr 280px; gap: 0 1rem; padding: 1rem; }
       }
-      /* Drop the sidebar below the editor on portrait tablets. */
+      /* Drop the sidebar below the editor on portrait tablets. Implicit
+         rows here (hidden onboarding leaves no empty track), so a real
+         row gap is safe again. */
       @media (max-width: 900px) {
-        .workspace { grid-template-columns: 1fr; }
+        .workspace { grid-template-columns: 1fr; grid-template-rows: none; gap: 1rem; }
+        .canvas-head, .editor-surface, .sidebar {
+          grid-column: 1; grid-row: auto;
+        }
+        .canvas-head { margin-bottom: 0; }
         .sidebar { position: static; max-height: none; }
       }
 
@@ -495,41 +522,28 @@ const SAMPLES: Record<string, Sample> = {
       }
       .metric-row .value { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
 
-      /* ---- tabbed inspector (studio dashboard slice 1, ADR 0005) ---- */
-      .inspector-tabs {
-        display: grid; grid-template-columns: repeat(4, 1fr);
-        border-bottom: 1px solid var(--rule);
-        position: sticky; top: 0; background: var(--surface); z-index: 2;
-      }
-      .inspector-tabs [role='tab'] {
+      /* ---- inspector digest (ADR 0010; tab strip removed) ---- */
+      .dg-go {
         font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
-        /* --callout-ink (not the spec's taupe): 11px inactive labels on
-           white need ≥4.5:1 — taupe is 4.07:1, this handoff token is
-           6.3:1. Recorded as an a11y spec deviation in ADR 0005. */
-        font-size: 11px; padding: 10px 4px;
-        background: transparent; border: none;
-        border-bottom: 2px solid transparent;
-        color: var(--callout-ink); cursor: pointer;
-        display: inline-flex; align-items: center; justify-content: center;
-        gap: 4px;
+        font-size: 11px; padding: 0 0 0 6px;
+        background: none; border: none; cursor: pointer;
+        color: var(--ochre-deep);
       }
-      .inspector-tabs [role='tab']:hover { color: var(--ink); }
-      .inspector-tabs [role='tab'][aria-selected='true'] {
-        color: var(--ink); border-bottom-color: var(--ink);
+      .dg-go:hover { text-decoration: underline; }
+      /* .inspector-panel prefix beats the pre-existing `.sidebar h3`
+         (0,1,1) on specificity — without it, that rule clobbers every
+         property here and the heading renders taupe (4.08:1, below AA
+         at this size), the exact failure --callout-ink exists to avoid. */
+      .inspector-panel .panel-title {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--callout-ink);
+        margin: 0 0 0.4rem;
       }
-      .inspector-tabs [role='tab']:focus-visible {
-        /* Inset ring: the sticky strip sits flush with the scrollport
-           top, so the default +2px offset ring clips on its top edge. */
-        outline-offset: -2px;
-      }
-      .tab-badge {
-        /* --ochre-deep: white-on-ochre is 3.98:1 at 9px; darkened one
-           step to pass AA (5.3:1). ADR 0005. */
-        background: var(--ochre-deep); color: #fff;
-        font-size: 9px; line-height: 1; padding: 2px 5px; border-radius: 999px;
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-      }
-      .tab-badge[hidden] { display: none; }
+      /* As an Analyze report card the ::before card title names the
+         panel — the in-aside heading would double it. */
+      .analyze-report .inspector-panel .panel-title { display: none; }
+      #panel-digest { border-bottom: 1px solid var(--rule); }
       .inspector-panel { padding: 18px 16px; }
       .inspector-panel[hidden] { display: none; }
 
@@ -1149,12 +1163,8 @@ const SAMPLES: Record<string, Sample> = {
         border-radius: 4px;
       }
       /* Phonology/Prosody are single-panel FOCUSED modes: the canvas
-         stays editable, the tab strip hides (the rail is the switcher),
-         and JS shows exactly one panel. Placed after the .inspector-tabs
-         base rules — same source-order discipline as the book-mode
-         collision above. */
-      body[data-mode='phonology'] .inspector-tabs,
-      body[data-mode='prosody'] .inspector-tabs { display: none; }
+         stays editable and JS shows exactly one panel (the rail is the
+         only switcher — ADR 0010 removed the tab strip). */
       .prosody-lines {
         list-style: none; margin: 0.25rem 0 0; padding: 0;
       }
@@ -1255,7 +1265,7 @@ const SAMPLES: Record<string, Sample> = {
           padding-left: 0; /* the rail is hidden — reclaim its gutter */
         }
         /* Hide all chrome. */
-        .mode-rail, .analyze-report,
+        .mode-rail, .analyze-report, .canvas-head,
         .context-bar, .cmdk, .cb-popover, .compat-banner, .find-bar,
         .sidebar, footer.footnote,
         .nav-prev, .nav-next, .spread-counter,
@@ -1474,10 +1484,6 @@ const SAMPLES: Record<string, Sample> = {
       </div>
       <div class="cb-right">
         <span class="saved-indicator" id="saved-indicator" aria-live="polite"></span>
-        <div class="view-toggle" role="group" aria-label="View mode">
-          <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
-          <button data-view-set="book" type="button" aria-pressed="false">Book</button>
-        </div>
         <button class="cb-cmdk" id="cmdk-btn" type="button"
           aria-label="Search and commands (Command K)">
           Search &amp; commands <kbd>⌘K</kbd>
@@ -1553,6 +1559,17 @@ const SAMPLES: Record<string, Sample> = {
         </div>
       </section>
 
+      <!-- Canvas header (ADR 0010): Grid/Book lives WITH the spreads it
+           controls — it hides with the workspace in Analyze, so it can
+           never dangle. Same buttons, same ids/listeners as before the
+           move (the change listeners and MutationObserver traveled). -->
+      <div class="canvas-head">
+        <h2 class="canvas-title">Spreads</h2>
+        <div class="view-toggle" role="group" aria-label="View mode">
+          <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
+          <button data-view-set="book" type="button" aria-pressed="false">Book</button>
+        </div>
+      </div>
       <section
         class="editor-surface"
         id="editor-surface"
@@ -1608,27 +1625,53 @@ const SAMPLES: Record<string, Sample> = {
       </section>
 
       <aside class="sidebar" aria-label="Readability profile">
-        <!-- Tabbed inspector (studio dashboard slice 1, ADR 0005).
-             Every pre-existing element id is preserved verbatim so the
-             render functions stay untouched; hidden panels keep
-             rendering (byId works under display:none). NOTE: setText()
-             rewrites className on #total-words/#total-target — never
-             add styling classes to those elements; hero styling keys
-             off the .length-hero* wrappers. -->
-        <div class="inspector-tabs" role="tablist" aria-label="Readability inspector">
-          <button role="tab" type="button" id="tab-length" data-tab="length"
-            aria-selected="true" aria-controls="panel-length">Length</button>
-          <button role="tab" type="button" id="tab-vocab" data-tab="vocab"
-            aria-selected="false" tabindex="-1" aria-controls="panel-vocab">Vocab</button>
-          <button role="tab" type="button" id="tab-phonics" data-tab="phonics"
-            aria-selected="false" tabindex="-1" aria-controls="panel-phonics">Phonics</button>
-          <button role="tab" type="button" id="tab-issues" data-tab="issues"
-            aria-selected="false" tabindex="-1" aria-controls="panel-issues">
-            Issues <span class="tab-badge" id="issues-badge" hidden>0</span>
-          </button>
+        <!-- Inspector (ADR 0010, one job per surface). Write mode shows
+             the DIGEST (the glance) + the Verdicts panel; the full
+             panels below it are the Analyze report cards and the
+             Phonology/Prosody mode panels. Every pre-existing element
+             id is preserved so the render functions stay untouched;
+             hidden panels keep rendering (byId works under
+             display:none). The digest carries its own dg-* ids — the
+             render functions write both, colocated with the canonical
+             setText calls. NOTE: setText() rewrites className on its
+             targets — never add styling classes to value spans it
+             writes; style via wrappers. -->
+        <div class="inspector-panel" role="region" id="panel-digest" aria-label="Manuscript at a glance" tabindex="0">
+          <div class="length-hero">
+            <div class="length-hero-num"><span class="value" id="dg-words">0</span></div>
+            <p class="length-hero-sub" id="dg-sub">
+              words · target <span class="value" id="dg-target">—</span>
+            </p>
+            <div class="length-progress" aria-hidden="true">
+              <div class="length-progress-fill" id="dg-fill"></div>
+            </div>
+          </div>
+          <div class="metric-row">
+            <span class="label">Sight-word coverage</span>
+            <span class="value" id="dg-sight">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Decodability</span>
+            <span class="value" id="dg-decode">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Reach words</span>
+            <span class="value"><span id="dg-reach">0</span>
+              <button type="button" class="dg-go" data-go="phonology">→ Phonology</button></span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Rhyme scheme</span>
+            <span class="value"><span id="dg-rhyme">—</span>
+              <button type="button" class="dg-go" data-go="prosody">→ Prosody</button></span>
+          </div>
+          <div class="metric-row">
+            <span class="label">Meter</span>
+            <span class="value"><span id="dg-meter">—</span>
+              <button type="button" class="dg-go" data-go="prosody">→ Prosody</button></span>
+          </div>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-length" aria-labelledby="tab-length" data-panel-title="Length" tabindex="0">
+        <div class="inspector-panel" role="region" id="panel-length" aria-label="Length" data-panel-title="Length" tabindex="0" hidden>
           <div class="length-hero">
             <div class="length-hero-num"><span class="value" id="total-words">0</span></div>
             <p class="length-hero-sub" id="length-hero-sub">
@@ -1654,7 +1697,7 @@ const SAMPLES: Record<string, Sample> = {
           <ol class="per-spread-list" id="per-spread-list"></ol>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-vocab" aria-labelledby="tab-vocab" data-panel-title="Vocab" tabindex="0" hidden>
+        <div class="inspector-panel" role="region" id="panel-vocab" aria-label="Vocabulary" data-panel-title="Vocab" tabindex="0" hidden>
           <div class="metric-row">
             <span class="label">Familiar words (Tier 1)</span>
             <span class="value" id="tier1-coverage">—</span>
@@ -1679,7 +1722,7 @@ const SAMPLES: Record<string, Sample> = {
           <ul class="reach-list" id="reach-list"></ul>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-phonics" aria-labelledby="tab-phonics" data-panel-title="Phonics" hidden>
+        <div class="inspector-panel" role="region" id="panel-phonics" aria-label="Phonics" data-panel-title="Phonics" hidden>
           <div class="metric-row">
             <span class="label">Decodability</span>
             <span class="value" id="decodability">—</span>
@@ -1734,7 +1777,12 @@ const SAMPLES: Record<string, Sample> = {
 
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" data-panel-title="Issues" tabindex="0" hidden>
+        <!-- The hard-constraint register (ADR 0009/0010): pass/fail
+             publishing mechanics. Visible beneath the digest in Write;
+             a card in the Analyze report. Soft-layer observations
+             belong to the mirror modes, not here. -->
+        <div class="inspector-panel" role="region" id="panel-issues" aria-label="Verdicts" data-panel-title="Verdicts" tabindex="0">
+          <h3 class="panel-title">Verdicts</h3>
           <p class="empty" id="warnings-empty">None.</p>
           <ul class="warning-list" id="warning-list"></ul>
         </div>
@@ -2080,7 +2128,7 @@ const SAMPLES: Record<string, Sample> = {
           fontSel.value = restoredPrefs.bodyFont;
         }
         // Mode is applied after the tab machinery initializes (setMode
-        // reads TAB_ORDER, a const declared further down — calling it
+        // reads FULL_PANELS, a const declared further down — calling it
         // here would hit the temporal dead zone). Stash it.
         if (isEditorMode(restoredPrefs.mode) && restoredPrefs.mode !== 'write') {
           pendingRestoredMode = restoredPrefs.mode;
@@ -2220,6 +2268,29 @@ const SAMPLES: Record<string, Sample> = {
           pro.meterConsistency > 0 ? fmtPercent(pro.meterConsistency) : '—',
         );
         setText('rhyme-scheme', pro.rhymeScheme ?? '—');
+
+        // Digest (ADR 0010): Write's glance duplicates a handful of
+        // values under dg-* ids — written HERE, beside the canonical
+        // writes above, so the panel and the digest can't drift apart.
+        setText('dg-words', String(wordCount), countClass);
+        setText('dg-target', targetLabel);
+        byId('dg-sub')?.classList.toggle('off-target', countClass !== '');
+        const dgFill = byId('dg-fill');
+        if (dgFill) {
+          const ratio =
+            wordCountTarget.max > 0 ? wordCount / wordCountTarget.max : 0;
+          dgFill.style.width = `${Math.min(1, ratio) * 100}%`;
+          dgFill.classList.toggle('in-range', countClass === '' && wordCount > 0);
+        }
+        setText('dg-sight', fmtPercent(profile.vocabulary.sightWordCoverage));
+        setText('dg-decode', fmtPercent(phon.decodabilityScore));
+        setText('dg-rhyme', pro.rhymeScheme ?? '—');
+        setText(
+          'dg-meter',
+          pro.dominantMeter
+            ? `${pro.dominantMeter} · ${fmtPercent(pro.meterConsistency)}`
+            : '—',
+        );
       }
 
       // Shared chip builder so the by-age and by-manner views render
@@ -2481,6 +2552,9 @@ const SAMPLES: Record<string, Sample> = {
       };
 
       function renderReachWords(reach: ReachWord[]): void {
+        // Digest count (ADR 0010) — the full list stays in panel-vocab
+        // (an Analyze card); the words themselves highlight in-context.
+        setText('dg-reach', String(reach.length));
         const list = byId('reach-list');
         const empty = byId('reach-empty');
         if (!list || !empty) return;
@@ -2513,13 +2587,6 @@ const SAMPLES: Record<string, Sample> = {
         if (!list || !empty) return;
         const all: Warning[] = [...profile.warnings];
         for (const sp of profile.perSpread) all.push(...sp.warnings);
-        // Issues-tab badge — before the zero-warning early return so it
-        // also hides when the list clears.
-        const badge = byId('issues-badge');
-        if (badge) {
-          badge.textContent = String(all.length);
-          badge.hidden = all.length === 0;
-        }
         list.innerHTML = '';
         if (all.length === 0) {
           empty.style.display = '';
@@ -3146,6 +3213,12 @@ const SAMPLES: Record<string, Sample> = {
           label: inBook ? 'Switch to Grid view' : 'Switch to Book view',
           hint: 'view',
           run: () => {
+            // The toggle lives on the canvas now (ADR 0010) — from
+            // Analyze this would flip an invisible control with zero
+            // feedback. Drop to Write first, same as openFindBar.
+            if (document.body.getAttribute('data-mode') === 'analyze') {
+              setMode('write');
+            }
             (document.querySelector(
               `[data-view-set="${inBook ? 'grid' : 'book'}"]`,
             ) as HTMLButtonElement | null)?.click();
@@ -3328,64 +3401,38 @@ const SAMPLES: Record<string, Sample> = {
         if (e.target === cmdkDialog) cmdkDialog.close();
       });
 
-      // ---- inspector tabs (studio dashboard slice 1, ADR 0005) ----
-      // Full ARIA tabs with roving tabindex + automatic activation on
-      // arrow keys (panel switching is cheap `hidden` toggling). Tab
-      // selection is transient — prefs v2 with persistence is slice 3.
-      type TabName = 'length' | 'vocab' | 'phonics' | 'issues';
-      const TAB_ORDER: readonly TabName[] = ['length', 'vocab', 'phonics', 'issues'];
-      // Remembered across mode switches: Analyze un-hides every panel,
-      // so returning to Write must restore the last active tab.
-      let currentTab: TabName = 'length';
-
-      function setActiveTab(name: TabName): void {
-        currentTab = name;
-        for (const t of TAB_ORDER) {
-          const active = t === name;
-          const tab = byId(`tab-${t}`);
-          const panel = byId(`panel-${t}`);
-          tab?.setAttribute('aria-selected', active ? 'true' : 'false');
-          tab?.setAttribute('tabindex', active ? '0' : '-1');
-          if (panel) panel.hidden = !active;
-        }
-      }
-
-      const inspectorTablist =
-        document.querySelector<HTMLElement>('.inspector-tabs');
-      inspectorTablist?.addEventListener('click', (e) => {
-        const btn = (e.target as HTMLElement | null)?.closest?.(
-          '[data-tab]',
-        ) as HTMLElement | null;
-        const name = btn?.dataset.tab as TabName | undefined;
-        if (name) setActiveTab(name);
-      });
-      inspectorTablist?.addEventListener('keydown', (e) => {
-        const idx = TAB_ORDER.indexOf(
-          ((document.activeElement as HTMLElement | null)?.dataset.tab ??
-            '') as TabName,
-        );
-        if (idx === -1) return;
-        let next = -1;
-        if (e.key === 'ArrowRight') next = (idx + 1) % TAB_ORDER.length;
-        else if (e.key === 'ArrowLeft') {
-          next = (idx + TAB_ORDER.length - 1) % TAB_ORDER.length;
-        } else if (e.key === 'Home') next = 0;
-        else if (e.key === 'End') next = TAB_ORDER.length - 1;
-        if (next === -1) return;
-        e.preventDefault();
-        const name = TAB_ORDER[next];
-        if (name) {
-          setActiveTab(name);
-          byId(`tab-${name}`)?.focus();
-        }
+      // ---- inspector digest (ADR 0010 — the tab strip is gone) ----
+      // The rail is the only switcher. FULL_PANELS are the Analyze
+      // report cards and the mode panels; the digest is Write's glance.
+      const FULL_PANELS = [
+        'length',
+        'vocab',
+        'phonics',
+        'issues',
+        'prosody',
+      ] as const;
+      // Digest cross-links jump into a mirror mode. Focus the rail
+      // button — the digest hides in the target mode, so the clicked
+      // button vanishes and focus would otherwise drop to <body>
+      // (same rule as the palette's mode commands, ADR 0007).
+      document.querySelectorAll<HTMLElement>('.dg-go').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const m = btn.dataset.go;
+          if (!isEditorMode(m)) return;
+          setMode(m);
+          document
+            .querySelector<HTMLElement>(`.rail-mode[data-mode-set="${m}"]`)
+            ?.focus();
+        });
       });
 
-      // ---- mode rail + Analyze mode (slice 3, ADR 0007) ----
-      // Analyze REPARENTS the four inspector panels into the
+      // ---- mode rail + Analyze mode (ADR 0007, reshaped by 0010) ----
+      // Analyze REPARENTS the five full panels into the
       // #analyze-report grid: element-bound listeners (phoneme chips,
       // details toggles) travel with their nodes, ids stay unique, and
-      // the render functions keep working unchanged. Write moves them
-      // back into the aside and restores the active tab.
+      // the render functions keep working unchanged. The digest never
+      // moves — it belongs to Write's aside (Analyze hides it with the
+      // workspace).
       // Book-view scroll offset survives an Analyze round trip:
       // display:none discards the container's scrollLeft, so capture
       // the spread index before hiding and re-scroll on return.
@@ -3397,8 +3444,8 @@ const SAMPLES: Record<string, Sample> = {
       ): void {
         const report = byId('analyze-report');
         const aside = document.querySelector<HTMLElement>('aside.sidebar');
-        const prosodyPanel = byId('panel-prosody');
-        if (!report || !aside || !prosodyPanel) return;
+        const digest = byId('panel-digest');
+        if (!report || !aside || !digest) return;
         const prevAttr = document.body.getAttribute('data-mode');
         const prev: EditorMode = isEditorMode(prevAttr) ? prevAttr : 'write';
         if (mode === 'analyze' && prev !== 'analyze') {
@@ -3428,68 +3475,41 @@ const SAMPLES: Record<string, Sample> = {
             );
           });
         if (mode === 'analyze') {
-          for (const t of TAB_ORDER) {
+          for (const t of FULL_PANELS) {
             const panel = byId(`panel-${t}`);
             if (panel) {
               panel.hidden = false;
-              // The page has no visible tablist in Analyze — an
-              // orphaned role=tabpanel announces an affordance that
-              // doesn't exist. Region keeps the aria-labelledby name.
-              panel.setAttribute('role', 'region');
               report.appendChild(panel);
             }
           }
-          prosodyPanel.hidden = false;
-          report.appendChild(prosodyPanel);
         } else {
           // Panels home in the aside for every editable mode; skip the
           // append when already there (a same-parent appendChild still
           // detaches, blurring any focused descendant for nothing).
-          for (const t of TAB_ORDER) {
+          // Visibility is one rule per mode: Write = digest + Verdicts;
+          // Phonology = the Phonics mirror; Prosody = the Prosody
+          // mirror (ADR 0010's one-job-per-surface table).
+          for (const t of FULL_PANELS) {
             const panel = byId(`panel-${t}`);
             if (panel) {
-              panel.setAttribute('role', 'tabpanel');
               if (panel.parentElement !== aside) aside.appendChild(panel);
+              panel.hidden = !(
+                (mode === 'write' && t === 'issues') ||
+                (mode === 'phonology' && t === 'phonics') ||
+                (mode === 'prosody' && t === 'prosody')
+              );
             }
           }
-          if (prosodyPanel.parentElement !== aside) {
-            aside.appendChild(prosodyPanel);
-          }
-          if (mode === 'write') {
-            prosodyPanel.hidden = true;
-            setActiveTab(currentTab);
-          } else if (mode === 'phonology') {
-            // Focused mode: canvas stays editable, tab strip is hidden
-            // (CSS), only the Phonics panel shows — with the phoneme
-            // collapsibles expanded per the spec. The user can still
-            // collapse them; we only force-open on entry. Same
-            // orphaned-tabpanel rule as Analyze: with the tablist
-            // hidden, the visible panel presents as a region.
-            prosodyPanel.hidden = true;
-            for (const t of TAB_ORDER) {
-              const panel = byId(`panel-${t}`);
-              if (panel) {
-                panel.hidden = t !== 'phonics';
-                if (t === 'phonics') panel.setAttribute('role', 'region');
-              }
-            }
-            // Entry only (prev guard): re-activating the current mode
-            // via rail re-click or palette must not wipe the user's
-            // collapse state mid-session.
-            if (prev !== 'phonology') {
-              document
-                .querySelectorAll<HTMLDetailsElement>('#panel-phonics details')
-                .forEach((d) => {
-                  d.open = true;
-                });
-            }
-          } else {
-            // prosody
-            for (const t of TAB_ORDER) {
-              const panel = byId(`panel-${t}`);
-              if (panel) panel.hidden = true;
-            }
-            prosodyPanel.hidden = false;
+          digest.hidden = mode !== 'write';
+          if (mode === 'phonology' && prev !== 'phonology') {
+            // Phoneme collapsibles expand on ENTRY only (prev guard):
+            // re-activating the current mode via rail re-click or
+            // palette must not wipe the user's collapse state.
+            document
+              .querySelectorAll<HTMLDetailsElement>('#panel-phonics details')
+              .forEach((d) => {
+                d.open = true;
+              });
           }
           if (
             prev === 'analyze' &&
@@ -3518,9 +3538,9 @@ const SAMPLES: Record<string, Sample> = {
         openCmdk();
       });
 
-      // Apply the prefs-restored mode now that the tab machinery above
-      // is initialized (stashed at restore time to dodge the TDZ on
-      // TAB_ORDER). The stash only ever holds non-write modes.
+      // Apply the prefs-restored mode now that the panel machinery
+      // above is initialized (stashed at restore time to dodge the TDZ
+      // on FULL_PANELS). The stash only ever holds non-write modes.
       if (pendingRestoredMode) {
         setMode(pendingRestoredMode, { persist: false });
       }
