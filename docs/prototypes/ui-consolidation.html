@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Folio — UI consolidation prototype</title>
+<!--
+  THROWAWAY PROTOTYPE (2026-07-12). Not product code — explores the
+  post-slice-4 UI redundancy fix before touching index.astro.
+
+  The four moves it demonstrates:
+    ① Grid/Book moves INTO the canvas header — the control follows its
+      referent, so it can't dangle in Analyze.
+    ② The Write inspector slims down. Two variants, switchable
+      bottom-right: A = tabs dissolve into one digest; B = two slim
+      tabs (Length | Issues).
+    ③ Phonology/Prosody earn their rail slots with MIRROR readouts the
+      old tabs never had (phoneme distribution across spreads; meter
+      shape where the outlier announces itself). ADR 0009's soft layer.
+    ④ Issues becomes the VERDICT layer only (hard constraints,
+      pass/fail). Observations live in the mirror, phrased neutrally.
+
+  Data is the real board demo fixture ("Time for Bed, Little One") with
+  its real analysis numbers from 2026-07-12.
+-->
+<style>
+  :root {
+    --cream:#f7f1e6; --beige:#ece2cf; --ink:#2c2620; --taupe:#8a7c66;
+    --rule:#d9cdb4; --ochre:#a37828; --rust:#9a4a2a; --surface:#fff;
+    --hairline:#eee4d0; --callout-ink:#6b5f4e; --ochre-deep:#8a6420;
+    --sans:'Atkinson Hyperlegible', system-ui, sans-serif;
+    --serif: Georgia, 'Times New Roman', serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--cream); color:var(--ink);
+         font-family:var(--serif); padding-left:76px; }
+
+  /* ---- rail (unchanged from product) ---- */
+  .rail { position:fixed; top:0; left:0; bottom:0; width:76px;
+          background:var(--ink); display:flex; flex-direction:column;
+          align-items:center; padding:14px 0; z-index:20; }
+  .rail-logo { width:34px; height:34px; border-radius:8px; background:var(--ochre);
+               color:var(--cream); font:600 17px var(--sans); display:flex;
+               align-items:center; justify-content:center; margin-bottom:14px; }
+  .rail button { width:100%; padding:9px 0; display:flex; flex-direction:column;
+                 align-items:center; gap:3px; background:none; border:none;
+                 border-left:2px solid transparent; color:#b7a988; cursor:pointer;
+                 font:9px var(--sans); letter-spacing:.02em; }
+  .rail button svg { width:17px; height:17px; opacity:.8; }
+  .rail button:hover { background:rgba(247,241,230,.06); }
+  .rail button.on { background:rgba(247,241,230,.1);
+                    border-left-color:var(--ochre); color:var(--cream); }
+  .rail button.on svg { opacity:1; }
+
+  /* ---- context bar: NO grid/book toggle here anymore (move ①) ---- */
+  .cbar { display:flex; align-items:center; gap:12px; padding:12px 20px;
+          background:var(--surface); border-bottom:1px solid var(--rule);
+          position:sticky; top:0; z-index:10; }
+  .brand { font:700 14px var(--sans); }
+  .chip { font:11px var(--sans); color:var(--callout-ink); padding:4px 10px;
+          background:var(--cream); border:1px solid var(--rule); border-radius:999px; }
+  .cbar .right { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  .saved { font:11px var(--mono); color:#b7a988; }
+  .cmdk { font:12px var(--sans); padding:6px 12px; background:var(--cream);
+          border:1px solid var(--rule); border-radius:6px; color:var(--ink); }
+
+  /* ---- layout ---- */
+  .stage { display:grid; grid-template-columns:1fr 316px; gap:1rem; padding:1rem 1.25rem; }
+  body[data-mode='analyze'] .stage { grid-template-columns:1fr; }
+  body[data-mode='analyze'] .canvas-wrap, body[data-mode='analyze'] .inspector { display:none; }
+  .report { display:none; }
+  body[data-mode='analyze'] .report { display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1rem;
+    padding:1.25rem; max-width:1400px; margin:0 auto; align-items:start; }
+
+  /* ---- canvas + LOCAL view toggle (move ①) ---- */
+  .canvas-wrap { min-width:0; }
+  .canvas-head { display:flex; align-items:center; gap:10px; margin-bottom:.75rem; }
+  .canvas-head h2 { font:600 11px var(--sans); letter-spacing:.08em;
+                    text-transform:uppercase; color:var(--callout-ink); margin:0; }
+  .seg { display:flex; margin-left:auto; border:1px solid var(--rule);
+         border-radius:6px; overflow:hidden; }
+  .seg button { font:12px var(--sans); padding:5px 12px; border:none;
+                background:var(--surface); color:var(--ink); cursor:pointer; }
+  .seg button.on { background:var(--ink); color:var(--cream); }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  .canvas-wrap.book .grid { display:block; }
+  .canvas-wrap.book .spread { display:none; max-width:640px; margin:0 auto; }
+  .canvas-wrap.book .spread.current { display:block; }
+  .booknav { display:none; text-align:center; margin-top:.6rem;
+             font:12px var(--mono); color:var(--taupe); }
+  .canvas-wrap.book .booknav { display:block; }
+  .booknav button { border:1px solid var(--rule); background:var(--surface);
+                    border-radius:50%; width:28px; height:28px; cursor:pointer; }
+  .spread { background:var(--surface); border:1px solid var(--rule);
+            border-radius:4px; padding:.9rem 1rem; }
+  .spread .n { font:11px var(--mono); color:var(--taupe); letter-spacing:.06em; }
+  .spread p { font:600 15px/1.55 var(--sans); margin:.4rem 0 0; }
+  .spread.ghost { border-style:dashed; color:var(--taupe); background:transparent; }
+  .spread.ghost p { font-weight:400; font-style:italic; font-size:13px; }
+  .reach { background:rgba(163,120,40,.16); border-bottom:1px dotted #a37828; }
+  [data-ph] { transition:background .12s; border-radius:2px; }
+  .ph-on [data-ph].hit { background:rgba(163,120,40,.28); }
+
+  /* ---- inspector (move ②) ---- */
+  .inspector { background:var(--surface); border:1px solid var(--rule);
+               border-radius:4px; align-self:start; position:sticky; top:64px; }
+  .panel { padding:18px 16px; }
+  .hero-num { font:34px var(--mono); }
+  .hero-sub { font:12px var(--sans); color:var(--taupe); margin:.1rem 0 .5rem; }
+  .bar { height:6px; background:var(--hairline); border-radius:3px; }
+  .bar i { display:block; height:100%; width:89%; background:var(--taupe); border-radius:3px; }
+  .row { display:flex; justify-content:space-between; padding:7px 0;
+         border-bottom:1px solid var(--hairline); font:13px var(--sans); }
+  .row .k { color:var(--taupe); }
+  .row .v { font-family:var(--mono); }
+  .row .v a { color:var(--ochre-deep); text-decoration:none; font-family:var(--sans); font-size:11px; }
+  h3.mini { font:700 11px var(--sans); letter-spacing:.08em; text-transform:uppercase;
+            color:var(--callout-ink); margin:1.1rem 0 .4rem; }
+  /* verdict rows (move ④) */
+  .verdict { display:flex; gap:8px; align-items:baseline; padding:8px 10px;
+             border-radius:3px; font:13px/1.45 var(--sans); margin:6px 0; }
+  .verdict .m { font-family:var(--mono); font-size:11px; flex:none; padding:1px 6px;
+                border-radius:3px; }
+  .verdict.fail { background:var(--cream); border-left:3px solid var(--rust); }
+  .verdict.fail .m { background:var(--rust); color:#fff; }
+  .verdict.pass { background:var(--cream); border-left:3px solid var(--taupe); color:var(--callout-ink); }
+  .verdict.pass .m { background:var(--taupe); color:#fff; }
+  .obs-note { font:italic 12px/1.5 var(--serif); color:var(--taupe); margin:.6rem 0 0; }
+
+  /* variant B slim tabs */
+  .tabs { display:none; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--rule); }
+  .tabs button { font:11px var(--sans); padding:10px 4px; background:none; border:none;
+                 border-bottom:2px solid transparent; color:var(--callout-ink); cursor:pointer; }
+  .tabs button.on { color:var(--ink); border-bottom-color:var(--ink); }
+  .tabs .badge { background:var(--ochre-deep); color:#fff; font:9px var(--mono);
+                 border-radius:999px; padding:1px 5px; margin-left:4px; }
+  body.variant-b .tabs { display:grid; }
+  body.variant-b .panel.digest [data-sec] { display:none; }
+  body.variant-b .panel.digest [data-sec].tab-on { display:block; }
+
+  /* ---- mirror panels (move ③) ---- */
+  .mirror { background:var(--surface); border:1px solid var(--rule);
+            border-radius:4px; align-self:start; position:sticky; top:64px; }
+  .mirror h2 { font:700 11px var(--sans); letter-spacing:.08em; text-transform:uppercase;
+               color:var(--callout-ink); margin:0; padding:14px 16px 0; }
+  /* meter shape */
+  .meter-line { display:grid; grid-template-columns:22px 1fr 30px; gap:8px;
+                align-items:center; padding:3px 0; }
+  .meter-line .L { font:700 12px var(--mono); color:var(--ochre-deep); text-align:center; }
+  .meter-line .track { height:10px; background:var(--hairline); border-radius:2px;
+                       position:relative; }
+  .meter-line .track i { position:absolute; inset:0 auto 0 0; background:var(--taupe);
+                         border-radius:2px; }
+  .meter-line.outlier .track i { background:var(--ochre); }
+  .meter-line .syl { font:11px var(--mono); color:var(--taupe); text-align:right; }
+  .meter-grid { position:relative; }
+  .meter-grid::after { content:''; position:absolute; top:0; bottom:0;
+    left:calc(22px + 8px + 47%); border-left:1px dashed var(--rule); pointer-events:none; }
+  .cap { font:italic 12px/1.5 var(--serif); color:var(--callout-ink); margin:.6rem 0 0; }
+  /* phoneme distribution matrix */
+  .dist { display:grid; grid-template-columns:auto repeat(7, 1fr); gap:4px 6px;
+          align-items:center; }
+  .dist .ph { font:12px var(--mono); }
+  .dist button.ph { background:var(--cream); border:1px solid var(--rule);
+                    border-radius:4px; padding:3px 7px; cursor:pointer; text-align:left; }
+  .dist button.ph.on { background:rgba(163,120,40,.2); border-color:var(--ochre); }
+  .dist .cell { height:16px; border-radius:3px; background:var(--hairline); }
+  .dist .c1 { background:#e4d3ae; } .dist .c2 { background:#c9a55e; }
+  .dist .c3 { background:var(--ochre); }
+  .dist .hd { font:10px var(--mono); color:var(--taupe); text-align:center; }
+
+  /* report cards (analyze) */
+  .card { background:var(--surface); border:1px solid var(--rule); border-radius:4px; }
+  .card > h2 { font:700 11px var(--sans); letter-spacing:.08em; text-transform:uppercase;
+               color:var(--callout-ink); margin:0; padding:12px 16px 0; }
+
+  /* responsive (desktop + iPad target, same as product) */
+  @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 860px) {
+    .stage { grid-template-columns: 1fr; }
+    .inspector, .mirror { position: static; order: -1; }
+  }
+
+  /* prototype chrome: annotations + variant switch */
+  .note { position:relative; }
+  .note::before { content:attr(data-note); position:absolute; top:-9px; right:10px;
+    background:var(--ink); color:var(--cream); font:10px var(--sans);
+    padding:2px 8px; border-radius:999px; z-index:5; }
+  .proto-panel { position:fixed; bottom:14px; right:14px; z-index:50;
+    background:var(--surface); border:1.5px dashed var(--ochre); border-radius:8px;
+    padding:10px 12px; font:12px var(--sans); max-width:270px;
+    box-shadow:0 8px 24px -12px rgba(44,38,32,.35); }
+  .proto-panel b { display:block; font-size:10px; letter-spacing:.1em;
+                   color:var(--ochre-deep); margin-bottom:6px; }
+  .proto-panel .vswitch { display:none; gap:6px; margin-top:6px; }
+  body[data-mode='write'] .proto-panel .vswitch { display:flex; }
+  .proto-panel .vswitch button { flex:1; font:12px var(--sans); padding:5px;
+    border:1px solid var(--rule); background:var(--cream); border-radius:5px; cursor:pointer; }
+  .proto-panel .vswitch button.on { background:var(--ink); color:var(--cream); border-color:var(--ink); }
+  .proto-panel p { margin:4px 0 0; line-height:1.45; color:var(--callout-ink); }
+</style>
+</head>
+<body data-mode="write">
+
+<nav class="rail">
+  <div class="rail-logo">F</div>
+  <button data-m="write" class="on"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.5l0.9-3.4 8.2-8.2 2.5 2.5-8.2 8.2-3.4 0.9z"/></svg>Write</button>
+  <button data-m="analyze"><svg viewBox="0 0 20 20" fill="currentColor"><rect x="4" y="11" width="2.6" height="5.5" rx="0.8"/><rect x="8.7" y="7" width="2.6" height="9.5" rx="0.8"/><rect x="13.4" y="3.5" width="2.6" height="13" rx="0.8"/></svg>Analyze</button>
+  <button data-m="phonology"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="4" y1="8" x2="4" y2="12"/><line x1="7" y1="5.5" x2="7" y2="14.5"/><line x1="10" y1="3.5" x2="10" y2="16.5"/><line x1="13" y1="6.5" x2="13" y2="13.5"/><line x1="16" y1="8.5" x2="16" y2="11.5"/></svg>Phonology</button>
+  <button data-m="prosody"><svg viewBox="0 0 20 20" fill="currentColor" stroke="currentColor"><circle cx="5.5" cy="15" r="2" stroke="none"/><circle cx="13.5" cy="13.5" r="2" stroke="none"/><line x1="7.5" y1="15" x2="7.5" y2="5" stroke-width="1.5"/><line x1="15.5" y1="13.5" x2="15.5" y2="3.5" stroke-width="1.5"/><line x1="7.5" y1="5" x2="15.5" y2="3.5" stroke-width="2"/></svg>Prosody</button>
+</nav>
+
+<header class="cbar">
+  <span class="brand">Folio</span>
+  <span class="chip">Time for Bed, Little One</span>
+  <span class="chip">Board book · 0–3</span>
+  <div class="right">
+    <span class="saved">saved just now</span>
+    <span class="cmdk">Search &amp; commands <kbd>⌘K</kbd></span>
+  </div>
+</header>
+
+<div class="stage">
+
+  <!-- ==== canvas (shared by write / phonology / prosody) ==== -->
+  <section class="canvas-wrap note" id="canvas" data-note="① view toggle lives with the canvas">
+    <div class="canvas-head">
+      <h2>Spreads</h2>
+      <div class="seg" id="viewseg">
+        <button class="on" data-v="grid">Grid</button>
+        <button data-v="book">Book</button>
+      </div>
+    </div>
+    <div class="grid" id="spreadgrid">
+      <div class="spread"><span class="n">SPREAD 1</span>
+        <p>The <span data-ph="AH">sun</span> sinks low, the day is <span data-ph="AH">done</span>.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, little <span data-ph="AH">one</span>.</p></div>
+      <div class="spread"><span class="n">SPREAD 2</span>
+        <p>The <span data-ph="AH">puppy</span> <span class="reach">yawns</span> in<span data-ph="AY">side</span> his <span data-ph="EH">bed</span>.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, <span data-ph="IY EH" class="reach">sleepyhead</span>.</p></div>
+      <div class="spread"><span class="n">SPREAD 3</span>
+        <p>The kitten <span class="reach">curls</span> <span data-ph="AH">up</span> soft and warm.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, safe and warm.</p></div>
+      <div class="spread"><span class="n">SPREAD 4</span>
+        <p>The little baby elephant stretches out his <span data-ph="AH">trunk</span> and <span data-ph="AY">quietly</span> <span data-ph="AY" class="reach">sighs</span>.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, close your <span data-ph="AY">eyes</span>.</p></div>
+      <div class="spread"><span class="n">SPREAD 5</span>
+        <p>The <span data-ph="IY" class="reach">birdie</span> <span data-ph="AH">tucks</span> be<span data-ph="IY">neath</span> her wing.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, <span data-ph="IY">everything</span>.</p></div>
+      <div class="spread"><span class="n">SPREAD 6</span>
+        <p>The moon begins its <span class="reach">luminous</span> <span class="reach">ascent</span>.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>, the day is <span data-ph="EH">spent</span>.</p></div>
+      <div class="spread"><span class="n">SPREAD 7</span>
+        <p>And now the whole <span data-ph="AY">wide</span> world's a<span data-ph="IY">sleep</span>.<br><span data-ph="AY">Time</span> for <span data-ph="EH">bed</span>. Not a <span data-ph="IY">peep</span>.</p></div>
+      <div class="spread ghost"><span class="n">SPREADS 8–16</span><p>empty — the book ends at spread 7</p></div>
+    </div>
+    <div class="booknav">
+      <button id="prev">‹</button> <span id="bookpos">Spread 1 of 7</span> <button id="next">›</button>
+    </div>
+  </section>
+
+  <!-- ==== WRITE inspector: variant A digest / variant B slim tabs (②④) ==== -->
+  <aside class="inspector note" id="insp-write" data-note="② one digest — or two slim tabs">
+    <div class="tabs">
+      <button class="on" data-tab="length">Length</button>
+      <button data-tab="issues">Issues <span class="badge">1</span></button>
+    </div>
+    <div class="panel digest">
+      <div data-sec="length" class="tab-on">
+        <div class="hero-num">89</div>
+        <p class="hero-sub">words · target ≤ 100</p>
+        <div class="bar"><i></i></div>
+        <div class="row"><span class="k">Sight-word coverage</span><span class="v">74%</span></div>
+        <div class="row"><span class="k">Decodability</span><span class="v">91%</span></div>
+        <div class="row"><span class="k">Reach words</span><span class="v">5 <a href="#" data-go="phonology">→ Phonology</a></span></div>
+        <div class="row"><span class="k">Rhyme scheme</span><span class="v">AABBCC… <a href="#" data-go="prosody">→ Prosody</a></span></div>
+        <div class="row"><span class="k">Meter</span><span class="v">iambic · 67% <a href="#" data-go="prosody">→ Prosody</a></span></div>
+      </div>
+      <div data-sec="issues">
+        <h3 class="mini">Verdicts</h3>
+        <div class="verdict fail"><span class="m">FAIL</span>
+          <span>7 spreads = <b>14 pages</b> — board books print in 4-page signatures. Nearest fits: 12 or 16 pages.</span></div>
+        <div class="verdict pass"><span class="m">PASS</span>
+          <span>89 words — within the board target (≤ 100).</span></div>
+        <div class="verdict pass"><span class="m">PASS</span>
+          <span>Trim 8 × 10 — matches the selected board trim.</span></div>
+        <p class="obs-note">Verdicts are publishing mechanics only. What the language is <em>doing</em> — sounds, meter, rhyme — lives in the Phonology and Prosody mirrors, described, never judged.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==== PHONOLOGY mirror (③) ==== -->
+  <aside class="mirror note" id="insp-phon" data-note="③ distribution, not inventory" hidden>
+    <h2>Phoneme distribution</h2>
+    <div class="panel">
+      <div class="dist" id="dist">
+        <span></span><span class="hd">1</span><span class="hd">2</span><span class="hd">3</span><span class="hd">4</span><span class="hd">5</span><span class="hd">6</span><span class="hd">7</span>
+        <button class="ph" data-ph="EH">/ɛ/ bed</button>
+        <span class="cell c2"></span><span class="cell c3"></span><span class="cell c2"></span><span class="cell c2"></span><span class="cell c2"></span><span class="cell c3"></span><span class="cell c2"></span>
+        <button class="ph" data-ph="AY">/aɪ/ time</button>
+        <span class="cell c2"></span><span class="cell c2"></span><span class="cell c1"></span><span class="cell c3"></span><span class="cell c1"></span><span class="cell c1"></span><span class="cell c2"></span>
+        <button class="ph" data-ph="AH">/ʌ/ sun</button>
+        <span class="cell c3"></span><span class="cell c2"></span><span class="cell c1"></span><span class="cell c1"></span><span class="cell c1"></span><span class="cell"></span><span class="cell"></span>
+        <button class="ph" data-ph="IY">/iː/ sleep</button>
+        <span class="cell"></span><span class="cell c1"></span><span class="cell"></span><span class="cell"></span><span class="cell c2"></span><span class="cell"></span><span class="cell c3"></span>
+      </div>
+      <p class="cap">The refrain holds /aɪ/–/ɛ/ steady on every spread. /ʌ/ gathers in the opening; /iː/ pools at the close. Click a row to see it in the text.</p>
+    </div>
+  </aside>
+
+  <!-- ==== PROSODY mirror (③) ==== -->
+  <aside class="mirror note" id="insp-pros" data-note="③ the shape, so the outlier speaks" hidden>
+    <h2>Meter shape · rhyme</h2>
+    <div class="panel">
+      <div class="meter-grid" id="metergrid"></div>
+      <p class="cap">Thirteen lines breathe at 6–8 syllables; one runs to 17. The dashed line marks the couplet pulse — the reader will feel where a line leaves it.</p>
+    </div>
+  </aside>
+</div>
+
+<!-- ==== ANALYZE report (unchanged concept: everything at once) ==== -->
+<section class="report">
+  <div class="card"><h2>Length</h2><div class="panel">
+    <div class="hero-num">89</div><p class="hero-sub">words · target ≤ 100</p>
+    <div class="bar"><i></i></div>
+    <div class="row"><span class="k">Sentences</span><span class="v">14</span></div>
+    <div class="row"><span class="k">Longest spread</span><span class="v">18 (spread 4)</span></div>
+  </div></div>
+  <div class="card"><h2>Vocabulary</h2><div class="panel">
+    <div class="row"><span class="k">Tier-1 coverage</span><span class="v">88%</span></div>
+    <div class="row"><span class="k">Sight-word coverage</span><span class="v">74%</span></div>
+    <div class="row"><span class="k">Reach words</span><span class="v">luminous · ascent · sleepyhead · birdie · sighs</span></div>
+  </div></div>
+  <div class="card"><h2>Sound &amp; line <span style="opacity:.6">(mirror)</span></h2><div class="panel">
+    <div class="row"><span class="k">Rhyme scheme</span><span class="v">AABBCCDDEEFFGG</span></div>
+    <div class="row"><span class="k">Meter</span><span class="v">iambic · 67%</span></div>
+    <div class="row"><span class="k">Decodability</span><span class="v">91%</span></div>
+  </div></div>
+  <div class="card note" data-note="④ verdicts, separated"><h2>Verdicts</h2><div class="panel">
+    <div class="verdict fail"><span class="m">FAIL</span><span>14 pages — off the 4-page signature (12 or 16).</span></div>
+    <div class="verdict pass"><span class="m">PASS</span><span>89 words ≤ 100 board target.</span></div>
+  </div></div>
+</section>
+
+<div class="proto-panel">
+  <b>PROTOTYPE CONTROLS</b>
+  <p>① Grid/Book lives on the canvas · ② slim inspector · ③ mirror modes · ④ verdicts split from observations.</p>
+  <div class="vswitch">
+    <button class="on" data-var="a">A · digest</button>
+    <button data-var="b">B · slim tabs</button>
+  </div>
+</div>
+
+<script>
+  // mode switching
+  const railBtns = document.querySelectorAll('.rail button');
+  const inspWrite = document.getElementById('insp-write');
+  const inspPhon = document.getElementById('insp-phon');
+  const inspPros = document.getElementById('insp-pros');
+  function setMode(m) {
+    document.body.dataset.mode = m;
+    railBtns.forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    inspWrite.hidden = m !== 'write';
+    inspPhon.hidden = m !== 'phonology';
+    inspPros.hidden = m !== 'prosody';
+    document.getElementById('canvas').classList.toggle('ph-on', m === 'phonology');
+  }
+  railBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.m)));
+  document.querySelectorAll('[data-go]').forEach(a =>
+    a.addEventListener('click', e => { e.preventDefault(); setMode(a.dataset.go); }));
+
+  // canvas-local grid/book (move ①)
+  const canvas = document.getElementById('canvas');
+  const spreads = [...document.querySelectorAll('#spreadgrid .spread:not(.ghost)')];
+  let cur = 0;
+  document.querySelectorAll('#viewseg button').forEach(b =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#viewseg button').forEach(x => x.classList.toggle('on', x === b));
+      canvas.classList.toggle('book', b.dataset.v === 'book');
+      show(cur);
+    }));
+  function show(i) {
+    cur = Math.max(0, Math.min(spreads.length - 1, i));
+    spreads.forEach((s, j) => s.classList.toggle('current', j === cur));
+    document.getElementById('bookpos').textContent = `Spread ${cur + 1} of ${spreads.length}`;
+  }
+  document.getElementById('prev').addEventListener('click', () => show(cur - 1));
+  document.getElementById('next').addEventListener('click', () => show(cur + 1));
+  show(0);
+
+  // variant switch (move ②)
+  document.querySelectorAll('.vswitch button').forEach(b =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.vswitch button').forEach(x => x.classList.toggle('on', x === b));
+      document.body.classList.toggle('variant-b', b.dataset.var === 'b');
+    }));
+  document.querySelectorAll('.tabs button').forEach(b =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+      document.querySelectorAll('[data-sec]').forEach(s =>
+        s.classList.toggle('tab-on', s.dataset.sec === b.dataset.tab));
+    }));
+
+  // phoneme distribution → text highlight (move ③)
+  document.querySelectorAll('.dist button.ph').forEach(b =>
+    b.addEventListener('click', () => {
+      const on = !b.classList.contains('on');
+      document.querySelectorAll('.dist button.ph').forEach(x => x.classList.remove('on'));
+      document.querySelectorAll('#spreadgrid [data-ph]').forEach(s => s.classList.remove('hit'));
+      if (on) {
+        b.classList.add('on');
+        document.querySelectorAll('#spreadgrid [data-ph]').forEach(s => {
+          if (s.dataset.ph.split(' ').includes(b.dataset.ph)) s.classList.add('hit');
+        });
+      }
+    }));
+
+  // meter shape (move ③) — real line data from the fixture
+  const LINES = [
+    ['A', 8], ['A', 6], ['B', 8], ['B', 6], ['C', 8], ['C', 6],
+    ['D', 17, true], ['D', 6], ['E', 8], ['E', 6],
+    ['F', 10], ['F', 7], ['G', 8], ['G', 6],
+  ];
+  const mg = document.getElementById('metergrid');
+  for (const [L, syl, outlier] of LINES) {
+    const div = document.createElement('div');
+    div.className = 'meter-line' + (outlier ? ' outlier' : '');
+    div.innerHTML = `<span class="L">${L}</span>
+      <span class="track"><i style="width:${(syl / 17) * 100}%"></i></span>
+      <span class="syl">${syl}</span>`;
+    mg.appendChild(div);
+  }
+</script>
+</body>
+</html>
