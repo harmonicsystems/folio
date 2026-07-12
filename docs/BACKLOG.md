@@ -56,11 +56,16 @@ analysis + generated demo fixtures). Replaces the current pre-loaded samples.*
   (`board`, `early-picture`, `picture`, `early-reader`, `chapter`), built
   youngest-first. Each replaces ad-hoc pre-loaded samples so every band's
   analysis can be previewed end to end. *(ADR 0009)*
-- [ ] **`board` fixture: finalize "Time for Bed, Little One."** Draft exists
-  (session 2026-07-11) — 7 spreads, refrain, planted meter outlier + distant
-  rhyme pair + lexical outlier ("luminous ascent") + off-signature 14pp. Trim to
-  a 12/16pp signature or keep the miss as the hard-layer demo (decide), then wire
-  as the `board` sample. *(ADR 0009)*
+- [x] ~~**`board` fixture: finalize "Time for Bed, Little One."**~~ — shipped
+  2026-07-12, `17a4f31`. Wired as the board sample from
+  `packages/web/demo-fixtures/`; the 14pp off-signature miss is KEPT as the
+  hard-layer demo (ADR 0009 requires one; the signature verdict surface is
+  future work). Two things the wiring exposed and fixed: setText was
+  flattening verse lines (no sample ever showed a rhyme scheme), and demo
+  vocabulary must be dict-covered or grapheme guesses invent false
+  non-rhymes in the mirror. Verified: AABBCCDDEEFFGG per-line letters,
+  meter outlier visible at 66.7% consistency, luminous/ascent flagged,
+  zero guessed pronunciations. *(ADR 0009)*
 - [ ] **Calibrate each fixture to ~60–70% "profile coverage."** By construction:
   one half-heard deviation per soft axis (prosody, rhyme/phonological, lexical
   frequency) + at least one hard-constraint miss, each sized to *its own* band.
