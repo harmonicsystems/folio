@@ -18,16 +18,14 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
   the new UI live on push. *(ops — needs local SSH key)*
 - [x] ~~**Finish studio dashboard slice 2**~~ — shipped 2026-07-11, `a404b6e`
   (extracted paths verified live; 11 review findings fixed pre-commit, ADR 0006).
-- [ ] **CMU dict expansion (~2k words).** Gates the honest decodability work
-  (ADR 0004). Scoped 2026-07-11: current dict is 330 entries → 66.1% token
-  coverage on the 10-fixture corpus, 1,856 unique OOV words falling to the
-  grapheme heuristic. Plan:
-  1. Vendor the upstream cmudict file (public domain) with provenance.
-  2. Zero-dependency generator script: word list (corpus vocabulary ∪ current
-     entries) → `cmu-dict.ts`, same header format.
-  3. Resolve contraction/apostrophe handling against the tokenizer convention
-     first (naive splits produce `t`/`s`/`ll`/`m` fragments).
-  4. Re-baseline corpus regression numbers as a deliberate, separate commit.
+- [x] ~~**CMU dict expansion (~2k words).**~~ — shipped 2026-07-12, `55f6c07`
+  (dict 330 → 2,119 entries, corpus token coverage 66.1% → 99.1%) +
+  `3626d78` (re-baseline: one bound, jemima meterConsistency). cmudict-0.7b
+  vendored with SHA-256 provenance; generator at
+  `packages/engine/scripts/generate-cmu-dict.mjs` reuses the engine tokenizer
+  so keys can't diverge; curly-apostrophe lookups normalized; five heteronym
+  overrides documented. 83 corpus words remain honestly OOV (absent upstream).
+  **This unblocks the sight-word-excluded decodability variant (ADR 0004).**
 
 ## Web — studio dashboard (design 1c) + editor
 
