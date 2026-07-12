@@ -44,3 +44,9 @@ What else did we look at? Why didn't we pick those?
 - 0001 — *reserved* for the TypeScript-over-Rust decision for the engine core (not yet written).
 - [0002 — Spread-first editing](0002-spread-first-editing.md) — *accepted (2026-05-25)*
 - [0003 — Spread-native engine API](0003-spread-native-engine-api.md) — *accepted (2026-05-25)*
+- [0004 — Decodability: scope the claims, keep the formula](0004-decodability-construct-scoping.md) — *accepted (2026-06-26)*
+- [0005 — Tabbed inspector (studio dashboard, slice 1)](0005-tabbed-inspector-slice-1.md) — *accepted (2026-07-11)*
+- [0006 — Context bar + ⌘K command palette (slice 2)](0006-context-bar-command-palette.md) — *accepted (2026-07-11)*
+- [0007 — Mode rail + Analyze mode + prefs v2 (slice 3)](0007-mode-rail-analyze-mode.md) — *accepted (2026-07-11)*
+- [0008 — Phonology + Prosody modes (slice 4)](0008-phonology-prosody-modes.md) — *accepted (2026-07-11)*
+- [0009 — Two-layer analysis (verdict vs. mirror) and generated demo fixtures](0009-two-layer-analysis-and-demo-fixtures.md) — *accepted (2026-07-11)*
