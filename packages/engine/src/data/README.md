@@ -6,13 +6,13 @@ Data is stored as TypeScript modules (not JSON) so the engine stays browser-port
 
 ## Currently included
 
+- **`cmu-dict.ts`** — GENERATED from the vendored CMU Pronouncing Dictionary 0.7b (`../../data-src/`, provenance there). ~2.1k entries: regression-corpus vocabulary ∪ the prior curated set (Dolch + picture nouns + extras). Keys follow the tokenizer convention (contractions whole, straight apostrophes, hyphens split). Regenerate with `scripts/generate-cmu-dict.mjs`; do not hand-edit. Five heteronym overrides (and/read/live/wind/use) are documented in the generator.
 - **`dolch.ts`** — Dolch (1948) sight word lists. All 220 service words across five grade-level groups (pre-primer, primer, first, second, third) plus 95 picture nouns. Exports per-group arrays, a combined `DOLCH_ALL` set, and a `dolchLevel(word)` lookup.
 - **`fry.ts`** — Fry (1980) instant word list, **first 100 only** for now. Groups 2–10 (words 101–1000) are a known follow-up. The first 100 alone covers ~50% of typical printed English and is enough for sight-word coverage to be useful on board books and very-early-reader text.
 
 ## Pending (Milestones 1–2)
 
 - **`fry.ts`** — extend to groups 2–10. Requires careful transcription from Fry (1980).
-- **`cmu-dict.ts`** — derived from the CMU Pronouncing Dictionary, preprocessed for fast phoneme lookup.
 - **`phoneme-norms.ts`** — Crowe & McLeod (2020) acquisition norms by phoneme, with place, manner, voicing.
 - **`vocabulary-tiers.ts`** — Beck/McKeown/Kucan Tier 1 / Tier 2 / Tier 3 classification. **This is the open architectural decision** — see ARCHITECTURE.md open questions. Tier 1 needs a sourced proxy (General Service List? Children's Printed Word Database?). Tier 2 requires curation.
 

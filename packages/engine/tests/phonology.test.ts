@@ -65,14 +65,16 @@ describe('getGuessedWords', () => {
   });
 
   it('flags real but out-of-subset words too (not just invented ones)', () => {
-    // The Folio CMU subset is curated. "Sat" and "mat" aren't in the
-    // ~320-word subset even though they're common — getGuessedWords
-    // surfaces them so the author knows decodability for these words
-    // is heuristic-based. This is the *point* of the function for the
-    // anti-slop integrity story.
-    const result = getGuessedWords('the cat sat on the mat');
-    expect(result).toContain('sat');
-    expect(result).toContain('mat');
+    // The Folio CMU subset is generated from a word list (corpus ∪
+    // curated); real words outside it still fall to the heuristic.
+    // "Sluggard" and "settee" are real words upstream cmudict-0.7b
+    // itself lacks, so they stay out-of-subset no matter how the word
+    // list grows — getGuessedWords surfaces them so the author knows
+    // decodability for these words is heuristic-based. This is the
+    // *point* of the function for the anti-slop integrity story.
+    const result = getGuessedWords('the sluggard dozed on the settee');
+    expect(result).toContain('sluggard');
+    expect(result).toContain('settee');
   });
 
   it('handles empty input', () => {

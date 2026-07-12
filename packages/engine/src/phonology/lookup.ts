@@ -19,8 +19,19 @@ import { CMU_DICT } from '../data/cmu-dict.js';
  * non-empty input — there is no failure mode where a word produces no
  * phonemes. Apostrophes in the input are stripped before fallback.
  */
+/**
+ * Dict keying convention (shared with scripts/generate-cmu-dict.mjs):
+ * lowercase, straight-apostrophe (U+0027) forms, contractions whole,
+ * hyphenated compounds keyed per part — mirroring the tokenizer
+ * (vocabulary/tokenize.ts). Tokens from typeset text can carry curly
+ * U+2019, so lookups normalize it; upstream CMU keys are straight.
+ */
+function dictKey(word: string): string {
+  return word.toLowerCase().replace(/’/g, "'");
+}
+
 export function getPronunciation(word: string): readonly string[] {
-  const key = word.toLowerCase();
+  const key = dictKey(word);
   const fromDict = CMU_DICT.get(key);
   if (fromDict) return fromDict;
   return estimatePronunciation(key);
@@ -38,7 +49,7 @@ export function getPronunciation(word: string): readonly string[] {
  * getPronunciation uses internally.
  */
 export function isInCmuDict(word: string): boolean {
-  return CMU_DICT.has(word.toLowerCase());
+  return CMU_DICT.has(dictKey(word));
 }
 
 /**

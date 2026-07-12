@@ -24,9 +24,13 @@ Every linguistic claim in Folio traces to a citation. This file is the canonical
 - **Smit, A. B., Hand, L., Freilinger, J. J., Bernthal, J. E., & Bird, A. (1990).** "The Iowa Articulation Norms Project and its Nebraska replication." *Journal of Speech and Hearing Disorders*, 55(4), 779–798.
   — Historical articulation norms. Retained for cross-reference.
 
-- **Carnegie Mellon University Pronouncing Dictionary (CMU dict).**
+- **Carnegie Mellon University Pronouncing Dictionary (CMU dict), release 0.7b.**
   http://www.speech.cs.cmu.edu/cgi-bin/cmudict
-  — Open-license phonetic dictionary used for transcription. Public domain.
+  — Open-license phonetic dictionary used for transcription (permissive
+  BSD-style license). Vendored verbatim at `packages/engine/data-src/cmudict-0.7b`
+  with SHA-256 provenance; `src/data/cmu-dict.ts` is generated from it by
+  `packages/engine/scripts/generate-cmu-dict.mjs` (first pronunciations,
+  tokenizer-convention keys, five documented heteronym overrides).
 
 - **Liang, F. M. (1983).** "Word Hy-phen-a-tion by Com-pu-ter." PhD dissertation, Stanford University.
   — Liang–Knuth hyphenation algorithm used for syllabification fallback.
