@@ -138,26 +138,102 @@ const SAMPLES: Record<string, Sample> = {
         line-height: 1.5;
       }
 
-      .topbar {
+      /* ---- context bar (studio dashboard slice 2, ADR 0006) ---- */
+      .context-bar {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 0.75rem 1.5rem; background: var(--surface);
+        padding: 12px 20px; background: var(--surface);
         border-bottom: 1px solid var(--rule);
         position: sticky; top: 0; z-index: 10; gap: 1rem; flex-wrap: wrap;
       }
-      /* Tighter spacing so all 9 controls fit on a single line on
-         tablet landscape, and wrap gracefully on tablet portrait. */
-      @media (max-width: 1280px) {
-        .topbar { padding: 0.6rem 1rem; gap: 0.6rem; }
-        .controls { gap: 0.6rem; }
-        .control-label { font-size: 0.65rem; }
-        .control select, .control button { font-size: 0.8rem; padding: 0.35rem 0.5rem; }
-      }
-      .brand { display: flex; align-items: baseline; gap: 0.5rem; }
+      .cb-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
       .brand-mark { font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; }
-      .brand-sub {
-        font-size: 0.75rem; color: var(--taupe);
-        text-transform: lowercase; letter-spacing: 0.04em;
+      .cb-title {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 14px; font-weight: 700; color: var(--taupe);
       }
+      .cb-chip-wrap { position: relative; }
+      .cb-chip {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 11px; color: var(--callout-ink);
+        padding: 4px 10px; background: var(--cream);
+        border: 1px solid var(--rule); border-radius: 999px;
+        cursor: pointer;
+      }
+      .cb-chip:hover { border-color: var(--taupe); }
+      .cb-popover {
+        position: absolute; top: calc(100% + 6px); left: 0; z-index: 30;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 6px; padding: 10px 12px; min-width: 210px;
+        box-shadow: 0 8px 24px -12px rgba(44, 38, 32, 0.35);
+      }
+      .cb-popover[hidden] { display: none; }
+      .cb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+      .cb-right .saved-indicator { margin-left: 0; }
+      .cb-sidebar-toggle {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 12px; padding: 5px 10px;
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 6px; color: var(--ink); cursor: pointer;
+      }
+      .cb-sidebar-toggle:hover { background: var(--beige); }
+      .cb-cmdk {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 12px; padding: 6px 12px;
+        background: var(--cream); border: 1px solid var(--rule);
+        border-radius: 6px; color: var(--ink); cursor: pointer;
+        display: inline-flex; align-items: center; gap: 8px;
+      }
+      .cb-cmdk:hover { border-color: var(--taupe); }
+      .cb-cmdk kbd {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 10px; color: var(--callout-ink);
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px; padding: 1px 5px;
+      }
+      /* Tablet portrait: title + rarely-changed chips yield to the
+         palette (the "…" affordance is the ⌘K button itself). */
+      @media (max-width: 900px) {
+        .cb-title { display: none; }
+        .cb-chip-wrap.cb-optional { display: none; }
+      }
+
+      /* ---- command palette (⌘K) ---- */
+      .cmdk {
+        border: 1px solid var(--rule); border-radius: 8px; padding: 0;
+        width: min(560px, calc(100vw - 2rem));
+        box-shadow: 0 16px 40px -16px rgba(44, 38, 32, 0.4);
+        background: var(--surface); color: var(--ink);
+      }
+      .cmdk::backdrop { background: rgba(44, 38, 32, 0.25); }
+      .cmdk-input {
+        width: 100%; border: none; border-bottom: 1px solid var(--rule);
+        padding: 12px 14px; background: var(--surface); color: var(--ink);
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 1rem; /* 16px — iOS zoom-on-focus floor */
+        outline: none;
+      }
+      .cmdk-list {
+        list-style: none; margin: 0; padding: 6px;
+        max-height: 320px; overflow-y: auto;
+      }
+      .cmdk-item {
+        display: flex; justify-content: space-between; align-items: center;
+        gap: 1rem; padding: 8px 10px; border-radius: 4px;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 13px; cursor: pointer;
+      }
+      .cmdk-item[aria-selected='true'] { background: var(--beige); }
+      .cmdk-item .cmdk-hint {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 10px; color: var(--callout-ink); white-space: nowrap;
+      }
+      .cmdk-item.cmdk-danger { color: var(--rust); }
+      .cmdk-empty {
+        padding: 12px 14px; color: var(--taupe); font-style: italic;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 13px;
+      }
+
       .saved-indicator {
         font-size: 0.7rem;
         color: var(--taupe);
@@ -167,19 +243,16 @@ const SAMPLES: Record<string, Sample> = {
       }
       .saved-indicator:empty { display: none; }
 
-      .controls { display: flex; gap: 1rem; align-items: end; flex-wrap: wrap; }
       .control { display: flex; flex-direction: column; gap: 0.25rem; }
       .control-label {
         font-size: 0.7rem; text-transform: uppercase;
         letter-spacing: 0.08em; color: var(--taupe);
       }
-      .control select, .control button {
+      .control select {
         padding: 0.4rem 0.6rem; font: inherit; font-size: 0.85rem;
         background: var(--surface); border: 1px solid var(--rule);
         border-radius: 2px; color: var(--ink);
       }
-      .control button { cursor: pointer; }
-      .control button:hover { background: var(--beige); }
 
       .workspace {
         display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem;
@@ -802,23 +875,7 @@ const SAMPLES: Record<string, Sample> = {
         background: var(--cream); color: var(--ink);
       }
 
-      /* ---- about button + dialog ---- */
-      .about-btn {
-        width: 1.75rem; height: 1.75rem;
-        border-radius: 50%;
-        border: 1px solid var(--rule);
-        background: var(--surface);
-        color: var(--taupe);
-        font: inherit;
-        font-size: 0.9rem;
-        cursor: pointer;
-        padding: 0;
-        line-height: 1;
-      }
-      .about-btn:hover {
-        background: var(--cream);
-        color: var(--ink);
-      }
+      /* ---- about dialog (opens from the ⌘K palette) ---- */
       .about-dialog {
         border: 1px solid var(--rule);
         border-radius: 6px;
@@ -1000,7 +1057,6 @@ const SAMPLES: Record<string, Sample> = {
          so source order decides (.view-toggle button lives just above). */
       @media (max-width: 900px), (pointer: coarse) {
         .control select,
-        .control button,
         .view-toggle button,
         .page-placement,
         .find-bar input[type="text"] {
@@ -1129,7 +1185,7 @@ const SAMPLES: Record<string, Sample> = {
           font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
         }
         /* Hide all chrome. */
-        .topbar, .compat-banner, .find-bar,
+        .context-bar, .cmdk, .cb-popover, .compat-banner, .find-bar,
         .sidebar, footer.footnote,
         .nav-prev, .nav-next, .spread-counter,
         .status-bar, .onboarding-card,
@@ -1228,95 +1284,86 @@ const SAMPLES: Record<string, Sample> = {
     </style>
   </head>
   <body>
-    <header class="topbar">
-      <div class="brand">
+    <!-- Context bar (studio dashboard slice 2, ADR 0006). The three
+         "document identity" settings stay as the SAME <select> elements
+         (ids intact, all existing listeners untouched) inside chip
+         popovers; everything rarer lives in the ⌘K palette. The
+         sidebar toggle survives here until the mode rail (slice 3). -->
+    <header class="context-bar">
+      <div class="cb-left">
         <span class="brand-mark">Folio</span>
-        <span class="brand-sub">spread editor</span>
-        <span class="saved-indicator" id="saved-indicator" aria-live="polite"></span>
-      </div>
-
-      <div class="controls">
-        <label class="control">
-          <span class="control-label">Age band</span>
-          <select id="age-band">
-            {ageBands.map((b) => (
-              <option value={b.id} selected={b.id === 'picture'}>
-                {b.label} · {b.range}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label class="control">
-          <span class="control-label">Trim</span>
-          <select id="trim-size">
-            {trimSizes.map((t) => (
-              <option value={t.id} selected={t.id === 'STANDARD_PORTRAIT'}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label class="control">
-          <span class="control-label">Body font</span>
-          <select id="body-font">
-            <option value="caslon" selected>Libre Caslon</option>
-            <option value="futura">Futura</option>
-            <option value="futura-bold">Futura Bold</option>
-            <option value="atkinson">Atkinson Hyperlegible</option>
-          </select>
-        </label>
-        <label class="control">
-          <span class="control-label">Layout</span>
-          <select id="layout-preset">
-            <option value="">— preset —</option>
-            <option value="classic">Classic facing</option>
-            <option value="mirror">Mirror</option>
-            <option value="text-top">Text top</option>
-            <option value="full-text">Full text</option>
-          </select>
-        </label>
-        <label class="control">
-          <span class="control-label">Load sample</span>
-          <select id="sample-loader">
-            <option value="">— pick one —</option>
-            {Object.entries(SAMPLES).map(([key, s]) => (
-              <option value={key}>{s.label}</option>
-            ))}
-          </select>
-        </label>
-        <label class="control">
-          <span class="control-label">Export</span>
-          <select id="export-format">
-            <option value="">— format —</option>
-            <option value="txt">Plain text (.txt)</option>
-            <option value="md">Markdown (.md)</option>
-            <option value="pdf">PDF (via print)</option>
-          </select>
-        </label>
-        <div class="control">
-          <span class="control-label">Reset</span>
-          <button id="reset-btn" type="button">Clear all spreads</button>
-        </div>
-        <div class="control">
-          <span class="control-label">View</span>
-          <div class="view-toggle" role="group" aria-label="View mode">
-            <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
-            <button data-view-set="book" type="button" aria-pressed="false">Book</button>
+        <span class="cb-title">Untitled manuscript</span>
+        <div class="cb-chip-wrap">
+          <button type="button" class="cb-chip" id="chip-age-band"
+            aria-haspopup="true" aria-expanded="false">Picture book · 3–7</button>
+          <div class="cb-popover" id="popover-age-band" hidden>
+            <label class="control">
+              <span class="control-label">Age band</span>
+              <select id="age-band">
+                {ageBands.map((b) => (
+                  <option value={b.id} selected={b.id === 'picture'}>
+                    {b.label} · {b.range}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
-        <div class="control">
-          <span class="control-label">Sidebar</span>
-          <button id="sidebar-toggle" type="button">Hide</button>
+        <div class="cb-chip-wrap cb-optional">
+          <button type="button" class="cb-chip" id="chip-trim-size"
+            aria-haspopup="true" aria-expanded="false">8 × 10 portrait</button>
+          <div class="cb-popover" id="popover-trim-size" hidden>
+            <label class="control">
+              <span class="control-label">Trim</span>
+              <select id="trim-size">
+                {trimSizes.map((t) => (
+                  <option value={t.id} selected={t.id === 'STANDARD_PORTRAIT'}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
-        <button
-          class="about-btn"
-          id="about-btn"
-          type="button"
-          title="About Folio"
-          aria-label="About Folio"
-        >?</button>
+        <div class="cb-chip-wrap cb-optional">
+          <button type="button" class="cb-chip" id="chip-body-font"
+            aria-haspopup="true" aria-expanded="false">Libre Caslon</button>
+          <div class="cb-popover" id="popover-body-font" hidden>
+            <label class="control">
+              <span class="control-label">Body font</span>
+              <select id="body-font">
+                <option value="caslon" selected>Libre Caslon</option>
+                <option value="futura">Futura</option>
+                <option value="futura-bold">Futura Bold</option>
+                <option value="atkinson">Atkinson Hyperlegible</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="cb-right">
+        <span class="saved-indicator" id="saved-indicator" aria-live="polite"></span>
+        <div class="view-toggle" role="group" aria-label="View mode">
+          <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
+          <button data-view-set="book" type="button" aria-pressed="false">Book</button>
+        </div>
+        <button id="sidebar-toggle" type="button" class="cb-sidebar-toggle">Hide</button>
+        <button class="cb-cmdk" id="cmdk-btn" type="button"
+          aria-label="Search and commands (Command K)">
+          Search &amp; commands <kbd>⌘K</kbd>
+        </button>
       </div>
     </header>
+
+    <dialog class="cmdk" id="cmdk" aria-label="Command palette">
+      <input class="cmdk-input" id="cmdk-input" type="text"
+        placeholder="Type a command — sample, export, layout, font…"
+        role="combobox" aria-expanded="true" aria-controls="cmdk-list"
+        aria-autocomplete="list"
+        aria-label="Search commands" autocomplete="off" />
+      <ul class="cmdk-list" id="cmdk-list" role="listbox" aria-label="Commands"></ul>
+      <div class="cmdk-empty" id="cmdk-empty" hidden>No matching command.</div>
+    </dialog>
 
     <div class="compat-banner" id="compat-banner" hidden role="status">
       <span>
@@ -2712,6 +2759,9 @@ const SAMPLES: Record<string, Sample> = {
         if (!sample) return;
         const ageSel = byId('age-band') as HTMLSelectElement | null;
         if (ageSel) ageSel.value = sample.ageBand;
+        // Programmatic .value writes fire no change event — sync the
+        // context-bar chip so it can't show a stale band (ADR 0006).
+        updateChipLabels();
         const spreads = sample.text
           .split(/\n\s*\n/)
           .map((s) => s.trim())
@@ -2727,27 +2777,26 @@ const SAMPLES: Record<string, Sample> = {
         runAnalysis();
       }
 
-      byId('sample-loader')?.addEventListener('change', (e) => {
-        const sel = e.target as HTMLSelectElement;
-        if (sel.value) {
-          // Loading a sample overwrites all 32 pages — confirm when any
-          // page has text the author could lose.
-          const hasContent = readManuscript().spreads.some(
-            (s) => s.leftPage.text.trim() || s.rightPage.text.trim(),
-          );
-          if (
-            hasContent &&
-            !window.confirm(
-              'Load the sample and replace your current manuscript? Your existing text will be overwritten.',
-            )
-          ) {
-            sel.value = '';
-            return;
-          }
-          loadSample(sel.value);
-          sel.value = '';
+      /**
+       * Loading a sample overwrites all 32 pages — confirm when any
+       * page has text the author could lose. Palette entry point
+       * (slice 2); the onboarding card's sample button keeps its own
+       * direct loadSample path (a fresh visitor has nothing to lose).
+       */
+      function requestLoadSample(key: string): void {
+        const hasContent = readManuscript().spreads.some(
+          (s) => s.leftPage.text.trim() || s.rightPage.text.trim(),
+        );
+        if (
+          hasContent &&
+          !window.confirm(
+            'Load the sample and replace your current manuscript? Your existing text will be overwritten.',
+          )
+        ) {
+          return;
         }
-      });
+        loadSample(key);
+      }
 
       // ---- export ----
       type ExportFormat = 'txt' | 'md';
@@ -2797,30 +2846,13 @@ const SAMPLES: Record<string, Sample> = {
         setTimeout(() => URL.revokeObjectURL(url), 100);
       }
 
-      byId('export-format')?.addEventListener('change', (e) => {
-        const sel = e.target as HTMLSelectElement;
-        if (sel.value === 'txt' || sel.value === 'md') {
-          downloadManuscript(sel.value);
-          sel.value = '';
-        } else if (sel.value === 'pdf') {
-          // Defer print so the select-reset and any pending UI updates
-          // settle before the browser captures the page state.
-          requestAnimationFrame(() => window.print());
-          sel.value = '';
-        }
-      });
+      // Export + layout preset are palette commands as of slice 2 —
+      // the palette calls downloadManuscript()/applyLayoutPreset()
+      // directly; their old topbar selects no longer exist.
 
       byId('body-font')?.addEventListener('change', () => {
         applyBodyFont();
         savePrefs();
-      });
-
-      byId('layout-preset')?.addEventListener('change', (e) => {
-        const sel = e.target as HTMLSelectElement;
-        if (sel.value) {
-          applyLayoutPreset(sel.value);
-          sel.value = '';
-        }
       });
 
       byId('sidebar-toggle')?.addEventListener('click', () => {
@@ -2828,6 +2860,309 @@ const SAMPLES: Record<string, Sample> = {
         const btn = byId('sidebar-toggle');
         if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
         savePrefs();
+      });
+
+      // ---- context-bar chips + popovers (slice 2, ADR 0006) ----
+      // The chips are just launchers: the SAME <select> elements live
+      // inside the popovers, so every existing change listener (trim
+      // aspect, body font, analysis re-run) keeps working untouched.
+      const CHIP_DEFS = [
+        { chip: 'chip-age-band', pop: 'popover-age-band', select: 'age-band' },
+        { chip: 'chip-trim-size', pop: 'popover-trim-size', select: 'trim-size' },
+        { chip: 'chip-body-font', pop: 'popover-body-font', select: 'body-font' },
+      ] as const;
+
+      function updateChipLabels(): void {
+        for (const def of CHIP_DEFS) {
+          const sel = byId(def.select) as HTMLSelectElement | null;
+          const chip = byId(def.chip);
+          if (sel && chip) {
+            chip.textContent =
+              sel.selectedOptions[0]?.textContent?.trim() ?? sel.value;
+          }
+        }
+      }
+
+      function closeChipPopovers(): void {
+        for (const def of CHIP_DEFS) {
+          const pop = byId(def.pop);
+          if (pop) pop.hidden = true;
+          byId(def.chip)?.setAttribute('aria-expanded', 'false');
+        }
+      }
+
+      for (const def of CHIP_DEFS) {
+        byId(def.chip)?.addEventListener('click', () => {
+          const pop = byId(def.pop);
+          if (!pop) return;
+          const willOpen = pop.hidden;
+          closeChipPopovers();
+          if (willOpen) {
+            pop.hidden = false;
+            byId(def.chip)?.setAttribute('aria-expanded', 'true');
+            (byId(def.select) as HTMLSelectElement | null)?.focus();
+          }
+        });
+      }
+      document.addEventListener('click', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!t?.closest?.('.cb-chip-wrap')) closeChipPopovers();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        // Return focus to the chip whose popover was open — closing a
+        // popover under a focused select otherwise strands focus on
+        // <body> (WCAG 2.4.3).
+        const openDef = CHIP_DEFS.find((d) => {
+          const pop = byId(d.pop);
+          return pop ? !pop.hidden : false;
+        });
+        closeChipPopovers();
+        if (openDef) byId(openDef.chip)?.focus();
+      });
+      document.addEventListener('change', (e) => {
+        const t = e.target as HTMLElement | null;
+        if (t && CHIP_DEFS.some((d) => d.select === t.id)) {
+          // Sync the label but do NOT auto-close: on Windows/Linux,
+          // arrow keys on a closed <select> fire change per step, and
+          // closing would snap the popover shut mid-browse. Escape or
+          // an outside click dismisses.
+          updateChipLabels();
+        }
+      });
+      // Sync chip labels with restored prefs (body font may differ from
+      // the markup's static defaults by this point).
+      updateChipLabels();
+
+      // ---- ⌘K command palette (slice 2, ADR 0006) ----
+      // Absorbs every rare action the old topbar carried. Commands act
+      // through the existing functions/selects so behavior (confirms,
+      // analysis re-runs, prefs saves) is identical to the old controls.
+      interface CmdkCommand {
+        id: string;
+        label: string;
+        hint?: string;
+        danger?: boolean;
+        /** Two-step destructive confirm, shown in place after first activation. */
+        confirmLabel?: string;
+        run: () => void;
+      }
+
+      const cmdkDialog = byId('cmdk') as HTMLDialogElement | null;
+      const cmdkInput = byId('cmdk-input') as HTMLInputElement | null;
+      const cmdkList = byId('cmdk-list');
+      let cmdkCommands: CmdkCommand[] = [];
+      let cmdkMatches: CmdkCommand[] = [];
+      let cmdkActive = 0;
+      let cmdkConfirming: string | null = null;
+
+      function buildCmdkCommands(): CmdkCommand[] {
+        const cmds: CmdkCommand[] = [];
+        for (const [key, s] of Object.entries(SAMPLES)) {
+          cmds.push({
+            id: `sample-${key}`,
+            label: `Load sample · ${s.label}`,
+            hint: 'sample',
+            run: () => requestLoadSample(key),
+          });
+        }
+        cmds.push({ id: 'export-txt', label: 'Export · Plain text (.txt)', hint: 'export', run: () => downloadManuscript('txt') });
+        cmds.push({ id: 'export-md', label: 'Export · Markdown (.md)', hint: 'export', run: () => downloadManuscript('md') });
+        cmds.push({
+          id: 'export-pdf', label: 'Export · PDF (print)', hint: 'export',
+          // Defer so the palette close settles before print captures the page.
+          run: () => requestAnimationFrame(() => window.print()),
+        });
+        const LAYOUTS = [
+          ['classic', 'Classic facing'],
+          ['mirror', 'Mirror'],
+          ['text-top', 'Text top'],
+          ['full-text', 'Full text'],
+        ] as const;
+        for (const [key, label] of LAYOUTS) {
+          cmds.push({
+            id: `layout-${key}`,
+            label: `Layout preset · ${label}`,
+            hint: 'layout',
+            run: () => applyLayoutPreset(key),
+          });
+        }
+        const selectCommands = (selectId: string, group: string): void => {
+          const sel = byId(selectId) as HTMLSelectElement | null;
+          if (!sel) return;
+          for (const opt of [...sel.options]) {
+            if (!opt.value) continue;
+            cmds.push({
+              id: `${selectId}-${opt.value}`,
+              label: `${group} · ${opt.textContent?.trim() ?? opt.value}`,
+              hint: opt.selected ? 'current' : undefined,
+              run: () => {
+                sel.value = opt.value;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+              },
+            });
+          }
+        };
+        selectCommands('age-band', 'Age band');
+        selectCommands('trim-size', 'Trim');
+        selectCommands('body-font', 'Body font');
+        const inBook =
+          byId('editor-surface')?.getAttribute('data-view') === 'book';
+        cmds.push({
+          id: 'toggle-view',
+          label: inBook ? 'Switch to Grid view' : 'Switch to Book view',
+          hint: 'view',
+          run: () => {
+            (document.querySelector(
+              `[data-view-set="${inBook ? 'grid' : 'book'}"]`,
+            ) as HTMLButtonElement | null)?.click();
+          },
+        });
+        cmds.push({ id: 'find', label: 'Find & replace…', hint: '⌘F', run: () => openFindBar() });
+        cmds.push({
+          id: 'about', label: 'About Folio',
+          run: () => (byId('about-dialog') as HTMLDialogElement | null)?.showModal(),
+        });
+        cmds.push({
+          id: 'reset',
+          label: 'Reset · clear all spreads',
+          danger: true,
+          confirmLabel: 'Confirm — clear all 16 spreads and delete the saved draft',
+          run: () => performReset(),
+        });
+        return cmds;
+      }
+
+      function renderCmdk(): void {
+        if (!cmdkList) return;
+        const q = (cmdkInput?.value ?? '').trim().toLowerCase();
+        cmdkMatches = cmdkCommands.filter(
+          (c) =>
+            c.label.toLowerCase().includes(q) ||
+            (c.hint ?? '').toLowerCase().includes(q),
+        );
+        if (cmdkActive >= cmdkMatches.length) cmdkActive = 0;
+        cmdkList.innerHTML = '';
+        const empty = byId('cmdk-empty');
+        if (empty) empty.hidden = cmdkMatches.length !== 0;
+        if (cmdkMatches.length === 0) {
+          cmdkInput?.removeAttribute('aria-activedescendant');
+          return;
+        }
+        cmdkMatches.forEach((c, i) => {
+          const li = document.createElement('li');
+          li.className = `cmdk-item${c.danger ? ' cmdk-danger' : ''}`;
+          li.id = `cmdk-opt-${i}`;
+          li.setAttribute('role', 'option');
+          li.setAttribute('aria-selected', i === cmdkActive ? 'true' : 'false');
+          li.dataset.cmd = c.id;
+          const label = document.createElement('span');
+          label.textContent =
+            cmdkConfirming === c.id && c.confirmLabel ? c.confirmLabel : c.label;
+          li.appendChild(label);
+          if (c.hint) {
+            const hint = document.createElement('span');
+            hint.className = 'cmdk-hint';
+            hint.textContent = c.hint;
+            li.appendChild(hint);
+          }
+          cmdkList.appendChild(li);
+        });
+        // Combobox pattern: the input keeps DOM focus; AT follows the
+        // active option through aria-activedescendant.
+        cmdkInput?.setAttribute('aria-activedescendant', `cmdk-opt-${cmdkActive}`);
+      }
+
+      function runCmdk(cmd: CmdkCommand): void {
+        if (cmd.confirmLabel && cmdkConfirming !== cmd.id) {
+          cmdkConfirming = cmd.id;
+          renderCmdk();
+          return;
+        }
+        cmdkDialog?.close();
+        cmd.run();
+      }
+
+      function openCmdk(): void {
+        if (!cmdkDialog || cmdkDialog.open) return;
+        // Never stack on another modal (e.g. About, itself palette-launched).
+        if (document.querySelector('dialog[open]:not(#cmdk)')) return;
+        cmdkCommands = buildCmdkCommands();
+        cmdkConfirming = null;
+        cmdkActive = 0;
+        if (cmdkInput) cmdkInput.value = '';
+        renderCmdk();
+        cmdkDialog.showModal();
+        cmdkInput?.focus();
+      }
+
+      byId('cmdk-btn')?.addEventListener('click', openCmdk);
+      // ⌘K on macOS, Ctrl+K elsewhere. Deliberately NOT Ctrl+K on macOS:
+      // that's the native kill-to-end-of-line editing command, which
+      // still works in the page editors and text inputs.
+      const isMacLike = /Mac|iPhone|iPad/.test(navigator.platform);
+      document.addEventListener('keydown', (e) => {
+        const chord = isMacLike ? e.metaKey && !e.ctrlKey : e.ctrlKey;
+        if (chord && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          if (cmdkDialog?.open) cmdkDialog.close();
+          else openCmdk();
+        }
+      });
+      cmdkInput?.addEventListener('input', () => {
+        cmdkActive = 0;
+        cmdkConfirming = null;
+        renderCmdk();
+      });
+      cmdkInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (cmdkMatches.length === 0) return;
+          cmdkActive =
+            e.key === 'ArrowDown'
+              ? (cmdkActive + 1) % cmdkMatches.length
+              : (cmdkActive + cmdkMatches.length - 1) % cmdkMatches.length;
+          cmdkConfirming = null;
+          renderCmdk();
+          cmdkList
+            ?.querySelector('[aria-selected="true"]')
+            ?.scrollIntoView({ block: 'nearest' });
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          // Auto-repeat from a held Enter must not blow through the
+          // two-step destructive confirm — real presses only.
+          if (e.repeat) return;
+          const cmd = cmdkMatches[cmdkActive];
+          if (cmd) runCmdk(cmd);
+        }
+      });
+      cmdkList?.addEventListener('click', (e) => {
+        const li = (e.target as HTMLElement | null)?.closest?.(
+          '[data-cmd]',
+        ) as HTMLElement | null;
+        const idx = cmdkMatches.findIndex((c) => c.id === li?.dataset.cmd);
+        if (idx === -1) return;
+        // Keep keyboard and pointer in sync: the clicked row becomes the
+        // active option, and focus returns to the input so a follow-up
+        // Enter targets the SAME command (matters for the armed confirm).
+        cmdkActive = idx;
+        const cmd = cmdkMatches[idx];
+        if (cmd) runCmdk(cmd);
+        if (cmdkDialog?.open) {
+          renderCmdk();
+          cmdkInput?.focus();
+        }
+      });
+      // Focus restore is native <dialog> behavior (close() restores the
+      // previously focused element synchronously). A manual restore here
+      // would run in the QUEUED close event — AFTER cmd.run() — and steal
+      // focus from commands that claim it (the find bar). Don't.
+      cmdkDialog?.addEventListener('close', () => {
+        cmdkConfirming = null;
+      });
+      // Backdrop click closes (same pattern as the About dialog).
+      cmdkDialog?.addEventListener('click', (e) => {
+        if (e.target === cmdkDialog) cmdkDialog.close();
       });
 
       // ---- inspector tabs (studio dashboard slice 1, ADR 0005) ----
@@ -3215,15 +3550,12 @@ const SAMPLES: Record<string, Sample> = {
       byId('find-replace-all')?.addEventListener('click', replaceAll);
       byId('find-close')?.addEventListener('click', closeFindBar);
 
-      byId('reset-btn')?.addEventListener('click', () => {
-        // Destroys all 16 spreads AND the stored draft — never silently.
-        if (
-          !window.confirm(
-            'Clear all 16 spreads and delete the saved draft? This cannot be undone.',
-          )
-        ) {
-          return;
-        }
+      /**
+       * Destroys all 16 spreads AND the stored draft. Reachable only
+       * through the ⌘K palette (slice 2), which gates it behind its own
+       * explicit two-step confirm — so no window.confirm here.
+       */
+      function performReset(): void {
         for (let i = 1; i <= SPREAD_COUNT; i++) {
           setPage(i, 'left', '', 'text-only');
           setPage(i, 'right', '', 'text-only');
@@ -3233,7 +3565,7 @@ const SAMPLES: Record<string, Sample> = {
         // overwriting the old draft surreptitiously.
         clearDraft();
         runAnalysis();
-      });
+      }
 
       // Initial indicator paint (in case there's a restored draft).
       updateSavedIndicator();
@@ -3299,9 +3631,8 @@ const SAMPLES: Record<string, Sample> = {
 
       // ---- about dialog ----
       const aboutDialog = byId('about-dialog') as HTMLDialogElement | null;
-      byId('about-btn')?.addEventListener('click', () => {
-        aboutDialog?.showModal();
-      });
+      // The About dialog opens from the ⌘K palette as of slice 2 (the
+      // old topbar "?" button is gone).
       byId('about-close')?.addEventListener('click', () => {
         aboutDialog?.close();
       });
