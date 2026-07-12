@@ -45,6 +45,7 @@ import {
   $getRoot,
   $getSelection,
   $isRangeSelection,
+  $createLineBreakNode,
   $createParagraphNode,
   $createRangeSelection,
   $createTextNode,
@@ -344,11 +345,19 @@ function HandleRegister({ spread, side }: { spread: number; side: Side }) {
             root.append($createParagraphNode());
             return;
           }
-          // Preserve blank-line paragraph breaks; collapse single
-          // newlines into spaces (matches plain-text convention).
+          // Faithful inverse of getText ($getRoot().getTextContent()):
+          // blank lines → paragraph breaks, single newlines → line
+          // breaks (what Shift+Enter produces). Collapsing single
+          // newlines to spaces — the old behavior — silently destroyed
+          // verse structure on sample load and v1-draft migration, and
+          // with it every per-line prosody readout (rhyme scheme, line
+          // meter).
           for (const para of text.split(/\n\n+/)) {
             const p = $createParagraphNode();
-            p.append($createTextNode(para.replace(/\n/g, ' ')));
+            para.split('\n').forEach((line, i) => {
+              if (i > 0) p.append($createLineBreakNode());
+              if (line.length > 0) p.append($createTextNode(line));
+            });
             root.append(p);
           }
         });

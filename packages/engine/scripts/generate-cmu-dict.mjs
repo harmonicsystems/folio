@@ -8,10 +8,11 @@
  * lowercase, straight apostrophes (see src/vocabulary/tokenize.ts and
  * the dictKey note in src/phonology/lookup.ts).
  *
- * Word list = corpus vocabulary (corpora/*.txt) ∪ current CMU_DICT keys.
- * Scope deliberately follows docs/BACKLOG.md ("CMU dict expansion"):
- * cover the regression corpus honestly; widen later by feeding the
- * generator a bigger list.
+ * Word list = corpus vocabulary (corpora/*.txt) ∪ demo-fixture
+ * vocabulary (packages/web/demo-fixtures/*.txt, ADR 0009) ∪ current
+ * CMU_DICT keys. Demo fixtures MUST be dict-covered: their planted
+ * rhyme/meter deviations are the product demo, and grapheme-guessed
+ * pronunciations invent false non-rhymes that pollute the mirror.
  *
  * Usage:  pnpm --filter @harmonic-systems/early-literacy build \
  *           && node packages/engine/scripts/generate-cmu-dict.mjs
@@ -36,17 +37,19 @@ const { CMU_DICT } = await import(
   join(engineRoot, 'dist', 'data', 'cmu-dict.js')
 );
 
-// ---- 1. word list: corpus vocabulary ∪ current entries ----
-const corporaDir = join(repoRoot, 'corpora');
-const corpusFiles = readdirSync(corporaDir).filter((f) => f.endsWith('.txt'));
+// ---- 1. word list: corpus ∪ demo fixtures ∪ current entries ----
 const words = new Set();
-for (const f of corpusFiles) {
-  const text = readFileSync(join(corporaDir, f), 'utf8');
-  for (const w of tokenizeWords(text)) {
-    // Normalize to the dict key form (tokens may carry curly quotes).
-    words.add(w.replace(/’/g, "'"));
+const addDir = (dir) => {
+  for (const f of readdirSync(dir).filter((f) => f.endsWith('.txt'))) {
+    const text = readFileSync(join(dir, f), 'utf8');
+    for (const w of tokenizeWords(text)) {
+      // Normalize to the dict key form (tokens may carry curly quotes).
+      words.add(w.replace(/’/g, "'"));
+    }
   }
-}
+};
+addDir(join(repoRoot, 'corpora'));
+addDir(join(repoRoot, 'packages', 'web', 'demo-fixtures'));
 const corpusWordCount = words.size;
 for (const k of CMU_DICT.keys()) words.add(k);
 
@@ -78,6 +81,10 @@ const OVERRIDES = new Map([
   ['live', ['L', 'IH1', 'V']], // verb ("where you live"), not adjective L AY1 V
   ['wind', ['W', 'IH1', 'N', 'D']], // noun (the wind), not verb W AY1 N D
   ['use', ['Y', 'UW1', 'Z']], // verb ("use your words"), not noun Y UW1 S
+  // Curated additions — words absent from upstream 0.7b, composed
+  // mechanically from upstream constituent entries (compound stress:
+  // primary on the first element, secondary on the second).
+  ['sleepyhead', ['S', 'L', 'IY1', 'P', 'IY0', 'HH', 'EH2', 'D']], // SLEEPY + HEAD
 ]);
 const entries = new Map();
 const missing = [];

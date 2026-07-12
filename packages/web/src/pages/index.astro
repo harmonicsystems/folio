@@ -28,6 +28,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPORA = resolve(__dirname, '../../../../corpora');
 const loadCorpus = (slug: string) =>
   readFileSync(`${CORPORA}/${slug}.txt`, 'utf8');
+// Demo fixtures (ADR 0009): authored-to-spec books with planted,
+// half-heard deviations — NOT the regression corpus. One per band,
+// replacing corpus texts as samples band by band. Lives OUTSIDE src
+// so the ../.. climb lands the same from src/pages (dev) and
+// dist/pages (build) — src and dist sit at equal depth.
+const DEMOS = resolve(__dirname, '../../demo-fixtures');
+const loadDemo = (slug: string) =>
+  readFileSync(`${DEMOS}/${slug}.txt`, 'utf8');
 
 interface Sample {
   ageBand: AgeBand;
@@ -38,8 +46,8 @@ interface Sample {
 const SAMPLES: Record<string, Sample> = {
   board: {
     ageBand: 'board',
-    label: 'Board · synthetic',
-    text: loadCorpus('synthetic-board-book'),
+    label: 'Board · Time for Bed, Little One',
+    text: loadDemo('board-time-for-bed'),
   },
   'early-picture': {
     ageBand: 'early-picture',
