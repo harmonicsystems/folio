@@ -12,12 +12,12 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
 
 ## Now (unblocked, do next)
 
-- [ ] **Push `main`.** Two commits ahead of origin (`f26f985` editor data-integrity,
-  `a5d8f58` inspector slice 1); slice 2 sits uncommitted in `index.astro`. Commit
-  slice 2, push all three. *(ops — needs local SSH key)*
-- [ ] **Finish studio dashboard slice 2** — context bar + ⌘K palette (ADR 0006,
-  in flight). Verify the extracted code paths (`performReset()`,
-  `requestLoadSample()`) fire before committing; the ADR claims no behavior forked.
+- [ ] **Push `main`.** Six commits ahead of origin (`f26f985` editor
+  data-integrity, `a5d8f58`/`a404b6e`/`f861ba0`/`bf834bc` studio-dashboard
+  slices 1–4, `0ce67bc` docs). Awaiting David's explicit go — auto-deploy takes
+  the new UI live on push. *(ops — needs local SSH key)*
+- [x] ~~**Finish studio dashboard slice 2**~~ — shipped 2026-07-11, `a404b6e`
+  (extracted paths verified live; 11 review findings fixed pre-commit, ADR 0006).
 - [ ] **CMU dict expansion (~2k words).** Gates the honest decodability work
   (ADR 0004). Scoped 2026-07-11: current dict is 330 entries → 66.1% token
   coverage on the 10-fixture corpus, 1,856 unique OOV words falling to the
@@ -31,12 +31,12 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
 
 ## Web — studio dashboard (design 1c) + editor
 
-- [ ] **Slice 3: mode rail.** Removes sidebar toggle + status bar, lands prefs v2
-  (tab persistence — deferred from slice 1 to avoid migration debt), revisits
-  the bundled mock icons / Lucide decision. *(ADR 0005/0006)*
-- [ ] **Slice 4: Prosody mode.** Absorbs the three prosody rows (dominant meter,
-  consistency, rhyme scheme) currently parked at the bottom of the Phonics tab.
-  *(ADR 0005 — "temporary home")*
+- [x] ~~**Slice 3: mode rail.**~~ — shipped 2026-07-11, `f861ba0` (rail + Analyze
+  mode + prefs v2; status bar + sidebar toggle removed; 8 pre-ship fixes,
+  ADR 0007). Mock icons kept, no Lucide dep.
+- [x] ~~**Slice 4: Prosody mode.**~~ — shipped 2026-07-11, `bf834bc` (Phonology +
+  Prosody modes; prosody rows moved to `panel-prosody` + per-line rhyme letters;
+  ADR 0008). Studio-dashboard sequence complete.
 - [ ] **Editable manuscript title.** The context bar shows a static "Untitled
   manuscript" with no way to change it — ADR 0006 scoped inline editing out per
   the handoff, so it's an intentional gap, now a real one. Needs: title state in
