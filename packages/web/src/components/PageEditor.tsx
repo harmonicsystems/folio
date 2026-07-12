@@ -409,9 +409,18 @@ interface Props {
   spread: number;
   side: Side;
   placeholder?: string;
+  readOnly?: boolean;
 }
 
-export default function PageEditor({ spread, side, placeholder }: Props) {
+function Editability({ readOnly }: { readOnly: boolean }) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    editor.setEditable(!readOnly);
+  }, [editor, readOnly]);
+  return null;
+}
+
+export default function PageEditor({ spread, side, placeholder, readOnly = false }: Props) {
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="page-editor-shell">
@@ -443,6 +452,7 @@ export default function PageEditor({ spread, side, placeholder }: Props) {
           }}
         />
         <HandleRegister spread={spread} side={side} />
+        <Editability readOnly={readOnly} />
         <TypographyShortcuts />
         <FloatingToolbar />
       </div>

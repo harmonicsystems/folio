@@ -24,6 +24,12 @@ import {
   type WebSpread,
 } from '../types.js';
 import '../styles/studio.css';
+import {
+  BOOK_TEMPLATES,
+  getBookTemplate,
+  type BookTemplate,
+  type BookTemplateId,
+} from '../templates.js';
 
 type Lens = 'draft' | 'listen' | 'language';
 type Side = 'left' | 'right';
@@ -53,7 +59,12 @@ interface SavedPage {
 }
 
 interface SavedStudio {
-  version: 3;
+  version: 4;
+  documentId: string;
+  templateId: BookTemplateId;
+  spreadCount: number;
+  sampleKey?: string;
+  returnDocumentId?: string;
   title: string;
   ageBand: AgeBand;
   readingSituation: ReadingSituation;
@@ -63,9 +74,18 @@ interface SavedStudio {
   savedAt: number;
 }
 
-const SPREAD_COUNT = 16;
+interface LibraryEntry {
+  id: string;
+  title: string;
+  templateId: BookTemplateId;
+  updatedAt: number;
+}
+
 const DRAFT_KEY = 'folio.draft.v3';
 const LEGACY_DRAFT_KEY = 'folio.draft.v2';
+const ACTIVE_DOCUMENT_KEY = 'folio.active-document.v1';
+const LIBRARY_KEY = 'folio.documents.v1';
+const DOCUMENT_PREFIX = 'folio.document.v1.';
 
 const AGE_BANDS: Array<{ id: AgeBand; label: string }> = [
   { id: 'board', label: 'Board book · 0–3' },
@@ -88,10 +108,14 @@ const PLACEMENTS: Array<{ id: PagePlacement; label: string }> = [
   { id: 'illustration-only', label: 'Illustration' },
 ];
 
-function blankPlacements(): Array<{ left: PagePlacement; right: PagePlacement }> {
-  return Array.from({ length: SPREAD_COUNT }, () => ({
-    left: 'text-only',
-    right: 'text-only',
+const DEFAULT_TEMPLATE = getBookTemplate('picture-16');
+
+function blankPlacements(
+  template: BookTemplate,
+): Array<{ left: PagePlacement; right: PagePlacement }> {
+  return Array.from({ length: template.spreadCount }, () => ({
+    left: template.defaultLeftPlacement,
+    right: template.defaultRightPlacement,
   }));
 }
 
@@ -113,13 +137,80 @@ function isLens(value: unknown): value is Lens {
   return value === 'draft' || value === 'listen' || value === 'language';
 }
 
+function createId(prefix = 'manuscript'): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function loadLibrary(): LibraryEntry[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LIBRARY_KEY) ?? '[]');
+    return Array.isArray(parsed) ? (parsed as LibraryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDocument(saved: SavedStudio, includeInLibrary = true): void {
+  localStorage.setItem(`${DOCUMENT_PREFIX}${saved.documentId}`, JSON.stringify(saved));
+  if (!includeInLibrary) return;
+  const library = loadLibrary().filter((entry) => entry.id !== saved.documentId);
+  library.unshift({
+    id: saved.documentId,
+    title: saved.title,
+    templateId: saved.templateId,
+    updatedAt: saved.savedAt,
+  });
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(library.slice(0, 20)));
+}
+
+function setActiveDocument(id: string): void {
+  localStorage.setItem(ACTIVE_DOCUMENT_KEY, id);
+}
+
 function loadSavedStudio(): SavedStudio | null {
   try {
+    const activeId = localStorage.getItem(ACTIVE_DOCUMENT_KEY);
+    if (activeId) {
+      const activeRaw = localStorage.getItem(`${DOCUMENT_PREFIX}${activeId}`);
+      if (activeRaw) {
+        const active = JSON.parse(activeRaw) as Partial<SavedStudio>;
+        if (active.version === 4 && Array.isArray(active.spreads)) {
+          return active as SavedStudio;
+        }
+      }
+    }
+
     const raw = localStorage.getItem(DRAFT_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<SavedStudio>;
+      const parsed = JSON.parse(raw) as {
+        version?: number;
+        title?: string;
+        ageBand?: AgeBand;
+        readingSituation?: ReadingSituation;
+        currentSpread?: number;
+        lens?: Lens;
+        spreads?: Array<{ leftPage: SavedPage; rightPage: SavedPage }>;
+        savedAt?: number;
+      };
       if (parsed.version === 3 && Array.isArray(parsed.spreads)) {
-        return parsed as SavedStudio;
+        const migrated: SavedStudio = {
+          version: 4,
+          documentId: createId(),
+          templateId: 'picture-16',
+          spreadCount: parsed.spreads.length,
+          title: parsed.title ?? 'Untitled manuscript',
+          ageBand: parsed.ageBand ?? 'picture',
+          readingSituation: isReadingSituation(parsed.readingSituation)
+            ? parsed.readingSituation
+            : 'adult-read-aloud',
+          currentSpread: parsed.currentSpread ?? 0,
+          lens: isLens(parsed.lens) ? parsed.lens : 'draft',
+          spreads: parsed.spreads,
+          savedAt: parsed.savedAt ?? Date.now(),
+        };
+        writeDocument(migrated);
+        setActiveDocument(migrated.documentId);
+        return migrated;
       }
     }
 
@@ -135,7 +226,10 @@ function loadSavedStudio(): SavedStudio | null {
     };
     if (legacy.version !== 2 || !Array.isArray(legacy.spreads)) return null;
     return {
-      version: 3,
+      version: 4,
+      documentId: createId(),
+      templateId: 'picture-16',
+      spreadCount: legacy.spreads.length,
       title: 'Untitled manuscript',
       ageBand: legacy.ageBand ?? 'picture',
       readingSituation: 'adult-read-aloud',
@@ -161,10 +255,11 @@ function makeWebManuscript(
   readingSituation: ReadingSituation,
   placements: Array<{ left: PagePlacement; right: PagePlacement }>,
   title: string,
+  spreadCount: number,
 ): WebManuscript {
   const handles = editors();
   const spreads: WebSpread[] = Array.from(
-    { length: SPREAD_COUNT },
+    { length: spreadCount },
     (_, index) => ({
       index: index + 1,
       leftPage: {
@@ -187,13 +282,21 @@ function makeWebManuscript(
 }
 
 export default function StudioApp({ samples }: Props) {
+  const [documentId, setDocumentId] = useState(() => createId());
+  const [templateId, setTemplateId] =
+    useState<BookTemplateId>(DEFAULT_TEMPLATE.id);
+  const [spreadCount, setSpreadCount] = useState(DEFAULT_TEMPLATE.spreadCount);
+  const [sampleKey, setSampleKey] = useState<string | null>(null);
+  const [returnDocumentId, setReturnDocumentId] = useState<string | null>(null);
   const [title, setTitle] = useState('Untitled manuscript');
   const [ageBand, setAgeBand] = useState<AgeBand>('picture');
   const [readingSituation, setReadingSituation] =
     useState<ReadingSituation>('adult-read-aloud');
   const [lens, setLens] = useState<Lens>('draft');
   const [currentSpread, setCurrentSpread] = useState(0);
-  const [placements, setPlacements] = useState(blankPlacements);
+  const [placements, setPlacements] = useState(() =>
+    blankPlacements(DEFAULT_TEMPLATE),
+  );
   const [profile, setProfile] = useState<ReadabilityProfile | null>(null);
   const [manuscript, setManuscript] = useState<WebManuscript | null>(null);
   const [guessedWords, setGuessedWords] = useState<string[]>([]);
@@ -203,6 +306,10 @@ export default function StudioApp({ samples }: Props) {
   const [sampleOpen, setSampleOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(false);
+  const [templateDialog, setTemplateDialog] = useState<'new' | 'convert' | null>(null);
+  const [library, setLibrary] = useState<LibraryEntry[]>([]);
+  const [restoring, setRestoring] = useState(true);
   const readyPages = useRef(new Set<string>());
   const restored = useRef(false);
   const analyzeTimer = useRef<number | null>(null);
@@ -213,6 +320,7 @@ export default function StudioApp({ samples }: Props) {
       readingSituation,
       placements,
       title,
+      spreadCount,
     );
     const engine = toEngineManuscript(web);
     const nextProfile = analyze(engine);
@@ -223,7 +331,12 @@ export default function StudioApp({ samples }: Props) {
 
     const handles = editors();
     const saved: SavedStudio = {
-      version: 3,
+      version: 4,
+      documentId,
+      templateId,
+      spreadCount,
+      ...(sampleKey ? { sampleKey } : {}),
+      ...(returnDocumentId ? { returnDocumentId } : {}),
       title,
       ageBand,
       readingSituation,
@@ -244,13 +357,29 @@ export default function StudioApp({ samples }: Props) {
       savedAt: Date.now(),
     };
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(saved));
+      if (!sampleKey) {
+        writeDocument(saved);
+        setActiveDocument(documentId);
+        setLibrary(loadLibrary());
+      }
       setSavedAt(saved.savedAt);
       setSaveFailed(false);
     } catch {
       setSaveFailed(true);
     }
-  }, [ageBand, currentSpread, lens, placements, readingSituation, title]);
+  }, [
+    ageBand,
+    currentSpread,
+    documentId,
+    lens,
+    placements,
+    readingSituation,
+    returnDocumentId,
+    sampleKey,
+    spreadCount,
+    templateId,
+    title,
+  ]);
 
   const scheduleAnalysis = useCallback(() => {
     if (analyzeTimer.current !== null) window.clearTimeout(analyzeTimer.current);
@@ -258,17 +387,23 @@ export default function StudioApp({ samples }: Props) {
   }, [runAnalysis]);
 
   useEffect(() => {
+    if (restored.current) return;
     let readinessTimer: number | null = null;
 
     const restoreWhenReady = () => {
       const handles = editors();
-      if (Object.keys(handles).length !== SPREAD_COUNT * 2 || restored.current) {
+      if (Object.keys(handles).length < spreadCount * 2 || restored.current) {
         return;
       }
       restored.current = true;
       if (readinessTimer !== null) window.clearInterval(readinessTimer);
       const saved = loadSavedStudio();
       if (saved) {
+        setDocumentId(saved.documentId);
+        setTemplateId(saved.templateId);
+        setSpreadCount(saved.spreadCount);
+        setSampleKey(saved.sampleKey ?? null);
+        setReturnDocumentId(saved.returnDocumentId ?? null);
         setTitle(saved.title || 'Untitled manuscript');
         setAgeBand(saved.ageBand ?? 'picture');
         setReadingSituation(
@@ -277,11 +412,11 @@ export default function StudioApp({ samples }: Props) {
             : 'adult-read-aloud',
         );
         setCurrentSpread(
-          Math.max(0, Math.min(SPREAD_COUNT - 1, saved.currentSpread ?? 0)),
+          Math.max(0, Math.min(saved.spreadCount - 1, saved.currentSpread ?? 0)),
         );
         setLens(isLens(saved.lens) ? saved.lens : 'draft');
         setPlacements(
-          Array.from({ length: SPREAD_COUNT }, (_, index) => ({
+          Array.from({ length: saved.spreadCount }, (_, index) => ({
             left: saved.spreads[index]?.leftPage.placement ?? 'text-only',
             right: saved.spreads[index]?.rightPage.placement ?? 'text-only',
           })),
@@ -307,8 +442,12 @@ export default function StudioApp({ samples }: Props) {
           }
         });
         setSavedAt(saved.savedAt ?? 0);
+        if (!saved.sampleKey) setActiveDocument(saved.documentId);
+      } else {
+        window.setTimeout(runAnalysis, 0);
       }
-      window.setTimeout(runAnalysis, 0);
+      setLibrary(loadLibrary());
+      window.setTimeout(() => setRestoring(false), 60);
     };
     const onReady = (event: Event) => {
       const detail = (event as CustomEvent<{ spread: number; side: Side }>).detail;
@@ -328,7 +467,7 @@ export default function StudioApp({ samples }: Props) {
       document.removeEventListener('page-editor-ready', onReady);
       document.removeEventListener('page-text-change', onChange);
     };
-  }, [runAnalysis, scheduleAnalysis]);
+  }, [runAnalysis, scheduleAnalysis, spreadCount]);
 
   useEffect(() => {
     if (!restored.current) return;
@@ -352,15 +491,15 @@ export default function StudioApp({ samples }: Props) {
       if (event.key === 'ArrowLeft') {
         setCurrentSpread((value) => Math.max(0, value - 1));
       } else if (event.key === 'ArrowRight') {
-        setCurrentSpread((value) => Math.min(SPREAD_COUNT - 1, value + 1));
+        setCurrentSpread((value) => Math.min(spreadCount - 1, value + 1));
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [focusMode]);
+  }, [focusMode, spreadCount]);
 
   useEffect(() => {
-    if (!sampleOpen && !exportOpen) return;
+    if (!sampleOpen && !exportOpen && !documentsOpen) return;
     const closeMenus = (event: Event) => {
       const target = event.target as HTMLElement | null;
       if (event.type === 'keydown') {
@@ -370,14 +509,15 @@ export default function StudioApp({ samples }: Props) {
       }
       setSampleOpen(false);
       setExportOpen(false);
+      setDocumentsOpen(false);
     };
-    document.addEventListener('pointerdown', closeMenus);
+    document.addEventListener('click', closeMenus);
     document.addEventListener('keydown', closeMenus);
     return () => {
-      document.removeEventListener('pointerdown', closeMenus);
+      document.removeEventListener('click', closeMenus);
       document.removeEventListener('keydown', closeMenus);
     };
-  }, [exportOpen, sampleOpen]);
+  }, [documentsOpen, exportOpen, sampleOpen]);
 
   useEffect(() => {
     applyPhonemeHighlight(activePhoneme);
@@ -400,6 +540,7 @@ export default function StudioApp({ samples }: Props) {
     [engineSpreads, guessedWords, profile, readingSituation],
   );
   const currentProfile = profile?.perSpread[currentSpread];
+  const currentTemplate = getBookTemplate(templateId);
   const currentEngineSpread = engineSpreads[currentSpread];
   const currentLines = (currentEngineSpread?.text ?? '')
     .split(/\n/)
@@ -414,50 +555,139 @@ export default function StudioApp({ samples }: Props) {
     );
   };
 
-  const loadSample = (key: string) => {
+  const captureCurrentDocument = (): SavedStudio => {
+    const web = makeWebManuscript(
+      ageBand,
+      readingSituation,
+      placements,
+      title,
+      spreadCount,
+    );
+    const handles = editors();
+    return {
+      version: 4,
+      documentId,
+      templateId,
+      spreadCount,
+      title,
+      ageBand,
+      readingSituation,
+      currentSpread,
+      lens,
+      spreads: web.spreads.map((spread, index) => ({
+        leftPage: {
+          ...spread.leftPage,
+          state: handles[`${index + 1}-left`]?.getStateJSON(),
+        },
+        rightPage: {
+          ...spread.rightPage,
+          state: handles[`${index + 1}-right`]?.getStateJSON(),
+        },
+      })),
+      savedAt: Date.now(),
+    };
+  };
+
+  const switchToDocument = (id: string) => {
+    setActiveDocument(id);
+    window.location.reload();
+  };
+
+  const exploreSample = (key: string) => {
     const sample = samples[key];
     if (!sample) return;
-    const hasText = Object.values(editors()).some((editor) =>
-      editor.getText().trim(),
-    );
-    if (
-      hasText &&
-      !window.confirm(
-        'Load this sample and replace the manuscript currently on the canvas?',
-      )
-    ) {
-      return;
+    const sourceId = sampleKey ? returnDocumentId : documentId;
+    if (!sampleKey) {
+      const current = captureCurrentDocument();
+      writeDocument(current);
+    } else {
+      localStorage.removeItem(`${DOCUMENT_PREFIX}${documentId}`);
     }
+    const sampleTemplateId: BookTemplateId =
+      key === 'board'
+        ? 'board-12'
+        : key === 'early-picture'
+          ? 'verse-16'
+          : 'picture-16';
+    const template = getBookTemplate(sampleTemplateId);
     const chunks = sample.text
       .split(/\n\s*\n/)
       .map((chunk) => chunk.trim())
       .filter(Boolean);
-    const handles = editors();
-    for (let index = 0; index < SPREAD_COUNT; index++) {
-      handles[`${index + 1}-left`]?.setText(chunks[index] ?? '');
-      handles[`${index + 1}-right`]?.setText('');
-    }
-    setPlacements(
-      Array.from({ length: SPREAD_COUNT }, (_, index) => ({
-        left: 'text-only' as const,
-        right: chunks[index]
-          ? ('illustration-only' as const)
-          : ('text-only' as const),
+    const sampleDocument: SavedStudio = {
+      version: 4,
+      documentId: createId('sample'),
+      templateId: template.id,
+      spreadCount: template.spreadCount,
+      sampleKey: key,
+      ...(sourceId ? { returnDocumentId: sourceId } : {}),
+      title: sample.label.replace(/^.+?·\s*/, ''),
+      ageBand: sample.ageBand,
+      readingSituation: 'adult-read-aloud',
+      currentSpread: 0,
+      lens: 'draft',
+      spreads: Array.from({ length: template.spreadCount }, (_, index) => ({
+        leftPage: {
+          text: chunks[index] ?? '',
+          placement: 'text-only' as const,
+        },
+        rightPage: {
+          text: '',
+          placement: chunks[index]
+            ? ('illustration-only' as const)
+            : ('text-only' as const),
+        },
       })),
-    );
-    setAgeBand(sample.ageBand);
-    setReadingSituation('adult-read-aloud');
-    setTitle(sample.label.replace(/^.+?·\s*/, ''));
-    setCurrentSpread(0);
-    setLens('draft');
-    setSampleOpen(false);
-    window.setTimeout(runAnalysis, 0);
+      savedAt: Date.now(),
+    };
+    writeDocument(sampleDocument, false);
+    switchToDocument(sampleDocument.documentId);
+  };
+
+  const returnFromSample = () => {
+    if (!returnDocumentId) return;
+    localStorage.removeItem(`${DOCUMENT_PREFIX}${documentId}`);
+    switchToDocument(returnDocumentId);
+  };
+
+  const createFromTemplate = (template: BookTemplate, convert: boolean) => {
+    const source = captureCurrentDocument();
+    if (!sampleKey) writeDocument(source);
+    const blank = Array.from({ length: template.spreadCount }, () => ({
+      leftPage: {
+        text: '',
+        placement: template.defaultLeftPlacement,
+      },
+      rightPage: {
+        text: '',
+        placement: template.defaultRightPlacement,
+      },
+    }));
+    const mapped = convert
+      ? blank.map((spread, index) => source.spreads[index] ?? spread)
+      : blank;
+    const next: SavedStudio = {
+      version: 4,
+      documentId: createId(),
+      templateId: template.id,
+      spreadCount: template.spreadCount,
+      title: convert ? source.title : 'Untitled manuscript',
+      ageBand: template.ageBand,
+      readingSituation: template.readingSituation,
+      currentSpread: 0,
+      lens: 'draft',
+      spreads: mapped,
+      savedAt: Date.now(),
+    };
+    writeDocument(next);
+    setTemplateDialog(null);
+    switchToDocument(next.documentId);
   };
 
   const download = (format: 'txt' | 'md') => {
     const handles = editors();
     const blocks: string[] = [];
-    for (let index = 0; index < SPREAD_COUNT; index++) {
+    for (let index = 0; index < spreadCount; index++) {
       const left =
         format === 'md'
           ? handles[`${index + 1}-left`]?.getMarkdown()
@@ -485,22 +715,27 @@ export default function StudioApp({ samples }: Props) {
   const reset = () => {
     if (
       !window.confirm(
-        'Clear all 16 spreads? This removes the saved manuscript from this device.',
+        `Clear all ${spreadCount} spreads in this manuscript?`,
       )
     ) {
       return;
     }
     Object.values(editors()).forEach((editor) => editor.setText(''));
-    localStorage.removeItem(DRAFT_KEY);
     setTitle('Untitled manuscript');
-    setPlacements(blankPlacements());
+    setPlacements(blankPlacements(getBookTemplate(templateId)));
     setCurrentSpread(0);
     setLens('draft');
     window.setTimeout(runAnalysis, 0);
   };
 
   return (
-    <div className={`studio-shell${focusMode ? ' focus-mode' : ''}`}>
+    <div className={`studio-shell${focusMode ? ' focus-mode' : ''}${restoring ? ' restoring' : ''}`}>
+      {restoring && (
+        <div className="studio-restoring" role="status">
+          <span>Folio</span>
+          <small>Opening your manuscript…</small>
+        </div>
+      )}
       <header className="studio-mast">
         <div className="studio-identity">
           <a className="studio-brand" href="/about">Folio</a>
@@ -509,6 +744,7 @@ export default function StudioApp({ samples }: Props) {
             className="studio-title"
             aria-label="Manuscript title"
             value={title}
+            readOnly={Boolean(sampleKey)}
             onChange={(event) => setTitle(event.target.value)}
           />
           <span className={`studio-saved${saveFailed ? ' failed' : ''}`}>
@@ -518,33 +754,44 @@ export default function StudioApp({ samples }: Props) {
                 ? 'saved on this device'
                 : 'not yet saved'}
           </span>
+          <button
+            type="button"
+            className="studio-structure"
+            disabled={Boolean(sampleKey)}
+            onClick={() => setTemplateDialog('convert')}
+          >
+            {currentTemplate.shortName} · {spreadCount} spreads
+          </button>
         </div>
 
         <div className="studio-context">
-          <label>
-            <span>Audience</span>
-            <select
-              value={ageBand}
-              onChange={(event) => setAgeBand(event.target.value as AgeBand)}
-            >
-              {AGE_BANDS.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <span>Experience</span>
-            <select
-              value={readingSituation}
-              onChange={(event) =>
-                setReadingSituation(event.target.value as ReadingSituation)
-              }
-            >
-              {SITUATIONS.map((option) => (
-                <option key={option.id} value={option.id}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          <fieldset className="studio-reading-context" disabled={Boolean(sampleKey)}>
+            <legend>Reading context · analysis only</legend>
+            <label>
+              <span>Audience</span>
+              <select
+                value={ageBand}
+                onChange={(event) => setAgeBand(event.target.value as AgeBand)}
+              >
+                {AGE_BANDS.map((option) => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Experience</span>
+              <select
+                value={readingSituation}
+                onChange={(event) =>
+                  setReadingSituation(event.target.value as ReadingSituation)
+                }
+              >
+                {SITUATIONS.map((option) => (
+                  <option key={option.id} value={option.id}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
           <div className="studio-menu-wrap">
             <button
               type="button"
@@ -554,17 +801,57 @@ export default function StudioApp({ samples }: Props) {
               onClick={() => {
                 setSampleOpen((value) => !value);
                 setExportOpen(false);
+                setDocumentsOpen(false);
               }}
             >
-              Samples
+              Explore
             </button>
             {sampleOpen && (
               <div className="studio-menu">
                 {Object.entries(samples).map(([key, sample]) => (
-                  <button key={key} type="button" onClick={() => loadSample(key)}>
+                  <button key={key} type="button" onClick={() => exploreSample(key)}>
                     {sample.label}
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+          <div className="studio-menu-wrap">
+            <button
+              type="button"
+              className="studio-button quiet"
+              aria-haspopup="menu"
+              aria-expanded={documentsOpen}
+              onClick={() => {
+                setDocumentsOpen((value) => !value);
+                setSampleOpen(false);
+                setExportOpen(false);
+              }}
+            >
+              Manuscripts
+            </button>
+            {documentsOpen && (
+              <div className="studio-menu align-right studio-document-menu">
+                <button type="button" onClick={() => setTemplateDialog('new')}>
+                  New manuscript…
+                </button>
+                {sampleKey && returnDocumentId && (
+                  <button type="button" onClick={returnFromSample}>
+                    Return to my manuscript
+                  </button>
+                )}
+                {library
+                  .filter((entry) => entry.id !== documentId)
+                  .map((entry) => (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => switchToDocument(entry.id)}
+                    >
+                      <strong>{entry.title || 'Untitled manuscript'}</strong>
+                      <small>{getBookTemplate(entry.templateId).shortName}</small>
+                    </button>
+                  ))}
               </div>
             )}
           </div>
@@ -577,6 +864,7 @@ export default function StudioApp({ samples }: Props) {
               onClick={() => {
                 setExportOpen((value) => !value);
                 setSampleOpen(false);
+                setDocumentsOpen(false);
               }}
             >
               Export
@@ -589,11 +877,25 @@ export default function StudioApp({ samples }: Props) {
               </div>
             )}
           </div>
-          <button type="button" className="studio-button quiet reset" onClick={reset}>
-            Clear
-          </button>
+          {!sampleKey && (
+            <button type="button" className="studio-button quiet reset" onClick={reset}>
+              Clear
+            </button>
+          )}
         </div>
       </header>
+
+      {sampleKey && (
+        <div className="studio-sample-banner" role="status">
+          <div>
+            <strong>Exploring an example</strong>
+            <span>This manuscript is read-only. Your work is still saved separately.</span>
+          </div>
+          {returnDocumentId && (
+            <button type="button" onClick={returnFromSample}>Return to my manuscript</button>
+          )}
+        </div>
+      )}
 
       <nav className="studio-lenses" aria-label="Workspace lens">
         {(['draft', 'listen', 'language'] as const).map((nextLens) => (
@@ -618,7 +920,7 @@ export default function StudioApp({ samples }: Props) {
             <div>
               <span className="studio-spread-kicker">Spread</span>
               <strong>{currentSpread + 1}</strong>
-              <span>of {SPREAD_COUNT}</span>
+              <span>of {spreadCount}</span>
             </div>
             <span className="studio-spread-status">
               {currentProfile?.wordCount ?? 0} words
@@ -637,15 +939,19 @@ export default function StudioApp({ samples }: Props) {
             </button>
           </div>
 
-          <div
-            className="studio-carousel"
-            style={{ '--spread-index': currentSpread } as React.CSSProperties}
-          >
-            <div className="studio-track">
-              {Array.from({ length: SPREAD_COUNT }, (_, index) => (
+          <div className="studio-carousel">
+            <div
+              className="studio-track"
+              style={{
+                width: `${spreadCount * 100}%`,
+                transform: `translateX(-${currentSpread * (100 / spreadCount)}%)`,
+              }}
+            >
+              {Array.from({ length: spreadCount }, (_, index) => (
                 <article
                   className="studio-spread"
                   key={index}
+                  style={{ width: `${100 / spreadCount}%` }}
                   aria-hidden={currentSpread !== index}
                   inert={currentSpread !== index ? true : undefined}
                 >
@@ -662,6 +968,7 @@ export default function StudioApp({ samples }: Props) {
                           <select
                             aria-label={`Spread ${index + 1} ${side} page layout`}
                             value={placement}
+                            disabled={Boolean(sampleKey)}
                             onChange={(event) =>
                               setPlacement(side, event.target.value as PagePlacement)
                             }
@@ -676,6 +983,7 @@ export default function StudioApp({ samples }: Props) {
                             spread={index + 1}
                             side={side}
                             placeholder="Write on this page…"
+                            readOnly={Boolean(sampleKey)}
                           />
                           {placement !== 'text-only' && (
                             <div className="studio-illustration" aria-label="Illustration area">
@@ -703,9 +1011,9 @@ export default function StudioApp({ samples }: Props) {
             <button
               type="button"
               aria-label="Next spread"
-              disabled={currentSpread === SPREAD_COUNT - 1}
+              disabled={currentSpread === spreadCount - 1}
               onClick={() =>
-                setCurrentSpread((value) => Math.min(SPREAD_COUNT - 1, value + 1))
+                setCurrentSpread((value) => Math.min(spreadCount - 1, value + 1))
               }
             >
               Next →
@@ -744,10 +1052,63 @@ export default function StudioApp({ samples }: Props) {
 
       <BookMap
         profile={profile}
+        spreadCount={spreadCount}
         currentSpread={currentSpread}
         reflections={reflections}
         onSelect={setCurrentSpread}
       />
+
+      {templateDialog && (
+        <div
+          className="studio-dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setTemplateDialog(null);
+          }}
+        >
+          <section
+            className="studio-template-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="template-dialog-title"
+          >
+            <div className="studio-template-head">
+              <div>
+                <span className="studio-margin-label">
+                  {templateDialog === 'new' ? 'New manuscript' : 'Change structure'}
+                </span>
+                <h2 id="template-dialog-title">Choose a working structure</h2>
+              </div>
+              <button type="button" onClick={() => setTemplateDialog(null)} aria-label="Close">
+                ×
+              </button>
+            </div>
+            <p className="studio-template-note">
+              {templateDialog === 'new'
+                ? 'Templates are blank, editable starting points—not publishing requirements.'
+                : 'Folio creates a separate copy and keeps this manuscript in Manuscripts. Text maps by spread where possible; it is never rewritten or automatically reflowed.'}
+            </p>
+            <div className="studio-template-grid">
+              {BOOK_TEMPLATES.map((template) => (
+                <button
+                  type="button"
+                  key={template.id}
+                  className={template.id === templateId ? 'current' : ''}
+                  onClick={() =>
+                    createFromTemplate(template, templateDialog === 'convert')
+                  }
+                >
+                  <strong>{template.name}</strong>
+                  <span>{template.spreadCount} spreads · {AGE_BANDS.find((band) => band.id === template.ageBand)?.label}</span>
+                  <p>{template.description}</p>
+                  {template.id === templateId && templateDialog === 'convert' && (
+                    <small>Current structure</small>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
 
       <footer className="studio-footer">
         <span>Folio observes the ingredients. You decide what the book becomes.</span>
@@ -986,11 +1347,13 @@ function LensEmpty({ label }: { label: string }) {
 
 function BookMap({
   profile,
+  spreadCount,
   currentSpread,
   reflections,
   onSelect,
 }: {
   profile: ReadabilityProfile | null;
+  spreadCount: number;
   currentSpread: number;
   reflections: readonly Reflection[];
   onSelect: (spread: number) => void;
@@ -1013,7 +1376,7 @@ function BookMap({
         </span>
       </div>
       <div className="studio-map-strip">
-        {Array.from({ length: SPREAD_COUNT }, (_, index) => {
+        {Array.from({ length: spreadCount }, (_, index) => {
           const words = profile?.perSpread[index]?.wordCount ?? 0;
           return (
             <button

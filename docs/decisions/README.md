@@ -55,3 +55,4 @@ What else did we look at? Why didn't we pick those?
 - [0012 — Read-aloud picture-book MVP](0012-read-aloud-picture-book-mvp.md) — *accepted (2026-07-12)*
 - [0013 — Quiet studio reader reflection layer](0013-quiet-studio-reader.md) — *accepted (2026-07-12)*
 - [0014 — Spread carousel editor and writer lenses](0014-spread-carousel-editor.md) — *accepted (2026-07-12)*
+- [0015 — Templates, reading context, and example isolation](0015-templates-reading-context-and-examples.md) — *accepted (2026-07-12)*
