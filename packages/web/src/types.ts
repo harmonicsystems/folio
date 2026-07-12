@@ -12,6 +12,7 @@
  */
 
 import type { Manuscript, Spread } from '@harmonic-systems/early-literacy';
+import type { ReadingSituation } from './reflections.js';
 
 /**
  * Composition of one page within a spread. Each page (left and right)
@@ -70,6 +71,8 @@ export interface WebSpread extends Omit<Spread, 'text'> {
  */
 export interface WebManuscript extends Omit<Manuscript, 'spreads'> {
   trimSize: TrimSize;
+  /** How the book will usually be experienced; prioritizes web-side signals. */
+  readingSituation: ReadingSituation;
   spreads: WebSpread[];
 }
 
@@ -120,6 +123,7 @@ export function emptyWebManuscript(
   return {
     ageBand,
     trimSize,
+    readingSituation: 'adult-read-aloud',
     spreads: Array.from({ length: spreadCount }, (_, i) => ({
       index: i + 1,
       leftPage: { text: '', placement: 'text-only' },

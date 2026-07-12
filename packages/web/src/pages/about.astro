@@ -217,10 +217,9 @@
 
       <section>
         <p>
-          Folio is a constraint-aware authoring tool for picture books and early-reader literature.
-          It helps you see — <em>as you write</em> — how your manuscript lands developmentally:
-          word count against the age-band target, sight-word coverage, reach words in context,
-          phoneme inventory, decodability.
+          Folio is a local-first studio for writers of read-aloud picture books. It shows how a
+          manuscript is built — the words a child encounters, the sounds they hear, and the rhythm
+          an adult reads aloud — without turning those ingredients into a quality score.
         </p>
         <p>
           The engine measures. It does not author. Folio will never generate manuscript text or
@@ -234,15 +233,14 @@
         <ul class="audience">
           <li>
             <strong>Picture-book authors</strong>
-            Writing toward a specific age band — board, early picture, picture, early reader, or chapter.
-            See word count, pacing across the 16 spreads, vocabulary load, and read-aloud-relevant
-            phoneme structure as you write. Compare your draft against canonical fixtures (Peter Rabbit,
-            Aesop, Owl &amp; Pussycat) to calibrate.
+            Compose one facing spread at a time while the Draft, Listen, and Language lenses reveal
+            pacing, vocabulary, rhyme, rhythm, sentence shape, and phoneme structure. The editor MVP
+            is centered on board and picture books for ages 0–7; the engine still accepts longer work.
           </li>
           <li>
             <strong>Speech-language pathologists</strong>
             The phoneme-acquisition norms in the engine come from <em>Crowe &amp; McLeod (2020), AJSLP</em> —
-            the same research base SLPs already use clinically. Click any phoneme in the sidebar to
+            the same research base SLPs already use clinically. Select any phoneme in Language to
             highlight every word containing it across the whole manuscript. Useful for evaluating
             whether a candidate text fits a client's current phoneme inventory, or for designing
             intervention materials with controlled sound load.
@@ -254,28 +252,28 @@
         <h2>What's in the editor</h2>
         <ul class="features">
           <li>
-            <strong>16-spread surface</strong>
-            <span>Two facing pages per spread, with independent per-page composition (text-only, text-top, text-bottom, illustration-only). Grid view for overview; book view for one-spread-at-a-time at the trim's open aspect ratio.</span>
+            <strong>Facing-spread carousel</strong>
+            <span>Write one two-page spread at a time, with independent text and illustration placement on each page. The book-shape strip keeps all 16 spreads visible and shows relative language density.</span>
           </li>
           <li>
             <strong>Rich text</strong>
             <span>Bold, italic, underline, strikethrough via Lexical. Floating toolbar on selection. Markdown shortcuts as you type (<code>**bold**</code>, <code>*italic*</code>, <code>~~strike~~</code>). Soft hyphen and non-breaking space via keyboard.</span>
           </li>
           <li>
-            <strong>Per-spread analysis</strong>
-            <span>Word-count ceiling per spread (heuristic, documented), sight-word coverage, reach-word attribution, and a mini bar in the sidebar so you can see your manuscript's pacing in one downward glance.</span>
+            <strong>Draft lens</strong>
+            <span>A few evidence-backed reflections about changes in density, vocabulary, sound, and flow. Reflections can take you directly to the affected spread.</span>
           </li>
           <li>
-            <strong>Phonology surface</strong>
-            <span>Decodability score, average syllables per word, syllable-shape breakdown, and the actual phonemes used — grouped by Crowe &amp; McLeod (2020) acquisition age, color-coded by lateness.</span>
+            <strong>Listen and Language lenses</strong>
+            <span>Rehearse rhyme, meter, and line shape; then inspect familiar and reach vocabulary, sentence types, pronunciation provenance, and the manuscript's clickable phoneme palette.</span>
           </li>
           <li>
             <strong>In-context highlighting</strong>
-            <span>Reach words underline in-place. Click any phoneme to highlight every word that contains it. Find &amp; replace tints all matches and walks current. All via the CSS Custom Highlight API — no DOM modification, no caret disruption.</span>
+            <span>Less-familiar words underline in place. Select any phoneme to highlight every word that contains it. Both use the CSS Custom Highlight API — no DOM modification and no caret disruption.</span>
           </li>
           <li>
-            <strong>Layout presets &amp; fonts</strong>
-            <span>Classic facing, Mirror, Text top, Full text presets apply across all spreads without touching your text. Body fonts: Libre Caslon, Futura, Futura Bold, Atkinson Hyperlegible, Bricolage Grotesque.</span>
+            <strong>Local-first manuscript tools</strong>
+            <span>Lossless rich-text autosave, editable title, authored and public-domain samples, per-page composition, and export to plain text, Markdown, or print/PDF.</span>
           </li>
         </ul>
       </section>
@@ -289,7 +287,7 @@
           </p>
           <p>
             Your draft autosaves to this browser's local storage and persists across page reloads. The
-            Reset button clears it. Anonymous page-view counts are recorded via
+            Clear removes it. Anonymous page-view counts are recorded via
             <a href="https://plausible.io/privacy-focused-web-analytics" target="_blank" rel="noopener">Plausible</a> —
             cookieless, no personal identifiers, no cross-site tracking.
           </p>
@@ -299,7 +297,7 @@
       <section>
         <h2>What's coming</h2>
         <ul class="upcoming">
-          <li>Syntax surfacing — sentence types and clause counts (the engine already measures them)</li>
+          <li>Selection-scoped reflections and richer evidence navigation</li>
           <li>Separating reach words into rich literary vocabulary vs. genuinely rare words</li>
           <li>Dialogic-reading prompt suggestions</li>
           <li>Per-client phoneme acquisition profiles for SLP workflows</li>

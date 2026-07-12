@@ -52,3 +52,6 @@ What else did we look at? Why didn't we pick those?
 - [0009 — Two-layer analysis (verdict vs. mirror) and generated demo fixtures](0009-two-layer-analysis-and-demo-fixtures.md) — *accepted (2026-07-11)*
 - [0010 — One job per surface: digest inspector, canvas-local view toggle](0010-inspector-digest-consolidation.md) — *accepted (2026-07-12)*
 - [0011 — Mirror readouts: meter shape + phoneme distribution](0011-mirror-readouts.md) — *accepted (2026-07-12)*
+- [0012 — Read-aloud picture-book MVP](0012-read-aloud-picture-book-mvp.md) — *accepted (2026-07-12)*
+- [0013 — Quiet studio reader reflection layer](0013-quiet-studio-reader.md) — *accepted (2026-07-12)*
+- [0014 — Spread carousel editor and writer lenses](0014-spread-carousel-editor.md) — *accepted (2026-07-12)*

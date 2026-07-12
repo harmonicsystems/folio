@@ -35,36 +35,28 @@ editor's first audience and default experience; it does not remove the longer
 age bands from the engine API. Record an ADR before changing route-level product
 scope or age-band prominence.*
 
-- [ ] **Decide the MVP audience: writers of board books and picture books for
-  ages 0–7, especially adult-read-aloud manuscripts.** This is where short,
-  spread-native text makes Folio's strongest signals — phonology, repetition,
-  rhythm, rhyme, vocabulary, and page density — most legible. Keep
-  `early-reader` and `chapter` supported by the engine/CLI, but do not promise
-  equal editor depth until they have section/chapter navigation, morphology,
-  wider frequency data, and independently validated reading constructs.
-  *(product conversation 2026-07-12; needs ADR)*
-- [ ] **Separate audience age from reading situation.** Ask how the manuscript
-  will usually be experienced: `adult read-aloud`, `shared reading`, or
-  `independent reading`. Use that context to prioritize existing signals; do not
-  collapse comprehension, decoding, and oral performance into one "reading
-  age." This likely belongs in web-side manuscript metadata first; changing the
-  published engine contract requires an ADR. *(product conversation 2026-07-12)*
-- [ ] **Adopt three primary writer jobs for the MVP.** Use these to accept or
-  reject new UI work:
-  1. *Audience fit:* "Show me the linguistic demands in my manuscript so I can
-     judge whether they fit my intended audience and reading situation."
-  2. *Sound and participation:* "Show me the rhyme, repetition, phoneme patterns,
-     and invitations to participate that shape a read-aloud."
-  3. *Flow across pages:* "Show me where rhythm, density, or language changes
-     across pages and spreads so I can rehearse and inspect those moments."
-  Folio reports evidence and reference ranges; it does not certify quality or a
-  definitive reader age. *(product conversation 2026-07-12)*
-- [ ] **Rewrite the product promise around ingredients, not assessment.** Draft
-  direction: Folio shows how a picture-book manuscript is built — the words
-  children encounter, the sounds they hear, and the rhythm an adult reads aloud.
-  It does not grade or rewrite the story. Reconcile homepage, onboarding, guide,
-  and sample-picker copy after the MVP audience decision. *(product conversation
-  2026-07-12)*
+- [x] ~~**Decide the MVP audience: writers of board books and picture books for
+  ages 0–7, especially adult-read-aloud manuscripts.**~~ — recorded 2026-07-12,
+  ADR 0012. Editor scope narrowing only; `early-reader`/`chapter` stay fully
+  supported by the engine/CLI.
+- [x] ~~**Separate audience age from reading situation** (`adult read-aloud`,
+  `shared reading`, `independent reading`).~~ — recorded 2026-07-12, ADR 0012.
+  Lands as web-side manuscript metadata first; an engine-contract change would
+  need its own ADR.
+- [x] ~~**Adopt three primary writer jobs for the MVP** (audience fit; sound and
+  participation; flow across pages) as the UI acceptance test.~~ — recorded
+  2026-07-12, ADR 0012.
+- [x] ~~**Rewrite the product promise around ingredients, not assessment.**~~ —
+  direction recorded 2026-07-12, ADR 0012. The actual copy reconciliation across
+  homepage, onboarding, `guide.astro`, `about.astro`, and the sample picker is
+  now-unblocked follow-on work (see below), not done.
+
+*ADR 0012 (2026-07-12) records the MVP scope, promise, jobs, and observation
+register. The now-unblocked next steps are: (a) reconcile product copy across
+homepage, onboarding, `guide.astro`, `about.astro`, and the sample picker to the
+ingredients-not-assessment promise; and (b) a follow-on ADR for the "quiet studio
+reader" interaction model below. The user-story slices and interaction-model
+items remain open — they are downstream of the decision, not part of it.*
 
 ### User-story slices
 
@@ -110,12 +102,13 @@ scope or age-band prominence.*
   vocabulary, density, rhythm changes, and phoneme concentrations as patterns or
   reflections. Audit labels including `Verdicts`, `warnings`, and "outlier" for
   unintended grading semantics. *(product conversation 2026-07-12)*
-- [ ] **Adopt observation-register vocabulary throughout the editor.** Prefer
+- [x] ~~**Adopt observation-register vocabulary throughout the editor.** Prefer
   `profile`, `pattern`, `less familiar`, `outside the selected reference range`,
   `examine`, `reflection`, and `estimated`; avoid `score`, `problem`, `failure`,
   `too difficult`, `age inappropriate`, `fix`, `weakness`, and `passed` unless a
-  hard technical constraint genuinely warrants it. *(product conversation
-  2026-07-12; extends ADR 0009 neutrality rule)*
+  hard technical constraint genuinely warrants it.~~ — recorded as house style
+  2026-07-12, ADR 0012 decision 5 (extends ADR 0009 neutrality rule). Applying it
+  to existing copy is part of the reconciliation follow-on.
 
 ## Web — studio dashboard (design 1c) + editor
 
