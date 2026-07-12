@@ -1140,6 +1140,32 @@ const SAMPLES: Record<string, Sample> = {
         background: var(--surface); border: 1px solid var(--rule);
         border-radius: 4px;
       }
+      /* Phonology/Prosody are single-panel FOCUSED modes: the canvas
+         stays editable, the tab strip hides (the rail is the switcher),
+         and JS shows exactly one panel. Placed after the .inspector-tabs
+         base rules — same source-order discipline as the book-mode
+         collision above. */
+      body[data-mode='phonology'] .inspector-tabs,
+      body[data-mode='prosody'] .inspector-tabs { display: none; }
+      .prosody-lines {
+        list-style: none; margin: 0.25rem 0 0; padding: 0;
+      }
+      .prosody-lines li {
+        display: flex; gap: 10px; align-items: baseline;
+        padding: 5px 0; border-bottom: 1px solid var(--hairline);
+        font-size: 12px;
+      }
+      .prosody-lines .rhyme-letter {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-weight: 700; color: var(--ochre-deep, #8a6420);
+        min-width: 1.2em; text-align: center; flex: none;
+      }
+      /* callout-ink, not taupe: taupe on white is 4.08:1 — below AA at 12px */
+      .prosody-lines .rhyme-letter.mute { color: var(--callout-ink); font-weight: 400; }
+      .prosody-lines .rhyme-line {
+        color: var(--ink); overflow: hidden; text-overflow: ellipsis;
+        white-space: nowrap;
+      }
       /* Card titles: in Write mode the tab strip names the panels; as
          report cards they need their own. Accessible names still come
          from aria-labelledby (accname resolves display:none targets). */
@@ -1323,8 +1349,8 @@ const SAMPLES: Record<string, Sample> = {
     </style>
   </head>
   <body data-mode="write">
-    <!-- Mode rail (studio dashboard slice 3, ADR 0007). Write and
-         Analyze task modes; Phonology/Prosody arrive in slice 4. The
+    <!-- Mode rail (studio dashboard slices 3–4, ADRs 0007/0008):
+         Write / Analyze / Phonology / Prosody task modes. The
          settings button opens the ⌘K palette (which already carries
          trim/font/layout — a second popover would duplicate it). -->
     <nav class="mode-rail" aria-label="Editor modes">
@@ -1346,6 +1372,27 @@ const SAMPLES: Record<string, Sample> = {
           <rect x="13.4" y="3.5" width="2.6" height="13" rx="0.8"></rect>
         </svg>
         <span class="rail-label">Analyze</span>
+      </button>
+      <button type="button" class="rail-mode" data-mode-set="phonology" aria-pressed="false" aria-label="Phonology">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"
+          stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="8" x2="4" y2="12"></line>
+          <line x1="7" y1="5.5" x2="7" y2="14.5"></line>
+          <line x1="10" y1="3.5" x2="10" y2="16.5"></line>
+          <line x1="13" y1="6.5" x2="13" y2="13.5"></line>
+          <line x1="16" y1="8.5" x2="16" y2="11.5"></line>
+        </svg>
+        <span class="rail-label">Phonology</span>
+      </button>
+      <button type="button" class="rail-mode" data-mode-set="prosody" aria-pressed="false" aria-label="Prosody">
+        <svg viewBox="0 0 20 20" fill="currentColor" stroke="currentColor" aria-hidden="true">
+          <circle cx="5.5" cy="15" r="2" stroke="none"></circle>
+          <circle cx="13.5" cy="13.5" r="2" stroke="none"></circle>
+          <line x1="7.5" y1="15" x2="7.5" y2="5" stroke-width="1.5"></line>
+          <line x1="15.5" y1="13.5" x2="15.5" y2="3.5" stroke-width="1.5"></line>
+          <line x1="7.5" y1="5" x2="15.5" y2="3.5" stroke-width="2"></line>
+        </svg>
+        <span class="rail-label">Prosody</span>
       </button>
       <button type="button" class="rail-mode rail-settings" id="rail-settings"
         aria-label="Settings — opens the command palette">
@@ -1677,9 +1724,18 @@ const SAMPLES: Record<string, Sample> = {
             </p>
           </details>
 
-          <!-- Temporary home: prosody rows move to the Prosody MODE in
-               slice 4 of the studio-dashboard sequence (ADR 0005). -->
-          <h3>Prosody</h3>
+        </div>
+
+        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" data-panel-title="Issues" tabindex="0" hidden>
+          <p class="empty" id="warnings-empty">None.</p>
+          <ul class="warning-list" id="warning-list"></ul>
+        </div>
+
+        <!-- Prosody MODE panel (slice 4, ADR 0008) — not a tab; shown
+             only in Prosody mode and as a card in the Analyze report.
+             The three metric rows moved here from their slice-1
+             temporary home at the bottom of the Phonics tab. -->
+        <div class="inspector-panel" role="region" aria-label="Prosody" id="panel-prosody" data-panel-title="Prosody" tabindex="0" hidden>
           <div class="metric-row">
             <span class="label">Dominant meter</span>
             <span class="value" id="dominant-meter">—</span>
@@ -1692,11 +1748,12 @@ const SAMPLES: Record<string, Sample> = {
             <span class="label">Rhyme scheme</span>
             <span class="value" id="rhyme-scheme">—</span>
           </div>
-        </div>
-
-        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" data-panel-title="Issues" tabindex="0" hidden>
-          <p class="empty" id="warnings-empty">None.</p>
-          <ul class="warning-list" id="warning-list"></ul>
+          <h3>Line endings</h3>
+          <p class="empty" id="prosody-lines-empty">
+            No repeating rhyme detected — line-by-line detail appears
+            when the manuscript has a rhyme scheme.
+          </p>
+          <ol class="prosody-lines" id="prosody-lines"></ol>
         </div>
       </aside>
     </main>
@@ -1828,7 +1885,16 @@ const SAMPLES: Record<string, Sample> = {
       const DRAFT_KEY_V2 = 'folio.draft.v2'; // lossless Lexical state per page
       const PREFS_KEY_V1 = 'folio.prefs.v1'; // legacy; read once for migration, removed on first v2 write
       const PREFS_KEY_V2 = 'folio.prefs.v2';
-      type EditorMode = 'write' | 'analyze';
+      type EditorMode = 'write' | 'analyze' | 'phonology' | 'prosody';
+      const MODE_SET: readonly EditorMode[] = [
+        'write',
+        'analyze',
+        'phonology',
+        'prosody',
+      ];
+      function isEditorMode(v: unknown): v is EditorMode {
+        return MODE_SET.includes(v as EditorMode);
+      }
       interface SavedPrefs {
         version: 2;
         bodyFont?: string;
@@ -1871,10 +1937,10 @@ const SAMPLES: Record<string, Sample> = {
             viewMode:
               (surface?.getAttribute('data-view') as 'grid' | 'book' | null) ??
               'grid',
-            mode:
-              document.body.getAttribute('data-mode') === 'analyze'
-                ? 'analyze'
-                : 'write',
+            mode: ((): EditorMode => {
+              const m = document.body.getAttribute('data-mode');
+              return isEditorMode(m) ? m : 'write';
+            })(),
           };
           localStorage.setItem(PREFS_KEY_V2, JSON.stringify(prefs));
           localStorage.removeItem(PREFS_KEY_V1);
@@ -2008,8 +2074,8 @@ const SAMPLES: Record<string, Sample> = {
         // Mode is applied after the tab machinery initializes (setMode
         // reads TAB_ORDER, a const declared further down — calling it
         // here would hit the temporal dead zone). Stash it.
-        if (restoredPrefs.mode === 'analyze') {
-          pendingRestoredMode = 'analyze';
+        if (isEditorMode(restoredPrefs.mode) && restoredPrefs.mode !== 'write') {
+          pendingRestoredMode = restoredPrefs.mode;
         }
         // View mode is applied after editors mount (book mode scrolls
         // to spread 1 which needs the surface laid out). Stash it for
@@ -2638,6 +2704,44 @@ const SAMPLES: Record<string, Sample> = {
         }
       }
 
+      /**
+       * Per-line rhyme-letter detail for the Prosody mode panel.
+       * Client-side pairing only, no engine change: the engine's
+       * detectRhymeScheme emits one letter per non-empty trimmed line
+       * ('-' when a line's last word has no rhyme phoneme) over the
+       * same '\n\n'-joined spread text, so splitting the identical
+       * string the identical way lines the letters up index-for-index.
+       */
+      function renderProsodyLines(
+        profile: ReadabilityProfile,
+        engineText: string,
+      ): void {
+        const list = byId('prosody-lines');
+        const empty = byId('prosody-lines-empty');
+        if (!list || !empty) return;
+        list.innerHTML = '';
+        const scheme = profile.prosody.rhymeScheme;
+        const lines = engineText
+          .split('\n')
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
+        const usable = !!scheme && scheme.length === lines.length;
+        empty.style.display = usable ? 'none' : '';
+        if (!usable || !scheme) return;
+        lines.forEach((line, i) => {
+          const li = document.createElement('li');
+          const letter = document.createElement('span');
+          letter.className = `rhyme-letter${scheme[i] === '-' ? ' mute' : ''}`;
+          letter.textContent = scheme[i] ?? '-';
+          const text = document.createElement('span');
+          text.className = 'rhyme-line';
+          text.textContent = line;
+          text.title = line;
+          li.append(letter, text);
+          list.appendChild(li);
+        });
+      }
+
       function runAnalysis(): void {
         const web = readManuscript();
         const engine = toEngineManuscript(web);
@@ -2653,6 +2757,7 @@ const SAMPLES: Record<string, Sample> = {
         renderPerSpread(profile);
         renderReachWords(profile.reachWords);
         renderWarnings(profile);
+        renderProsodyLines(profile, engineText);
         applyReachWordHighlights(profile);
         applyPhonemeHighlights();
         renderGuessedWords(engineText);
@@ -3038,8 +3143,10 @@ const SAMPLES: Record<string, Sample> = {
             ) as HTMLButtonElement | null)?.click();
           },
         });
-        const inAnalyze =
-          document.body.getAttribute('data-mode') === 'analyze';
+        const modeAttr = document.body.getAttribute('data-mode');
+        const activeMode: EditorMode = isEditorMode(modeAttr)
+          ? modeAttr
+          : 'write';
         // The palette's dialog.close() restores focus synchronously to
         // the pre-palette element BEFORE run() executes — the mode
         // switch then hides/reparents that element and focus falls to
@@ -3049,24 +3156,23 @@ const SAMPLES: Record<string, Sample> = {
             .querySelector<HTMLElement>(`.rail-mode[data-mode-set="${m}"]`)
             ?.focus();
         };
-        cmds.push({
-          id: 'mode-write',
-          label: 'Go to mode · Write',
-          hint: inAnalyze ? undefined : 'current',
-          run: () => {
-            setMode('write');
-            focusRail('write');
-          },
-        });
-        cmds.push({
-          id: 'mode-analyze',
-          label: 'Go to mode · Analyze',
-          hint: inAnalyze ? 'current' : undefined,
-          run: () => {
-            setMode('analyze');
-            focusRail('analyze');
-          },
-        });
+        const MODE_LABELS: Record<EditorMode, string> = {
+          write: 'Write',
+          analyze: 'Analyze',
+          phonology: 'Phonology',
+          prosody: 'Prosody',
+        };
+        for (const m of MODE_SET) {
+          cmds.push({
+            id: `mode-${m}`,
+            label: `Go to mode · ${MODE_LABELS[m]}`,
+            hint: activeMode === m ? 'current' : undefined,
+            run: () => {
+              setMode(m);
+              focusRail(m);
+            },
+          });
+        }
         cmds.push({ id: 'find', label: 'Find & replace…', hint: '⌘F', run: () => openFindBar() });
         cmds.push({
           id: 'about', label: 'About Folio',
@@ -3283,10 +3389,15 @@ const SAMPLES: Record<string, Sample> = {
       ): void {
         const report = byId('analyze-report');
         const aside = document.querySelector<HTMLElement>('aside.sidebar');
-        if (!report || !aside) return;
-        if (mode === 'analyze') {
+        const prosodyPanel = byId('panel-prosody');
+        if (!report || !aside || !prosodyPanel) return;
+        const prevAttr = document.body.getAttribute('data-mode');
+        const prev: EditorMode = isEditorMode(prevAttr) ? prevAttr : 'write';
+        if (mode === 'analyze' && prev !== 'analyze') {
           // Read the spread position while the workspace is still laid
           // out — after data-mode flips it is display:none and reads 0.
+          // (prev guard: re-entering Analyze would clobber the captured
+          // index with 0 from the already-hidden surface.)
           analyzeReturnSpread = document.body.classList.contains('book-mode')
             ? currentSpreadIndex()
             : null;
@@ -3320,16 +3431,60 @@ const SAMPLES: Record<string, Sample> = {
               report.appendChild(panel);
             }
           }
+          prosodyPanel.hidden = false;
+          report.appendChild(prosodyPanel);
         } else {
+          // Panels home in the aside for every editable mode; skip the
+          // append when already there (a same-parent appendChild still
+          // detaches, blurring any focused descendant for nothing).
           for (const t of TAB_ORDER) {
             const panel = byId(`panel-${t}`);
             if (panel) {
               panel.setAttribute('role', 'tabpanel');
-              aside.appendChild(panel);
+              if (panel.parentElement !== aside) aside.appendChild(panel);
             }
           }
-          setActiveTab(currentTab);
+          if (prosodyPanel.parentElement !== aside) {
+            aside.appendChild(prosodyPanel);
+          }
+          if (mode === 'write') {
+            prosodyPanel.hidden = true;
+            setActiveTab(currentTab);
+          } else if (mode === 'phonology') {
+            // Focused mode: canvas stays editable, tab strip is hidden
+            // (CSS), only the Phonics panel shows — with the phoneme
+            // collapsibles expanded per the spec. The user can still
+            // collapse them; we only force-open on entry. Same
+            // orphaned-tabpanel rule as Analyze: with the tablist
+            // hidden, the visible panel presents as a region.
+            prosodyPanel.hidden = true;
+            for (const t of TAB_ORDER) {
+              const panel = byId(`panel-${t}`);
+              if (panel) {
+                panel.hidden = t !== 'phonics';
+                if (t === 'phonics') panel.setAttribute('role', 'region');
+              }
+            }
+            // Entry only (prev guard): re-activating the current mode
+            // via rail re-click or palette must not wipe the user's
+            // collapse state mid-session.
+            if (prev !== 'phonology') {
+              document
+                .querySelectorAll<HTMLDetailsElement>('#panel-phonics details')
+                .forEach((d) => {
+                  d.open = true;
+                });
+            }
+          } else {
+            // prosody
+            for (const t of TAB_ORDER) {
+              const panel = byId(`panel-${t}`);
+              if (panel) panel.hidden = true;
+            }
+            prosodyPanel.hidden = false;
+          }
           if (
+            prev === 'analyze' &&
             analyzeReturnSpread !== null &&
             document.body.classList.contains('book-mode')
           ) {
@@ -3347,7 +3502,8 @@ const SAMPLES: Record<string, Sample> = {
         .querySelectorAll<HTMLElement>('.rail-mode[data-mode-set]')
         .forEach((btn) => {
           btn.addEventListener('click', () => {
-            setMode(btn.dataset.modeSet === 'analyze' ? 'analyze' : 'write');
+            const m = btn.dataset.modeSet;
+            setMode(isEditorMode(m) ? m : 'write');
           });
         });
       byId('rail-settings')?.addEventListener('click', () => {
@@ -3356,9 +3512,9 @@ const SAMPLES: Record<string, Sample> = {
 
       // Apply the prefs-restored mode now that the tab machinery above
       // is initialized (stashed at restore time to dodge the TDZ on
-      // TAB_ORDER).
-      if (pendingRestoredMode === 'analyze') {
-        setMode('analyze', { persist: false });
+      // TAB_ORDER). The stash only ever holds non-write modes.
+      if (pendingRestoredMode) {
+        setMode(pendingRestoredMode, { persist: false });
       }
 
       // Phoneme chip clicks (event delegation — chips are re-rendered
