@@ -1165,25 +1165,62 @@ const SAMPLES: Record<string, Sample> = {
       /* Phonology/Prosody are single-panel FOCUSED modes: the canvas
          stays editable and JS shows exactly one panel (the rail is the
          only switcher — ADR 0010 removed the tab strip). */
+      /* Meter-shape rows (ADR 0011): letter | bar | syllable count.
+         The line TEXT lives in the still-visible canvas; each row's
+         title attribute carries it for hover. */
       .prosody-lines {
         list-style: none; margin: 0.25rem 0 0; padding: 0;
       }
       .prosody-lines li {
-        display: flex; gap: 10px; align-items: baseline;
-        padding: 5px 0; border-bottom: 1px solid var(--hairline);
-        font-size: 12px;
+        display: grid; grid-template-columns: 22px 1fr 30px; gap: 8px;
+        align-items: center; padding: 3px 0;
       }
       .prosody-lines .rhyme-letter {
         font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 12px;
         font-weight: 700; color: var(--ochre-deep, #8a6420);
-        min-width: 1.2em; text-align: center; flex: none;
+        text-align: center;
       }
       /* callout-ink, not taupe: taupe on white is 4.08:1 — below AA at 12px */
       .prosody-lines .rhyme-letter.mute { color: var(--callout-ink); font-weight: 400; }
-      .prosody-lines .rhyme-line {
-        color: var(--ink); overflow: hidden; text-overflow: ellipsis;
-        white-space: nowrap;
+      .prosody-lines .line-track {
+        height: 10px; background: var(--hairline); border-radius: 2px;
+        overflow: hidden;
       }
+      .prosody-lines .line-track i {
+        display: block; height: 100%; background: var(--taupe);
+        border-radius: 2px;
+      }
+      .prosody-lines li.outlier .line-track i { background: var(--ochre); }
+      .prosody-lines .line-syl {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 11px; color: var(--callout-ink); text-align: right;
+      }
+      .mirror-cap {
+        font-style: italic; font-size: 12px; line-height: 1.5;
+        color: var(--callout-ink); margin: 0.6rem 0 0;
+      }
+      /* Phoneme distribution matrix (ADR 0011). Column count varies
+         with non-empty spreads — set inline by the render. */
+      .phon-dist { display: grid; gap: 4px 5px; align-items: center; margin: 0.25rem 0 0; }
+      /* Author display:grid would defeat the hidden attribute's UA
+         display:none — guard it explicitly. */
+      .phon-dist[hidden] { display: none; }
+      .phon-dist .hd {
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 10px; color: var(--callout-ink); text-align: center;
+      }
+      .phon-dist button.phon-chip { text-align: left; }
+      .phon-dist .cell { height: 15px; border-radius: 3px; background: var(--hairline); }
+      /* Occupied cells get a taupe border: occupancy survives on a
+         shape channel even where adjacent fill steps fall under the
+         3:1 non-text contrast line (empty↔c1 is 1.17:1). */
+      .phon-dist .cell.c1,
+      .phon-dist .cell.c2,
+      .phon-dist .cell.c3 { border: 1px solid var(--taupe); }
+      .phon-dist .cell.c1 { background: #e4d3ae; }
+      .phon-dist .cell.c2 { background: #c9a55e; }
+      .phon-dist .cell.c3 { background: var(--ochre); }
       /* Card titles: in Write mode the tab strip names the panels; as
          report cards they need their own. Accessible names still come
          from aria-labelledby (accname resolves display:none targets). */
@@ -1736,6 +1773,20 @@ const SAMPLES: Record<string, Sample> = {
             <span class="value" id="top-syllable">—</span>
           </div>
 
+          <!-- Distribution mirror (ADR 0009/0011): where each of the
+               most frequent sounds sits across the spreads —
+               observation only, no norm. Rows are live phon-chips, so
+               the existing click-to-highlight machinery applies. -->
+          <h3>Distribution by spread</h3>
+          <p class="empty" id="phon-dist-empty">
+            Appears once spreads have text.
+          </p>
+          <div class="phon-dist" id="phon-dist" hidden></div>
+          <p class="mirror-cap" id="phon-dist-cap" hidden>
+            Darker cells = more words carrying that sound, relative to
+            its own busiest spread. Click a row to see them in the text.
+          </p>
+
           <details class="phon-details">
             <summary>Syllable shapes</summary>
             <ul class="syll-list" id="syll-list"></ul>
@@ -1804,12 +1855,17 @@ const SAMPLES: Record<string, Sample> = {
             <span class="label">Rhyme scheme</span>
             <span class="value" id="rhyme-scheme">—</span>
           </div>
-          <h3>Line endings</h3>
+          <h3>Line shape</h3>
           <p class="empty" id="prosody-lines-empty">
-            No repeating rhyme detected — line-by-line detail appears
-            when the manuscript has a rhyme scheme.
+            Line-by-line shape appears once the manuscript has two or
+            more lines.
           </p>
           <ol class="prosody-lines" id="prosody-lines"></ol>
+          <p class="mirror-cap" id="prosody-lines-cap" hidden>
+            Bar length is syllables per line, drawn against the
+            manuscript's own longest line. Rhyme letters match the
+            scheme above; hover a bar for its line.
+          </p>
         </div>
       </aside>
     </main>
@@ -1900,7 +1956,10 @@ const SAMPLES: Record<string, Sample> = {
       import {
         analyze,
         getGuessedWords,
+        getPronunciation,
         getWordPhonemes,
+        syllableCount,
+        tokenizeWords,
       } from '@harmonic-systems/early-literacy';
       import type {
         AgeBand,
@@ -2780,12 +2839,18 @@ const SAMPLES: Record<string, Sample> = {
       }
 
       /**
-       * Per-line rhyme-letter detail for the Prosody mode panel.
-       * Client-side pairing only, no engine change: the engine's
-       * detectRhymeScheme emits one letter per non-empty trimmed line
-       * ('-' when a line's last word has no rhyme phoneme) over the
-       * same '\n\n'-joined spread text, so splitting the identical
-       * string the identical way lines the letters up index-for-index.
+       * Meter-shape mirror for the Prosody panel (ADR 0011): one row
+       * per line — rhyme letter, a bar scaled to syllables against the
+       * manuscript's own longest line, and the count. The shape does
+       * the talking; the only emphasis is a deviation of the pattern's
+       * own making (≥1.5× the median, ochre instead of taupe).
+       *
+       * Line pairing is client-side, no engine change: detectRhymeScheme
+       * emits one letter per non-empty trimmed line over the same
+       * '\n\n'-joined spread text, so splitting the identical string
+       * the identical way lines the letters up index-for-index. Rows
+       * render whenever there are ≥2 lines; letters appear only when a
+       * scheme exists (otherwise a muted dot).
        */
       function renderProsodyLines(
         profile: ReadabilityProfile,
@@ -2793,28 +2858,150 @@ const SAMPLES: Record<string, Sample> = {
       ): void {
         const list = byId('prosody-lines');
         const empty = byId('prosody-lines-empty');
+        const cap = byId('prosody-lines-cap');
         if (!list || !empty) return;
         list.innerHTML = '';
-        const scheme = profile.prosody.rhymeScheme;
         const lines = engineText
           .split('\n')
           .map((l) => l.trim())
           .filter((l) => l.length > 0);
-        const usable = !!scheme && scheme.length === lines.length;
+        const usable = lines.length >= 2;
         empty.style.display = usable ? 'none' : '';
-        if (!usable || !scheme) return;
+        if (cap) cap.hidden = !usable;
+        if (!usable) return;
+        const scheme = profile.prosody.rhymeScheme;
+        const letters =
+          scheme && scheme.length === lines.length ? scheme : null;
+        const syls = lines.map((line) =>
+          tokenizeWords(line).reduce(
+            (sum, w) => sum + syllableCount(getPronunciation(w)),
+            0,
+          ),
+        );
+        const max = Math.max(...syls, 1);
+        const median = [...syls].sort((a, b) => a - b)[
+          Math.floor(syls.length / 2)
+        ] as number;
         lines.forEach((line, i) => {
+          const syl = syls[i] ?? 0;
           const li = document.createElement('li');
+          // Outlier = the pattern's own deviation, nothing normative:
+          // ≥1.5× this manuscript's median line (4+ lines so a median
+          // means something).
+          if (lines.length >= 4 && median > 0 && syl >= median * 1.5) {
+            li.className = 'outlier';
+          }
+          li.title = `${line} — ${syl} syllable${syl === 1 ? '' : 's'}`;
           const letter = document.createElement('span');
-          letter.className = `rhyme-letter${scheme[i] === '-' ? ' mute' : ''}`;
-          letter.textContent = scheme[i] ?? '-';
-          const text = document.createElement('span');
-          text.className = 'rhyme-line';
-          text.textContent = line;
-          text.title = line;
-          li.append(letter, text);
+          const L = letters?.[i] ?? '·';
+          letter.className = `rhyme-letter${L === '-' || L === '·' ? ' mute' : ''}`;
+          letter.textContent = L;
+          const track = document.createElement('span');
+          track.className = 'line-track';
+          const fill = document.createElement('i');
+          fill.style.width = `${(syl / max) * 100}%`;
+          track.appendChild(fill);
+          const count = document.createElement('span');
+          count.className = 'line-syl';
+          count.textContent = String(syl);
+          li.append(letter, track, count);
           list.appendChild(li);
         });
+      }
+
+      /**
+       * Phoneme-distribution mirror for the Phonics panel (ADR 0011):
+       * the manuscript's most frequent sounds (top 8, IPA — the same
+       * identities the inventory chips and highlights use) × non-empty
+       * spreads, cell intensity by occurrence count. Rows are live
+       * .phon-chip buttons, so the existing click-to-highlight and
+       * cross-view active-state sync apply unchanged.
+       */
+      function renderPhonemeDistribution(
+        spreads: ReadonlyArray<{ index: number; text: string }>,
+      ): void {
+        const grid = byId('phon-dist');
+        const empty = byId('phon-dist-empty');
+        const cap = byId('phon-dist-cap');
+        if (!grid || !empty) return;
+        const filled = spreads.filter((s) => s.text.trim().length > 0);
+        const usable = filled.length > 0;
+        grid.hidden = !usable;
+        empty.style.display = usable ? 'none' : '';
+        if (cap) cap.hidden = !usable;
+        grid.innerHTML = '';
+        if (!usable) return;
+        // Metric: WORDS containing each sound, per spread —
+        // getWordPhonemes dedupes within a word, so "mama" counts /m/
+        // once here while the inventory chips below count every
+        // occurrence. Deliberate and labeled as such ("words with this
+        // sound"): for distribution, how many words carry the sound is
+        // the shape that matters; raw occurrence totals live on the
+        // chips.
+        const totals = new Map<string, number>();
+        const bySpread = filled.map((s) => {
+          const counts = new Map<string, number>();
+          for (const w of tokenizeWords(s.text)) {
+            for (const p of getWordPhonemes(w)) {
+              counts.set(p, (counts.get(p) ?? 0) + 1);
+              totals.set(p, (totals.get(p) ?? 0) + 1);
+            }
+          }
+          return counts;
+        });
+        const top = [...totals.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 8)
+          .map(([p]) => p);
+        grid.style.gridTemplateColumns = `auto repeat(${filled.length}, 1fr)`;
+        // Header row: spread numbers.
+        grid.appendChild(document.createElement('span'));
+        for (const s of filled) {
+          const hd = document.createElement('span');
+          hd.className = 'hd';
+          hd.textContent = String(s.index);
+          grid.appendChild(hd);
+        }
+        for (const p of top) {
+          const isActive = activePhonemes.has(p);
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `phon-chip${isActive ? ' active' : ''}`;
+          btn.dataset.phoneme = p;
+          btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          // The cells are visual-only (bare spans); the row label IS
+          // the accessible channel for the per-spread distribution.
+          const perSpread = filled
+            .map((s, i) => {
+              const n = bySpread[i]?.get(p) ?? 0;
+              return n > 0 ? `spread ${s.index}: ${n}` : null;
+            })
+            .filter(Boolean)
+            .join(', ');
+          const total = totals.get(p) ?? 0;
+          btn.setAttribute(
+            'aria-label',
+            `Sound /${p}/ — in ${total} word${total === 1 ? '' : 's'} (${perSpread}). Toggle highlight.`,
+          );
+          btn.textContent = `/${p}/`;
+          grid.appendChild(btn);
+          // Intensity is relative to the ROW's own peak — the mirror
+          // shows each sound's shape across the book, not absolute
+          // counts (a frequent sound would otherwise read uniformly
+          // dark and its clustering would vanish).
+          const rowMax = Math.max(
+            ...bySpread.map((c) => c.get(p) ?? 0),
+            1,
+          );
+          for (const counts of bySpread) {
+            const n = counts.get(p) ?? 0;
+            const level = n === 0 ? 0 : Math.ceil((3 * n) / rowMax);
+            const cell = document.createElement('span');
+            cell.className = `cell${level > 0 ? ` c${level}` : ''}`;
+            cell.title = `/${p}/ · ${n} word${n === 1 ? '' : 's'}`;
+            grid.appendChild(cell);
+          }
+        }
       }
 
       function runAnalysis(): void {
@@ -2833,6 +3020,7 @@ const SAMPLES: Record<string, Sample> = {
         renderReachWords(profile.reachWords);
         renderWarnings(profile);
         renderProsodyLines(profile, engineText);
+        renderPhonemeDistribution(engine.spreads);
         applyReachWordHighlights(profile);
         applyPhonemeHighlights();
         renderGuessedWords(engineText);
@@ -3576,6 +3764,8 @@ const SAMPLES: Record<string, Sample> = {
       }
       byId('phoneme-by-age')?.addEventListener('click', onPhonemeChipClick);
       byId('phoneme-by-manner')?.addEventListener('click', onPhonemeChipClick);
+      // Distribution-matrix rows are phon-chips too (ADR 0011).
+      byId('phon-dist')?.addEventListener('click', onPhonemeChipClick);
 
       byId('phon-clear')?.addEventListener('click', () => {
         activePhonemes.clear();

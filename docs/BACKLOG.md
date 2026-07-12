@@ -82,10 +82,12 @@ analysis + generated demo fixtures). Replaces the current pre-loaded samples.*
 - [ ] **Band-key the demo state (1:1:1).** Selecting a band loads its canonical
   book → layout → analysis via one lookup. Collapse any code path that lets band,
   layout, and sample vary independently. *(ADR 0009)*
-- [ ] **Descriptive mirror readout for the soft layer.** Surface phoneme
-  distribution + meter shape *as observation* (e.g. "/u/ appears often here,"
-  "the meter has this shape"), distinct from the reach-word / decodability paths
-  that exist to flag. Feeds the demo's "notice-it-yourself" moment. *(ADR 0009)*
+- [x] ~~**Descriptive mirror readout for the soft layer.**~~ — shipped
+  2026-07-12 (ADR 0011): meter-shape chart in the Prosody panel (per-line
+  syllable bars against the manuscript's own longest line, deviation ≥1.5×
+  median in ochre) + phoneme-distribution matrix in Phonics (top-8 sounds ×
+  spreads, words-carrying-the-sound, per-row relative shading, rows are live
+  phon-chips). Observation-register copy throughout. *(ADR 0009 → 0011)*
 - [ ] **Neutrality audit of soft-layer copy.** No evaluative vocabulary
   ("flaw," "weak," "wrong," "fix") anywhere in the soft layer; keep observation
   and optional SLP *reference* notes visibly separate. Any verdict phrasing there

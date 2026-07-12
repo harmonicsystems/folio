@@ -51,3 +51,4 @@ What else did we look at? Why didn't we pick those?
 - [0008 — Phonology + Prosody modes (slice 4)](0008-phonology-prosody-modes.md) — *accepted (2026-07-11)*
 - [0009 — Two-layer analysis (verdict vs. mirror) and generated demo fixtures](0009-two-layer-analysis-and-demo-fixtures.md) — *accepted (2026-07-11)*
 - [0010 — One job per surface: digest inspector, canvas-local view toggle](0010-inspector-digest-consolidation.md) — *accepted (2026-07-12)*
+- [0011 — Mirror readouts: meter shape + phoneme distribution](0011-mirror-readouts.md) — *accepted (2026-07-12)*
