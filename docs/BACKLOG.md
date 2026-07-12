@@ -12,10 +12,11 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
 
 ## Now (unblocked, do next)
 
-- [ ] **Push `main`.** Six commits ahead of origin (`f26f985` editor
-  data-integrity, `a5d8f58`/`a404b6e`/`f861ba0`/`bf834bc` studio-dashboard
-  slices 1–4, `0ce67bc` docs). Awaiting David's explicit go — auto-deploy takes
-  the new UI live on push. *(ops — needs local SSH key)*
+- [ ] **Push `main`.** Seventeen commits ahead of origin (`f26f985` audit fixes
+  → `4a08938` mirror readouts: studio-dashboard slices 1–4, CMU dict expansion,
+  board demo fixture, ADR 0010 consolidation, ADR 0011 mirrors, docs). Awaiting
+  David's explicit go — auto-deploy takes the new UI live on push. *(ops —
+  needs local SSH key)*
 - [x] ~~**Finish studio dashboard slice 2**~~ — shipped 2026-07-11, `a404b6e`
   (extracted paths verified live; 11 review findings fixed pre-commit, ADR 0006).
 - [x] ~~**CMU dict expansion (~2k words).**~~ — shipped 2026-07-12, `55f6c07`
@@ -26,6 +27,95 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
   so keys can't diverge; curly-apostrophe lookups normalized; five heteronym
   overrides documented. 83 corpus words remain honestly OOV (absent upstream).
   **This unblocks the sight-word-excluded decodability variant (ADR 0004).**
+
+## Product direction — read-aloud picture-book MVP
+
+*Decision candidate from product conversation 2026-07-12. This narrows the
+editor's first audience and default experience; it does not remove the longer
+age bands from the engine API. Record an ADR before changing route-level product
+scope or age-band prominence.*
+
+- [ ] **Decide the MVP audience: writers of board books and picture books for
+  ages 0–7, especially adult-read-aloud manuscripts.** This is where short,
+  spread-native text makes Folio's strongest signals — phonology, repetition,
+  rhythm, rhyme, vocabulary, and page density — most legible. Keep
+  `early-reader` and `chapter` supported by the engine/CLI, but do not promise
+  equal editor depth until they have section/chapter navigation, morphology,
+  wider frequency data, and independently validated reading constructs.
+  *(product conversation 2026-07-12; needs ADR)*
+- [ ] **Separate audience age from reading situation.** Ask how the manuscript
+  will usually be experienced: `adult read-aloud`, `shared reading`, or
+  `independent reading`. Use that context to prioritize existing signals; do not
+  collapse comprehension, decoding, and oral performance into one "reading
+  age." This likely belongs in web-side manuscript metadata first; changing the
+  published engine contract requires an ADR. *(product conversation 2026-07-12)*
+- [ ] **Adopt three primary writer jobs for the MVP.** Use these to accept or
+  reject new UI work:
+  1. *Audience fit:* "Show me the linguistic demands in my manuscript so I can
+     judge whether they fit my intended audience and reading situation."
+  2. *Sound and participation:* "Show me the rhyme, repetition, phoneme patterns,
+     and invitations to participate that shape a read-aloud."
+  3. *Flow across pages:* "Show me where rhythm, density, or language changes
+     across pages and spreads so I can rehearse and inspect those moments."
+  Folio reports evidence and reference ranges; it does not certify quality or a
+  definitive reader age. *(product conversation 2026-07-12)*
+- [ ] **Rewrite the product promise around ingredients, not assessment.** Draft
+  direction: Folio shows how a picture-book manuscript is built — the words
+  children encounter, the sounds they hear, and the rhythm an adult reads aloud.
+  It does not grade or rewrite the story. Reconcile homepage, onboarding, guide,
+  and sample-picker copy after the MVP audience decision. *(product conversation
+  2026-07-12)*
+
+### User-story slices
+
+- [ ] **Audience-fit profile, not reading-age prediction.** For read-aloud work,
+  foreground familiar/reach vocabulary, sentence and clause structure,
+  repetition, participation opportunities, phoneme inventory, rhythm/rhyme, and
+  density by spread. For independent reading, foreground sight words,
+  pronunciation certainty, decodability, syllable shapes, and sentence
+  complexity. Copy must say what the manuscript asks of a reader/listener, not
+  claim which ages "can read" it. *(product conversation 2026-07-12)*
+- [ ] **Rhyme story: make the evidence inspectable in context.** User story:
+  "As a rhyming picture-book writer, I want to see the rhyme structure Folio
+  detects across my lines so I can find breaks and intentional variations."
+  Extend the existing per-line rhyme letters with linked line evidence,
+  uncertain/absent endings, and guessed-pronunciation provenance. Never label a
+  non-match as wrong. *(product conversation 2026-07-12; builds on ADR 0011)*
+- [ ] **Rhythm story: support rehearsal without predicting performance.** User
+  story: "As a read-aloud writer, I want to see where the manuscript's suggested
+  stress pattern is consistent or changes so I can rehearse those passages and
+  decide whether the variation is intentional." Show dominant pattern,
+  line-level consistency, stress trace, outliers, and pronunciation uncertainty.
+  Phrase effects conditionally: written stress can suggest a stumble, pause, or
+  emphasis, but cannot determine a reader's performance. *(product conversation
+  2026-07-12; builds on ADR 0011)*
+
+### Interaction model — a quiet studio reader
+
+- [ ] **Introduce neutral, evidence-backed "reflections."** Borrow progressive
+  disclosure from chatbot interfaces without chat, generation, or implied
+  agency: watch continuously, stay quiet, surface a small contextual
+  observation, let the writer inspect its evidence, and never alter manuscript
+  text. Each reflection needs a scope (word/line/page/spread/manuscript), reason
+  for surfacing, evidence, provenance/confidence, relevant mode link, and a
+  consequence-free dismissal. *(product conversation 2026-07-12)*
+- [ ] **Design three depths of attention.** `Glance`: at most two or three timely
+  reflections beside the canvas. `Inspect`: affected words/lines, neighboring
+  spread comparison, source/guess status, and construct limits. `Study`: the
+  existing Analyze, Phonics, and Prosody modes. Do not turn Write mode into a
+  persistent dashboard. *(product conversation 2026-07-12; extends ADR 0010)*
+- [ ] **Separate linguistic patterns from integrity warnings.** Reserve warnings
+  for states that threaten trust or work — failed persistence, guessed
+  pronunciation, unsupported browser behavior, invalid data. Present reach
+  vocabulary, density, rhythm changes, and phoneme concentrations as patterns or
+  reflections. Audit labels including `Verdicts`, `warnings`, and "outlier" for
+  unintended grading semantics. *(product conversation 2026-07-12)*
+- [ ] **Adopt observation-register vocabulary throughout the editor.** Prefer
+  `profile`, `pattern`, `less familiar`, `outside the selected reference range`,
+  `examine`, `reflection`, and `estimated`; avoid `score`, `problem`, `failure`,
+  `too difficult`, `age inappropriate`, `fix`, `weakness`, and `passed` unless a
+  hard technical constraint genuinely warrants it. *(product conversation
+  2026-07-12; extends ADR 0009 neutrality rule)*
 
 ## Web — studio dashboard (design 1c) + editor
 
@@ -59,12 +149,17 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
 ## Demo / sample fixtures
 
 *Whole initiative from session 2026-07-11; rationale in ADR 0009 (two-layer
-analysis + generated demo fixtures). Replaces the current pre-loaded samples.*
+analysis + authored demo fixtures). Replaces the current pre-loaded samples.*
 
-- [ ] **Generate one fully-realized book per `AgeBand`.** Five bespoke fixtures
-  (`board`, `early-picture`, `picture`, `early-reader`, `chapter`), built
-  youngest-first. Each replaces ad-hoc pre-loaded samples so every band's
-  analysis can be previewed end to end. *(ADR 0009)*
+- [ ] **Author diagnostic demo fixtures for the chosen MVP bands.** Build
+  youngest-first and prioritize `board`, `early-picture`, and `picture` if the
+  read-aloud MVP is accepted. These are intentionally authored demonstration
+  manuscripts, not regression fixtures and not LLM-generated manuscript
+  content. Keep public-domain texts as comparison fixtures showing that strong
+  literature can legitimately produce many signals. Defer bespoke
+  `early-reader`/`chapter` demos until those editor experiences are product
+  priorities. *(ADR 0009 + product conversation 2026-07-12; scope depends on MVP
+  ADR)*
 - [x] ~~**`board` fixture: finalize "Time for Bed, Little One."**~~ — shipped
   2026-07-12, `17a4f31`. Wired as the board sample from
   `packages/web/demo-fixtures/`; the 14pp off-signature miss is KEPT as the
@@ -75,10 +170,24 @@ analysis + generated demo fixtures). Replaces the current pre-loaded samples.*
   non-rhymes in the mirror. Verified: AABBCCDDEEFFGG per-line letters,
   meter outlier visible at 66.7% consistency, luminous/ascent flagged,
   zero guessed pronunciations. *(ADR 0009)*
-- [ ] **Calibrate each fixture to ~60–70% "profile coverage."** By construction:
-  one half-heard deviation per soft axis (prosody, rhyme/phonological, lexical
-  frequency) + at least one hard-constraint miss, each sized to *its own* band.
-  Not a grade — the target is "sound but tightenable." *(ADR 0009)*
+- [ ] **Replace "60–70% good/profile coverage" with diagnostic signal design.**
+  A sample's job is to demonstrate what Folio can notice, not what Folio
+  considers good. Give each fixture a small, intentional set of legible
+  contrasts: familiar vocabulary plus a few reach words; repetition followed by
+  a deliberate break; a concentrated target phoneme; at least one visible
+  pronunciation-provenance case where appropriate; aligned rhythmic lines plus
+  a variation; a denser spread; mixed sentence types; and a wordless or
+  near-wordless moment. Select only signals appropriate to that manuscript — do
+  not force every engine axis into every sample. *(supersedes the 60–70% framing
+  from ADR 0009; product conversation 2026-07-12 — update ADR before shipping)*
+- [ ] **Add fixture-authored guided tours.** Store deterministic annotations in
+  demo metadata: where to start, what pattern to activate, which evidence to
+  inspect, and what limitation/provenance note matters. The tour should teach
+  that flags are ingredients rather than defects and should never generate or
+  suggest manuscript prose. Suggested sample categories: `clean signal` (one
+  domain), `mixed manuscript` (several interacting dimensions), and
+  `public-domain comparison` (recognized literature with legitimate signals).
+  *(product conversation 2026-07-12; likely web-only metadata)*
 - [ ] **Band-key the demo state (1:1:1).** Selecting a band loads its canonical
   book → layout → analysis via one lookup. Collapse any code path that lets band,
   layout, and sample vary independently. *(ADR 0009)*
