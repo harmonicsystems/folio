@@ -128,6 +128,7 @@ const SAMPLES: Record<string, Sample> = {
         --surface: #ffffff;
         --hairline: #eee4d0; /* inspector row hairlines + progress track */
         --callout-ink: #6b5f4e; /* handoff token; ≥4.5:1 on white at small sizes */
+        --taupe-muted: #b7a988; /* rail inactive items (6.4:1 on ink) */
         --ochre-deep: #8a6420; /* ochre darkened one step for small text/badges (WCAG AA) */
       }
       * { box-sizing: border-box; }
@@ -169,13 +170,6 @@ const SAMPLES: Record<string, Sample> = {
       .cb-popover[hidden] { display: none; }
       .cb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
       .cb-right .saved-indicator { margin-left: 0; }
-      .cb-sidebar-toggle {
-        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
-        font-size: 12px; padding: 5px 10px;
-        background: var(--surface); border: 1px solid var(--rule);
-        border-radius: 6px; color: var(--ink); cursor: pointer;
-      }
-      .cb-sidebar-toggle:hover { background: var(--beige); }
       .cb-cmdk {
         font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
         font-size: 12px; padding: 6px 12px;
@@ -1092,47 +1086,84 @@ const SAMPLES: Record<string, Sample> = {
         font-size: 0.75rem;
       }
 
-      /* ---- collapsible sidebar + status bar ---- */
-      body.sidebar-collapsed .workspace {
-        grid-template-columns: 1fr;
-        padding-bottom: 4rem;
+      /* ---- mode rail (studio dashboard slice 3, ADR 0007) ---- */
+      .mode-rail {
+        position: fixed; top: 0; left: 0; bottom: 0; width: 76px;
+        background: var(--ink); z-index: 20;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 14px 0;
       }
-      body.sidebar-collapsed .sidebar { display: none; }
-      .status-bar {
+      .rail-logo {
+        width: 34px; height: 34px; border-radius: 8px;
+        background: var(--ochre); color: var(--cream);
+        font-size: 17px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 14px;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+      }
+      .rail-mode {
+        width: 100%; padding: 9px 0;
+        display: flex; flex-direction: column; align-items: center; gap: 3px;
+        background: transparent; border: none;
+        border-left: 2px solid transparent;
+        color: var(--taupe-muted, #b7a988); cursor: pointer;
+      }
+      .rail-mode svg { width: 17px; height: 17px; opacity: 0.8; }
+      .rail-mode .rail-label {
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 9px; letter-spacing: 0.02em;
+      }
+      .rail-mode:hover { background: rgba(247, 241, 230, 0.06); }
+      .rail-mode[aria-pressed='true'] {
+        background: rgba(247, 241, 230, 0.1);
+        border-left-color: var(--ochre);
+        color: var(--cream);
+      }
+      .rail-mode[aria-pressed='true'] svg { opacity: 1; }
+      .rail-settings { margin-top: auto; }
+      /* iPad portrait: icons only. */
+      @media (max-width: 900px) {
+        .rail-mode .rail-label { display: none; }
+      }
+      body { padding-left: 76px; }
+
+      /* ---- analyze mode: the inspector panels, promoted to a page ---- */
+      .analyze-report {
         display: none;
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        background: var(--surface);
-        border-top: 1px solid var(--rule);
-        padding: 0.55rem 1.5rem;
-        z-index: 4;
-        gap: 1.5rem;
-        font-size: 0.85rem;
-        align-items: center;
-        flex-wrap: wrap;
-        justify-content: space-around;
+        padding: 1.5rem; max-width: 1400px; margin: 0 auto;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1rem; align-items: start;
       }
-      body.sidebar-collapsed .status-bar { display: flex; }
-      .status-item {
-        display: flex; align-items: baseline; gap: 0.4rem;
+      body[data-mode='analyze'] .analyze-report { display: grid; }
+      body[data-mode='analyze'] .workspace { display: none; }
+      .analyze-report .inspector-panel {
+        background: var(--surface); border: 1px solid var(--rule);
+        border-radius: 4px;
       }
-      .status-label {
+      /* Card titles: in Write mode the tab strip names the panels; as
+         report cards they need their own. Accessible names still come
+         from aria-labelledby (accname resolves display:none targets). */
+      .analyze-report .inspector-panel::before {
+        content: attr(data-panel-title);
+        display: block;
+        font-family: 'Atkinson Hyperlegible', system-ui, sans-serif;
+        font-size: 11px; font-weight: 700;
         text-transform: uppercase; letter-spacing: 0.08em;
-        font-size: 0.7rem; color: var(--taupe);
+        color: var(--callout-ink);
+        padding: 12px 16px 0;
       }
-      .status-val {
-        font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-        color: var(--ink);
-      }
-      .status-val.over { color: var(--rust); }
-      .status-val.under { color: var(--ochre); }
-      .status-sub { color: var(--taupe); font-size: 0.8rem; }
 
       /* ---- floating prev/next + spread counter (book mode only) ---- */
       .nav-prev, .nav-next, .spread-counter { display: none; }
       body.book-mode .nav-prev,
       body.book-mode .nav-next,
       body.book-mode .spread-counter { display: flex; }
+      /* AFTER the book-mode rules (same specificity — source order
+         decides): Analyze hides the workspace, so its book-view chrome
+         must hide with it even while body.book-mode is set. */
+      body[data-mode='analyze'] .nav-prev,
+      body[data-mode='analyze'] .nav-next,
+      body[data-mode='analyze'] .spread-counter { display: none; }
       .nav-prev, .nav-next {
         position: fixed; top: 50%; transform: translateY(-50%);
         align-items: center; justify-content: center;
@@ -1143,14 +1174,18 @@ const SAMPLES: Record<string, Sample> = {
         z-index: 5;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
       }
-      .nav-prev { left: 1rem; }
+      /* Fixed positioning ignores body's 76px rail padding — offset
+         left-anchored chrome past the rail or it sits underneath it
+         (rail z-index 20 beats nav z-index 5). */
+      .nav-prev { left: calc(76px + 1rem); }
       .nav-next { right: 1rem; }
       .nav-prev:hover, .nav-next:hover { background: var(--beige); }
       .nav-prev:disabled, .nav-next:disabled {
         opacity: 0.35; cursor: not-allowed;
       }
       .spread-counter {
-        position: fixed; bottom: 1.25rem; left: 50%;
+        /* 50% of viewport + half the rail width = centered on content */
+        position: fixed; bottom: 1.25rem; left: calc(50% + 38px);
         transform: translateX(-50%);
         align-items: center; justify-content: center;
         padding: 0.35rem 0.85rem;
@@ -1183,17 +1218,21 @@ const SAMPLES: Record<string, Sample> = {
         }
         body {
           font-family: var(--body-font-family, 'Libre Caslon Text', Georgia, serif);
+          padding-left: 0; /* the rail is hidden — reclaim its gutter */
         }
         /* Hide all chrome. */
+        .mode-rail, .analyze-report,
         .context-bar, .cmdk, .cb-popover, .compat-banner, .find-bar,
         .sidebar, footer.footnote,
         .nav-prev, .nav-next, .spread-counter,
-        .status-bar, .onboarding-card,
+        .onboarding-card,
         .about-dialog, .lex-toolbar,
         .page-controls, .spread-footer { display: none !important; }
 
         .workspace {
-          display: block;
+          /* Force the spreads printable even from Analyze mode (screen
+             CSS hides .workspace there). */
+          display: block !important;
           padding: 0;
           margin: 0;
           max-width: none;
@@ -1283,7 +1322,44 @@ const SAMPLES: Record<string, Sample> = {
       }
     </style>
   </head>
-  <body>
+  <body data-mode="write">
+    <!-- Mode rail (studio dashboard slice 3, ADR 0007). Write and
+         Analyze task modes; Phonology/Prosody arrive in slice 4. The
+         settings button opens the ⌘K palette (which already carries
+         trim/font/layout — a second popover would duplicate it). -->
+    <nav class="mode-rail" aria-label="Editor modes">
+      <div class="rail-logo" aria-hidden="true">F</div>
+      <!-- aria-label duplicates the visible label: ≤900px hides
+           .rail-label with display:none, which would otherwise strip
+           the buttons' accessible names entirely. -->
+      <button type="button" class="rail-mode" data-mode-set="write" aria-pressed="true" aria-label="Write">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4.5 15.5l0.9-3.4 8.2-8.2 2.5 2.5-8.2 8.2-3.4 0.9z"></path>
+        </svg>
+        <span class="rail-label">Write</span>
+      </button>
+      <button type="button" class="rail-mode" data-mode-set="analyze" aria-pressed="false" aria-label="Analyze">
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <rect x="4" y="11" width="2.6" height="5.5" rx="0.8"></rect>
+          <rect x="8.7" y="7" width="2.6" height="9.5" rx="0.8"></rect>
+          <rect x="13.4" y="3.5" width="2.6" height="13" rx="0.8"></rect>
+        </svg>
+        <span class="rail-label">Analyze</span>
+      </button>
+      <button type="button" class="rail-mode rail-settings" id="rail-settings"
+        aria-label="Settings — opens the command palette">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"
+          stroke-linecap="round" aria-hidden="true">
+          <line x1="3" y1="6.5" x2="17" y2="6.5"></line>
+          <circle cx="8" cy="6.5" r="2" fill="var(--ink)"></circle>
+          <line x1="3" y1="13.5" x2="17" y2="13.5"></line>
+          <circle cx="12.5" cy="13.5" r="2" fill="var(--ink)"></circle>
+        </svg>
+        <span class="rail-label">Settings</span>
+      </button>
+    </nav>
+
     <!-- Context bar (studio dashboard slice 2, ADR 0006). The three
          "document identity" settings stay as the SAME <select> elements
          (ids intact, all existing listeners untouched) inside chip
@@ -1347,7 +1423,6 @@ const SAMPLES: Record<string, Sample> = {
           <button data-view-set="grid" class="active" type="button" aria-pressed="true">Grid</button>
           <button data-view-set="book" type="button" aria-pressed="false">Book</button>
         </div>
-        <button id="sidebar-toggle" type="button" class="cb-sidebar-toggle">Hide</button>
         <button class="cb-cmdk" id="cmdk-btn" type="button"
           aria-label="Search and commands (Command K)">
           Search &amp; commands <kbd>⌘K</kbd>
@@ -1498,7 +1573,7 @@ const SAMPLES: Record<string, Sample> = {
           </button>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-length" aria-labelledby="tab-length" tabindex="0">
+        <div class="inspector-panel" role="tabpanel" id="panel-length" aria-labelledby="tab-length" data-panel-title="Length" tabindex="0">
           <div class="length-hero">
             <div class="length-hero-num"><span class="value" id="total-words">0</span></div>
             <p class="length-hero-sub" id="length-hero-sub">
@@ -1524,7 +1599,7 @@ const SAMPLES: Record<string, Sample> = {
           <ol class="per-spread-list" id="per-spread-list"></ol>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-vocab" aria-labelledby="tab-vocab" tabindex="0" hidden>
+        <div class="inspector-panel" role="tabpanel" id="panel-vocab" aria-labelledby="tab-vocab" data-panel-title="Vocab" tabindex="0" hidden>
           <div class="metric-row">
             <span class="label">Familiar words (Tier 1)</span>
             <span class="value" id="tier1-coverage">—</span>
@@ -1549,7 +1624,7 @@ const SAMPLES: Record<string, Sample> = {
           <ul class="reach-list" id="reach-list"></ul>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-phonics" aria-labelledby="tab-phonics" hidden>
+        <div class="inspector-panel" role="tabpanel" id="panel-phonics" aria-labelledby="tab-phonics" data-panel-title="Phonics" hidden>
           <div class="metric-row">
             <span class="label">Decodability</span>
             <span class="value" id="decodability">—</span>
@@ -1619,7 +1694,7 @@ const SAMPLES: Record<string, Sample> = {
           </div>
         </div>
 
-        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" tabindex="0" hidden>
+        <div class="inspector-panel" role="tabpanel" id="panel-issues" aria-labelledby="tab-issues" data-panel-title="Issues" tabindex="0" hidden>
           <p class="empty" id="warnings-empty">None.</p>
           <ul class="warning-list" id="warning-list"></ul>
         </div>
@@ -1692,30 +1767,10 @@ const SAMPLES: Record<string, Sample> = {
       </div>
     </dialog>
 
-    <div class="status-bar" id="status-bar" aria-live="polite">
-      <span class="status-item">
-        <span class="status-label">Words</span>
-        <span class="status-val" id="sb-words">0</span>
-        <span class="status-sub" id="sb-target">/ —</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">Sight</span>
-        <span class="status-val" id="sb-sight">—</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">Spreads</span>
-        <span class="status-val" id="sb-spreads">0</span>
-        <span class="status-sub">/ 16</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">Decode</span>
-        <span class="status-val" id="sb-decode">—</span>
-      </span>
-      <span class="status-item">
-        <span class="status-label">Warnings</span>
-        <span class="status-val" id="sb-warnings">0</span>
-      </span>
-    </div>
+    <!-- Whole-manuscript report surface: Analyze mode reparents the
+         four inspector panels here (slice 3, ADR 0007). Empty in
+         Write mode. -->
+    <section class="analyze-report" id="analyze-report" aria-label="Manuscript report"></section>
 
     <button class="nav-prev" id="nav-prev" type="button" aria-label="Previous spread">‹</button>
     <button class="nav-next" id="nav-next" type="button" aria-label="Next spread">›</button>
@@ -1771,20 +1826,37 @@ const SAMPLES: Record<string, Sample> = {
       //                     touch them.
       const DRAFT_KEY = 'folio.draft.v1'; // legacy plain-text drafts; read-only (migration)
       const DRAFT_KEY_V2 = 'folio.draft.v2'; // lossless Lexical state per page
-      const PREFS_KEY = 'folio.prefs.v1';
+      const PREFS_KEY_V1 = 'folio.prefs.v1'; // legacy; read once for migration, removed on first v2 write
+      const PREFS_KEY_V2 = 'folio.prefs.v2';
+      type EditorMode = 'write' | 'analyze';
       interface SavedPrefs {
-        version: 1;
+        version: 2;
         bodyFont?: string;
         viewMode?: 'grid' | 'book';
-        sidebarCollapsed?: boolean;
+        /** v2: replaces v1 sidebarCollapsed — the mode rail replaced the toggle. */
+        mode?: EditorMode;
       }
       function loadPrefs(): SavedPrefs | null {
         try {
-          const raw = localStorage.getItem(PREFS_KEY);
-          if (!raw) return null;
-          const parsed = JSON.parse(raw);
-          if (parsed?.version !== 1) return null;
-          return parsed as SavedPrefs;
+          const raw = localStorage.getItem(PREFS_KEY_V2);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.version === 2) return parsed as SavedPrefs;
+          }
+          // Migrate v1: carry font + view forward. sidebarCollapsed has
+          // no v2 equivalent (the toggle is gone) and is dropped.
+          const rawV1 = localStorage.getItem(PREFS_KEY_V1);
+          if (rawV1) {
+            const v1 = JSON.parse(rawV1);
+            if (v1?.version === 1) {
+              return {
+                version: 2,
+                bodyFont: typeof v1.bodyFont === 'string' ? v1.bodyFont : undefined,
+                viewMode: v1.viewMode === 'book' ? 'book' : 'grid',
+              };
+            }
+          }
+          return null;
         } catch {
           return null;
         }
@@ -1794,15 +1866,18 @@ const SAMPLES: Record<string, Sample> = {
           const fontSel = byId('body-font') as HTMLSelectElement | null;
           const surface = byId('editor-surface');
           const prefs: SavedPrefs = {
-            version: 1,
+            version: 2,
             bodyFont: fontSel?.value ?? 'caslon',
             viewMode:
               (surface?.getAttribute('data-view') as 'grid' | 'book' | null) ??
               'grid',
-            sidebarCollapsed:
-              document.body.classList.contains('sidebar-collapsed'),
+            mode:
+              document.body.getAttribute('data-mode') === 'analyze'
+                ? 'analyze'
+                : 'write',
           };
-          localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+          localStorage.setItem(PREFS_KEY_V2, JSON.stringify(prefs));
+          localStorage.removeItem(PREFS_KEY_V1);
         } catch {
           /* ignore */
         }
@@ -1923,16 +1998,18 @@ const SAMPLES: Record<string, Sample> = {
       // Restore preferences first so the editors hydrate against the
        // right font and view, and the sidebar doesn't pop open/closed
        // after first paint.
+      let pendingRestoredMode: EditorMode | null = null;
       const restoredPrefs = loadPrefs();
       if (restoredPrefs) {
         const fontSel = byId('body-font') as HTMLSelectElement | null;
         if (fontSel && restoredPrefs.bodyFont) {
           fontSel.value = restoredPrefs.bodyFont;
         }
-        if (restoredPrefs.sidebarCollapsed) {
-          document.body.classList.add('sidebar-collapsed');
-          const btn = byId('sidebar-toggle');
-          if (btn) btn.textContent = 'Show';
+        // Mode is applied after the tab machinery initializes (setMode
+        // reads TAB_ORDER, a const declared further down — calling it
+        // here would hit the temporal dead zone). Stash it.
+        if (restoredPrefs.mode === 'analyze') {
+          pendingRestoredMode = 'analyze';
         }
         // View mode is applied after editors mount (book mode scrolls
         // to spread 1 which needs the surface laid out). Stash it for
@@ -2363,8 +2440,7 @@ const SAMPLES: Record<string, Sample> = {
         const all: Warning[] = [...profile.warnings];
         for (const sp of profile.perSpread) all.push(...sp.warnings);
         // Issues-tab badge — before the zero-warning early return so it
-        // also hides when the list clears. Count semantics identical to
-        // sb-warnings in updateStatusBar.
+        // also hides when the list clears.
         const badge = byId('issues-badge');
         if (badge) {
           badge.textContent = String(all.length);
@@ -2412,54 +2488,6 @@ const SAMPLES: Record<string, Sample> = {
             sp.rightPage.placement === 'text-only';
           const tile = document.querySelector(`[data-spread="${sp.index}"]`);
           tile?.classList.toggle('empty', isEmpty);
-        }
-      }
-
-      function updateStatusBar(profile: ReadabilityProfile): void {
-        const w = byId('sb-words');
-        const t = byId('sb-target');
-        const s = byId('sb-sight');
-        const sp = byId('sb-spreads');
-        const wa = byId('sb-warnings');
-        if (w) {
-          w.textContent = String(profile.wordCount);
-          let cls = '';
-          if (profile.wordCount > profile.wordCountTarget.max) cls = 'over';
-          else if (
-            profile.wordCountTarget.min > 0 &&
-            profile.wordCount < profile.wordCountTarget.min
-          )
-            cls = 'under';
-          w.className = `status-val ${cls}`.trim();
-        }
-        if (t) {
-          t.textContent =
-            profile.wordCountTarget.min > 0
-              ? `/ ${profile.wordCountTarget.min}–${profile.wordCountTarget.max}`
-              : `/ ${profile.wordCountTarget.max}`;
-        }
-        if (s) {
-          s.textContent = `${(profile.vocabulary.sightWordCoverage * 100).toFixed(0)}%`;
-        }
-        if (sp) {
-          sp.textContent = String(
-            profile.perSpread.filter((p) => p.wordCount > 0).length,
-          );
-        }
-        const dc = byId('sb-decode');
-        if (dc) {
-          dc.textContent =
-            profile.wordCount === 0
-              ? '—'
-              : `${(profile.phonology.decodabilityScore * 100).toFixed(0)}%`;
-          dc.className = 'status-val';
-        }
-        if (wa) {
-          const all =
-            profile.warnings.length +
-            profile.perSpread.reduce((acc, p) => acc + p.warnings.length, 0);
-          wa.textContent = String(all);
-          wa.className = `status-val${all > 0 ? ' over' : ''}`;
         }
       }
 
@@ -2625,7 +2653,6 @@ const SAMPLES: Record<string, Sample> = {
         renderPerSpread(profile);
         renderReachWords(profile.reachWords);
         renderWarnings(profile);
-        updateStatusBar(profile);
         applyReachWordHighlights(profile);
         applyPhonemeHighlights();
         renderGuessedWords(engineText);
@@ -2855,13 +2882,6 @@ const SAMPLES: Record<string, Sample> = {
         savePrefs();
       });
 
-      byId('sidebar-toggle')?.addEventListener('click', () => {
-        const collapsed = document.body.classList.toggle('sidebar-collapsed');
-        const btn = byId('sidebar-toggle');
-        if (btn) btn.textContent = collapsed ? 'Show' : 'Hide';
-        savePrefs();
-      });
-
       // ---- context-bar chips + popovers (slice 2, ADR 0006) ----
       // The chips are just launchers: the SAME <select> elements live
       // inside the popovers, so every existing change listener (trim
@@ -3018,6 +3038,35 @@ const SAMPLES: Record<string, Sample> = {
             ) as HTMLButtonElement | null)?.click();
           },
         });
+        const inAnalyze =
+          document.body.getAttribute('data-mode') === 'analyze';
+        // The palette's dialog.close() restores focus synchronously to
+        // the pre-palette element BEFORE run() executes — the mode
+        // switch then hides/reparents that element and focus falls to
+        // <body>. Claim focus on the matching rail button instead.
+        const focusRail = (m: EditorMode): void => {
+          document
+            .querySelector<HTMLElement>(`.rail-mode[data-mode-set="${m}"]`)
+            ?.focus();
+        };
+        cmds.push({
+          id: 'mode-write',
+          label: 'Go to mode · Write',
+          hint: inAnalyze ? undefined : 'current',
+          run: () => {
+            setMode('write');
+            focusRail('write');
+          },
+        });
+        cmds.push({
+          id: 'mode-analyze',
+          label: 'Go to mode · Analyze',
+          hint: inAnalyze ? 'current' : undefined,
+          run: () => {
+            setMode('analyze');
+            focusRail('analyze');
+          },
+        });
         cmds.push({ id: 'find', label: 'Find & replace…', hint: '⌘F', run: () => openFindBar() });
         cmds.push({
           id: 'about', label: 'About Folio',
@@ -3171,8 +3220,12 @@ const SAMPLES: Record<string, Sample> = {
       // selection is transient — prefs v2 with persistence is slice 3.
       type TabName = 'length' | 'vocab' | 'phonics' | 'issues';
       const TAB_ORDER: readonly TabName[] = ['length', 'vocab', 'phonics', 'issues'];
+      // Remembered across mode switches: Analyze un-hides every panel,
+      // so returning to Write must restore the last active tab.
+      let currentTab: TabName = 'length';
 
       function setActiveTab(name: TabName): void {
+        currentTab = name;
         for (const t of TAB_ORDER) {
           const active = t === name;
           const tab = byId(`tab-${t}`);
@@ -3212,6 +3265,101 @@ const SAMPLES: Record<string, Sample> = {
           byId(`tab-${name}`)?.focus();
         }
       });
+
+      // ---- mode rail + Analyze mode (slice 3, ADR 0007) ----
+      // Analyze REPARENTS the four inspector panels into the
+      // #analyze-report grid: element-bound listeners (phoneme chips,
+      // details toggles) travel with their nodes, ids stay unique, and
+      // the render functions keep working unchanged. Write moves them
+      // back into the aside and restores the active tab.
+      // Book-view scroll offset survives an Analyze round trip:
+      // display:none discards the container's scrollLeft, so capture
+      // the spread index before hiding and re-scroll on return.
+      let analyzeReturnSpread: number | null = null;
+
+      function setMode(
+        mode: EditorMode,
+        opts: { persist?: boolean } = {},
+      ): void {
+        const report = byId('analyze-report');
+        const aside = document.querySelector<HTMLElement>('aside.sidebar');
+        if (!report || !aside) return;
+        if (mode === 'analyze') {
+          // Read the spread position while the workspace is still laid
+          // out — after data-mode flips it is display:none and reads 0.
+          analyzeReturnSpread = document.body.classList.contains('book-mode')
+            ? currentSpreadIndex()
+            : null;
+          // Mirror of openFindBar's drop-to-Write guard: a find bar
+          // left open here would walk (and Replace-all into) editors
+          // the user can no longer see. Only when actually open —
+          // setMode runs at init (prefs restore) where closeFindBar's
+          // findMatches/findCurrent lets are still in their TDZ; the
+          // bar ships hidden, so init always skips this.
+          const findBar = byId('find-bar');
+          if (findBar && !findBar.hidden) closeFindBar();
+        }
+        document.body.setAttribute('data-mode', mode);
+        document
+          .querySelectorAll<HTMLElement>('.rail-mode[data-mode-set]')
+          .forEach((btn) => {
+            btn.setAttribute(
+              'aria-pressed',
+              btn.dataset.modeSet === mode ? 'true' : 'false',
+            );
+          });
+        if (mode === 'analyze') {
+          for (const t of TAB_ORDER) {
+            const panel = byId(`panel-${t}`);
+            if (panel) {
+              panel.hidden = false;
+              // The page has no visible tablist in Analyze — an
+              // orphaned role=tabpanel announces an affordance that
+              // doesn't exist. Region keeps the aria-labelledby name.
+              panel.setAttribute('role', 'region');
+              report.appendChild(panel);
+            }
+          }
+        } else {
+          for (const t of TAB_ORDER) {
+            const panel = byId(`panel-${t}`);
+            if (panel) {
+              panel.setAttribute('role', 'tabpanel');
+              aside.appendChild(panel);
+            }
+          }
+          setActiveTab(currentTab);
+          if (
+            analyzeReturnSpread !== null &&
+            document.body.classList.contains('book-mode')
+          ) {
+            scrollToSpread(analyzeReturnSpread);
+            analyzeReturnSpread = null;
+          }
+        }
+        // The init-time prefs restore passes persist:false — saving
+        // there would run before the deferred book-view restore sets
+        // data-view, silently rewriting a stored viewMode to 'grid'.
+        if (opts.persist !== false) savePrefs();
+      }
+
+      document
+        .querySelectorAll<HTMLElement>('.rail-mode[data-mode-set]')
+        .forEach((btn) => {
+          btn.addEventListener('click', () => {
+            setMode(btn.dataset.modeSet === 'analyze' ? 'analyze' : 'write');
+          });
+        });
+      byId('rail-settings')?.addEventListener('click', () => {
+        openCmdk();
+      });
+
+      // Apply the prefs-restored mode now that the tab machinery above
+      // is initialized (stashed at restore time to dodge the TDZ on
+      // TAB_ORDER).
+      if (pendingRestoredMode === 'analyze') {
+        setMode('analyze', { persist: false });
+      }
 
       // Phoneme chip clicks (event delegation — chips are re-rendered
       // on every analyze pass, so binding per-element would leak).
@@ -3496,6 +3644,11 @@ const SAMPLES: Record<string, Sample> = {
       }
 
       function openFindBar(): void {
+        // Find operates on the editors; Analyze hides them. Drop back
+        // to Write so the matches being walked are actually visible.
+        if (document.body.getAttribute('data-mode') === 'analyze') {
+          setMode('write');
+        }
         const bar = byId('find-bar');
         if (!bar) return;
         bar.hidden = false;
@@ -3832,6 +3985,9 @@ const SAMPLES: Record<string, Sample> = {
 
       document.addEventListener('keydown', (e) => {
         if (!document.body.classList.contains('book-mode')) return;
+        // Analyze hides the workspace; arrows would scroll an invisible
+        // surface (and swallow arrow keys the report may want).
+        if (document.body.getAttribute('data-mode') === 'analyze') return;
         const active = document.activeElement;
         const tag = active?.tagName;
         if (tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT') return;
