@@ -40,8 +40,17 @@ ADRs 0004–0006, `packages/engine/src/data/README.md`, session findings.
   the handoff, so it's an intentional gap, now a real one. Needs: title state in
   persistence, edit affordance in the context bar, export filename should follow.
   *(found in session 2026-07-11)*
-- [ ] **guide.astro copy fix.** "The sections follow the sidebar, top to bottom"
-  is stale post-slice-1. Small. *(ADR 0005 watch item)*
+- [ ] **guide.astro copy fix.** Stale twice over: post-slice-1 AND post-ADR-0010
+  (the tabbed inspector it may now describe was consolidated into the digest +
+  modes the same day). A parallel session is refreshing it against slices 1–4;
+  it needs one more pass against ADR 0010 after that lands. *(ADR 0005 watch
+  item + ADR 0010)*
+- [x] ~~**UI consolidation (ADR 0010).**~~ — shipped 2026-07-12, `3479c88`
+  (prototype `c504399`): tab strip dissolved into the Write digest with
+  mode cross-links, Issues → Verdicts, Grid/Book moved onto the canvas,
+  panels to static role=region. Mirror readouts (phoneme distribution,
+  meter shape) remain the ADR 0009 items that make the modes sing —
+  prototyped in docs/prototypes/ui-consolidation.html, not yet product.
 - [ ] *(watch, not scheduled)* **Stacked highlight legibility** — reach-word wash
   under phoneme-match tint composites to ~0.34 ochre. If it reads muddy, the
   sanctioned fallback is border-only `phoneme-match`. Do not do speculatively.
