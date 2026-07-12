@@ -64,6 +64,15 @@ title, local save status, and reset remain available. They no longer define the
 first viewport. Find/replace and the command palette are deferred from this
 first rebuild rather than transplanted as old-shell dependencies.
 
+### 7. The manuscript is visually errorless by default
+
+Less-familiar vocabulary remains available in Draft and Language evidence but
+is not marked with ambient error-like underlines on the writing canvas. Inline
+paint is opt-in: selecting a phoneme in Language temporarily highlights the
+words that carry it. A Focus control hides manuscript metadata, lenses, the
+editorial margin, and book map while preserving the spread carousel, autosave,
+and background analysis; Escape returns to the studio.
+
 ## Consequences
 
 - The app now reads as a writing environment first and an analysis tool second.
@@ -76,6 +85,8 @@ first rebuild rather than transplanted as old-shell dependencies.
   Astro page script. The engine remains framework-free and portable.
 - The book-map density bars are within-manuscript comparisons, not developmental
   targets.
+- A writer can make the analysis layer disappear without changing or pausing
+  it; returning to the studio reveals up-to-date evidence.
 
 ## Alternatives considered
 
@@ -87,4 +98,3 @@ first rebuild rather than transplanted as old-shell dependencies.
   editor state, sample loading, and analysis reads for the whole manuscript.
 - **Move reflection derivation into the engine.** Rejected by ADR 0013; wording
   and attention priority remain product-context concerns.
-

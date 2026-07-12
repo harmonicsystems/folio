@@ -202,6 +202,7 @@ export default function StudioApp({ samples }: Props) {
   const [activePhoneme, setActivePhoneme] = useState<string | null>(null);
   const [sampleOpen, setSampleOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const readyPages = useRef(new Set<string>());
   const restored = useRef(false);
   const analyzeTimer = useRef<number | null>(null);
@@ -336,6 +337,10 @@ export default function StudioApp({ samples }: Props) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && focusMode) {
+        setFocusMode(false);
+        return;
+      }
       const target = event.target as HTMLElement | null;
       if (
         target?.closest(
@@ -352,7 +357,7 @@ export default function StudioApp({ samples }: Props) {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  }, [focusMode]);
 
   useEffect(() => {
     if (!sampleOpen && !exportOpen) return;
@@ -375,8 +380,8 @@ export default function StudioApp({ samples }: Props) {
   }, [exportOpen, sampleOpen]);
 
   useEffect(() => {
-    applyHighlights(profile, activePhoneme);
-  }, [activePhoneme, profile, currentSpread]);
+    applyPhonemeHighlight(activePhoneme);
+  }, [activePhoneme, currentSpread, profile]);
 
   const engineSpreads = useMemo(
     () => (manuscript ? toEngineManuscript(manuscript).spreads : []),
@@ -495,7 +500,7 @@ export default function StudioApp({ samples }: Props) {
   };
 
   return (
-    <div className="studio-shell">
+    <div className={`studio-shell${focusMode ? ' focus-mode' : ''}`}>
       <header className="studio-mast">
         <div className="studio-identity">
           <a className="studio-brand" href="/about">Folio</a>
@@ -621,6 +626,15 @@ export default function StudioApp({ samples }: Props) {
                 ? ` · ${currentProfile.reachWords.length} less-familiar here`
                 : ''}
             </span>
+            <button
+              type="button"
+              className="studio-focus-toggle"
+              aria-pressed={focusMode}
+              title="Hide analysis and manuscript controls; press Escape to return"
+              onClick={() => setFocusMode((value) => !value)}
+            >
+              {focusMode ? 'Exit focus' : 'Focus on writing'}
+            </button>
           </div>
 
           <div
@@ -1020,22 +1034,18 @@ function BookMap({
   );
 }
 
-function applyHighlights(
-  profile: ReadabilityProfile | null,
-  activePhoneme: string | null,
-): void {
+function applyPhonemeHighlight(activePhoneme: string | null): void {
   const HighlightCtor = (
     window as unknown as { Highlight?: new (...ranges: Range[]) => unknown }
   ).Highlight;
   const highlights = (CSS as unknown as { highlights?: Map<string, unknown> })
     .highlights;
   if (!HighlightCtor || !highlights) return;
+  // Clear the old ambient vocabulary layer during hot reloads and draft
+  // migrations. Less-familiar words now stay in the evidence surfaces.
   highlights.delete('reach-word');
   highlights.delete('phoneme-match');
-  if (!profile) return;
-
-  const reach = new Set(profile.reachWords.map((word) => word.word.toLowerCase()));
-  const reachRanges: Range[] = [];
+  if (!activePhoneme) return;
   const phonemeRanges: Range[] = [];
   document.querySelectorAll<HTMLElement>('.page-editor-editable').forEach((root) => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -1049,20 +1059,13 @@ function applyHighlights(
         const range = document.createRange();
         range.setStart(node, match.index);
         range.setEnd(node, match.index + match[0].length);
-        if (reach.has(word)) reachRanges.push(range.cloneRange());
-        if (
-          activePhoneme &&
-          getWordPhonemes(word).includes(activePhoneme)
-        ) {
+        if (getWordPhonemes(word).includes(activePhoneme)) {
           phonemeRanges.push(range.cloneRange());
         }
       }
       node = walker.nextNode();
     }
   });
-  if (reachRanges.length) {
-    highlights.set('reach-word', new HighlightCtor(...reachRanges));
-  }
   if (phonemeRanges.length) {
     highlights.set('phoneme-match', new HighlightCtor(...phonemeRanges));
   }
