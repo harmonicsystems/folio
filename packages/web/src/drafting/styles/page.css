@@ -113,6 +113,7 @@
 
 .pg-text {
   font-family: var(--page-font);
+  font-weight: var(--pg-font-weight, 400);
   font-size: calc(var(--pg-font-pt, 18) * 1pt);
   line-height: var(--pg-leading, 1.4);
   color: var(--page-ink);

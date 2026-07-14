@@ -90,6 +90,8 @@ export interface DraftBook {
   pageCount: number;
   binding: BindingId;
   readerLevel?: 1 | 2 | 3;
+  /** Drafting page font id (fonts.ts); undefined = the default serif. */
+  pageFont?: string;
   /** Contact is a freeform multiline block; both feed submission page 1. */
   author?: { name: string; contact?: string };
   submission?: { includePageMarkers: boolean };
@@ -654,6 +656,7 @@ export function validateBook(raw: unknown): DraftBook | null {
         : format.levels
           ? 1
           : undefined,
+    pageFont: typeof b.pageFont === 'string' ? b.pageFont : undefined,
     author:
       authorRaw && typeof authorRaw.name === 'string'
         ? {

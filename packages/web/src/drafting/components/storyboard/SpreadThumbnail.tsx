@@ -13,6 +13,7 @@ import type { FrontMatterRole } from '../../formats.js';
 import type { PageSlot, RenderUnit } from '../../pageMap.js';
 import { chapterAt } from '../../model.js';
 import { countWords } from '../../counts.js';
+import { pageFontStyle } from '../../fonts.js';
 import { SpreadFrame } from '../page/SpreadFrame.js';
 
 const PPI = 96;
@@ -111,6 +112,7 @@ export function SpreadThumbnail({
               transform: `scale(${scale})`,
               transformOrigin: '0 0',
               '--page-scale': scale,
+              ...pageFontStyle(book.pageFont),
             } as React.CSSProperties
           }
         >

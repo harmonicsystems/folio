@@ -7,6 +7,7 @@
 
 import { useEffect, useRef } from 'react';
 import { getFormat, sameTrim, trimLabel, type Trim } from '../../formats.js';
+import { PAGE_FONTS, getPageFont } from '../../fonts.js';
 import type { DraftBook } from '../../model.js';
 import { applyConstruction, applyLevel, applyPageCount } from '../../model.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
@@ -122,6 +123,34 @@ export function SpecsPanel({
           </div>
         </div>
       )}
+
+      <div className="nb-field">
+        <label>Page font</label>
+        <div className="nb-chips" role="group" aria-label="Page font">
+          {PAGE_FONTS.map((font) => (
+            <button
+              key={font.id}
+              type="button"
+              aria-pressed={getPageFont(book.pageFont).id === font.id}
+              style={{ fontFamily: font.stack, fontWeight: font.weight ?? 400 }}
+              onClick={() =>
+                store.updateBook((b) => ({
+                  ...b,
+                  pageFont: font.id,
+                  updatedAt: Date.now(),
+                }))
+              }
+            >
+              {font.label}
+              <span className="nb-chip-note">{font.note}</span>
+            </button>
+          ))}
+        </div>
+        <span className="nb-chip-note">
+          Drafting only — the submission manuscript always exports in 12pt
+          Times New Roman.
+        </span>
+      </div>
 
       {format.levels && (
         <div className="nb-field">

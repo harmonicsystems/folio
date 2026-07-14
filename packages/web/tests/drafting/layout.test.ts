@@ -83,3 +83,22 @@ describe('toSavedDraftSpreads (flatten export path)', () => {
     expect(spreads[2].rightPage.placement).toBe('illustration-only');
   });
 });
+
+describe('page fonts', () => {
+  it('resolves known ids and falls back to the default serif', async () => {
+    const { getPageFont, PAGE_FONTS, DEFAULT_PAGE_FONT_ID } = await import(
+      '../../src/drafting/fonts.js'
+    );
+    expect(getPageFont('futura-bold').weight).toBe(700);
+    expect(getPageFont(undefined).id).toBe(DEFAULT_PAGE_FONT_ID);
+    expect(getPageFont('not-a-font').id).toBe(DEFAULT_PAGE_FONT_ID);
+    expect(new Set(PAGE_FONTS.map((f) => f.id)).size).toBe(PAGE_FONTS.length);
+  });
+
+  it('pageFont survives the validate round-trip', async () => {
+    const { validateBook } = await import('../../src/drafting/model.js');
+    const book = newBook(PICTURE_BOOK, { now: 1 });
+    const withFont = { ...book, pageFont: 'futura' };
+    expect(validateBook(JSON.parse(JSON.stringify(withFont)))?.pageFont).toBe('futura');
+  });
+});

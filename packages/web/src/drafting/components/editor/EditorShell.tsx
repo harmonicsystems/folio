@@ -26,6 +26,7 @@ import {
   type PageSlot,
 } from '../../pageMap.js';
 import { countWords } from '../../counts.js';
+import { pageFontStyle } from '../../fonts.js';
 import { loadPrefs, savePrefs } from '../../persistence.js';
 import { navigate } from '../../router.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
@@ -258,19 +259,43 @@ export function EditorShell({
 
   return (
     <div className="ed-root">
-      <SpreadCanvas trim={book.trim}>
-        <SpreadFrame
-          format={format}
-          trim={book.trim}
-          unit={unit}
-          contentFor={contentFor}
-          mode="edit"
-          showGuides={showGuides}
-          chapterFor={chapterFor}
-          renderEditor={renderEditor}
-          renderPageFrame={renderPageFrame}
-        />
-      </SpreadCanvas>
+      <div className="ed-canvasrow">
+        <button
+          type="button"
+          className="ed-turn"
+          data-dir="prev"
+          onClick={goPrev}
+          disabled={unit.index === 0}
+          aria-label="Previous spread"
+        >
+          ‹
+        </button>
+        <SpreadCanvas trim={book.trim}>
+          <div style={pageFontStyle(book.pageFont)}>
+            <SpreadFrame
+              format={format}
+              trim={book.trim}
+              unit={unit}
+              contentFor={contentFor}
+              mode="edit"
+              showGuides={showGuides}
+              chapterFor={chapterFor}
+              renderEditor={renderEditor}
+              renderPageFrame={renderPageFrame}
+            />
+          </div>
+        </SpreadCanvas>
+        <button
+          type="button"
+          className="ed-turn"
+          data-dir="next"
+          onClick={goNext}
+          disabled={unit.index === map.units.length - 1}
+          aria-label="Next spread"
+        >
+          ›
+        </button>
+      </div>
 
       <div className="ed-pagerow" data-single={unit.kind === 'single'}>
         {unit.pages.map((slot) => {
@@ -302,13 +327,14 @@ export function EditorShell({
                     type="button"
                     className="app-iconbtn ed-break"
                     aria-pressed={layoutFor === slot.pageNumber}
+                    title="Text position, type size, and illustration space for this page"
                     onClick={() =>
                       setLayoutFor((v) =>
                         v === slot.pageNumber ? null : slot.pageNumber,
                       )
                     }
                   >
-                    layout
+                    ⊞ Text & art
                   </button>
                   {layoutFor === slot.pageNumber && (
                     <LayoutControls
@@ -329,11 +355,11 @@ export function EditorShell({
                 <button
                   type="button"
                   className="app-iconbtn ed-break"
-                  title="Break to next page (⌘⏎)"
+                  title="Push the text after the caret to the next page (⌘⏎)"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => breakFromButton(slot)}
                 >
-                  break ↵
+                  ↵ Page break
                 </button>
               )}
               {format.supportsChapters &&
@@ -378,7 +404,7 @@ export function EditorShell({
                       )
                     }
                   >
-                    + chapter
+                    + Chapter
                   </button>
                 ))}
             </div>

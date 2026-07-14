@@ -525,12 +525,44 @@ select {
   gap: var(--space-3);
 }
 
+.ed-canvasrow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
 .ed-canvas {
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Page-turn rails: generous click targets flanking the book, quiet until
+   hovered — click through the book from the sides of the pages. */
+.ed-turn {
+  flex: none;
+  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-2xl);
+  color: var(--ink-3);
+  border-radius: var(--radius-lg);
+  opacity: 0.45;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+.ed-turn:hover:not(:disabled) {
+  opacity: 1;
+  background: var(--bg-surface);
+  color: var(--ink-1);
+}
+.ed-turn:disabled {
+  opacity: 0.12;
+  cursor: default;
 }
 
 /* Paper elevation is chrome (presentation), so it may theme. */
@@ -583,13 +615,16 @@ select {
 /* Caption actions read as quiet buttons, not stray words. */
 .ed-break {
   font-size: var(--text-xs);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--rule);
   border-radius: 999px;
-  padding: 1px var(--space-2);
+  padding: 3px var(--space-3);
   white-space: nowrap;
+  background: var(--bg-surface);
+  color: var(--ink-2);
 }
 .ed-break:hover {
-  border-color: var(--rule);
+  border-color: var(--ink-3);
+  color: var(--ink-1);
 }
 
 .ed-chapter {
@@ -698,11 +733,25 @@ select {
   gap: var(--space-8);
 }
 
+/* Column width is set inline from the zoom control. */
 .sb-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 224px);
   justify-content: center;
   gap: var(--space-6) var(--space-4);
+}
+
+.sb-zoom {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+.sb-zoom button {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  width: 28px;
+  text-align: center;
+}
+.sb-zoom button:disabled {
+  opacity: 0.3;
 }
 
 .sb-thumb {

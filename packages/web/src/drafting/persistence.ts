@@ -57,6 +57,8 @@ export interface SavedBookV1 {
 export interface DraftingPrefs {
   version: 1;
   showSafeArea?: boolean;
+  /** Storyboard thumbnail width in px. */
+  storyboardZoom?: number;
 }
 
 function storageAvailable(): boolean {
