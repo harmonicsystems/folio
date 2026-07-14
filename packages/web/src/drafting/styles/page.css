@@ -1,0 +1,82 @@
+/**
+ * PRINT-TRUE PAGE TOKENS + native-unit page geometry.
+ *
+ * Everything in this file renders the book itself. The --page-* tokens are
+ * defined on :root ONLY and must NEVER be redefined under any [data-theme] —
+ * book pages are ink-on-paper, true to print, in every theme (in the evening
+ * theme the book is literally the brightest object on screen).
+ *
+ * .pg-* classes may use only --page-* tokens and physical units. Pages are
+ * laid out at native CSS physical units (1in = 96px, 1pt = 4/3px exactly) and
+ * scaled to fit with transform: scale() — layout, wraps, and overflow are
+ * computed once at native size, so the editor and every thumbnail render the
+ * same book. --page-scale carries the current scale for hairline compensation
+ * (calc(1px / var(--page-scale)) stays one device pixel at any zoom).
+ */
+
+:root {
+  --page-paper: #fffdf9; /* warm-white uncoated stock */
+  --page-ink: #211f1c; /* printed black */
+  --page-guide: rgba(33, 31, 28, 0.16); /* safe-area / trim guides */
+  --page-spine: rgba(33, 31, 28, 0.1); /* fold gradient peak */
+  --page-placeholder-bg: rgba(33, 31, 28, 0.045);
+  --page-placeholder-ink: #5d574e;
+  --page-overflow-tint: rgba(154, 74, 42, 0.08);
+  --page-font: 'Libre Caslon Text', ui-serif, Georgia, serif;
+  --page-scale: 1;
+}
+
+/* One physical page at native inch size. --trim-w/--trim-h set per book. */
+.pg-page {
+  width: calc(var(--trim-w) * 1in);
+  height: calc(var(--trim-h) * 1in);
+  background: var(--page-paper);
+  position: relative;
+  flex: none;
+}
+
+/* Safe area: margins in real inches; the gutter is the spine-side inset. */
+.pg-safe {
+  position: absolute;
+  inset: calc(var(--m-top) * 1in) calc(var(--m-inside) * 1in)
+    calc(var(--m-bottom) * 1in) calc(var(--m-outside) * 1in);
+}
+.pg-page[data-side='recto'] .pg-safe {
+  inset: calc(var(--m-top) * 1in) calc(var(--m-outside) * 1in)
+    calc(var(--m-bottom) * 1in) calc(var(--m-inside) * 1in);
+}
+
+/* Optional guides (toggle): scale-compensated hairline + whisper shading. */
+.pg-safe-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  outline: calc(1px / var(--page-scale)) dashed var(--page-guide);
+}
+
+/* Text block: font size arrives in pt via --pg-font-pt (data-driven). */
+.pg-text {
+  font-family: var(--page-font);
+  font-size: calc(var(--pg-font-pt, 18) * 1pt);
+  line-height: var(--pg-leading, 1.4);
+  color: var(--page-ink);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  min-height: 1em;
+  outline: none;
+}
+
+/* Spine fold: a narrow gradient straddling the join of facing pages. */
+.pg-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0.5in;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--page-spine),
+    transparent
+  );
+}

@@ -1,0 +1,154 @@
+---
+// TEMPORARY risk spike for the explore/drafting-first branch — deleted before merge.
+// Tests the two mechanisms that milestone 3 depends on:
+//   1. caret behavior in a contenteditable laid out at native inches and scaled
+//      down — `transform: scale()` (left) vs CSS `zoom` (right)
+//   2. overflow measurement: offsetHeight is a layout-box value, so it should
+//      report native (pre-transform) pixels — exactly what the safe-area
+//      comparison needs. The readout + tint below verify that live.
+// No imports, no engine, no app code.
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>draft spike — scaled contenteditable</title>
+    <style>
+      :root {
+        --trim-w: 10; /* inches */
+        --trim-h: 10;
+        --m-top: 0.5;
+        --m-bottom: 0.625;
+        --m-outside: 0.5;
+        --m-inside: 0.75;
+        --scale: 0.55;
+        --page-paper: #fffdf9;
+        --page-ink: #211f1c;
+        --page-guide: rgba(33, 31, 28, 0.16);
+        --page-overflow-tint: rgba(154, 74, 42, 0.08);
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #efece6;
+        font-family: system-ui, sans-serif;
+        color: #2c2620;
+      }
+      h1 { font-size: 16px; }
+      .row { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+      .cell h2 { font-size: 13px; font-weight: 600; }
+      /* outer box reserves the scaled footprint */
+      .fit {
+        width: calc(var(--trim-w) * 1in * var(--scale));
+        height: calc(var(--trim-h) * 1in * var(--scale));
+        overflow: hidden;
+      }
+      .page {
+        width: calc(var(--trim-w) * 1in);
+        height: calc(var(--trim-h) * 1in);
+        background: var(--page-paper);
+        box-shadow: 0 2px 6px rgba(44, 38, 32, 0.2);
+        position: relative;
+      }
+      .page.via-transform { transform: scale(var(--scale)); transform-origin: 0 0; }
+      .page.via-zoom { zoom: var(--scale); }
+      .safe {
+        position: absolute;
+        inset: calc(var(--m-top) * 1in) calc(var(--m-outside) * 1in)
+          calc(var(--m-bottom) * 1in) calc(var(--m-inside) * 1in);
+        outline: 2px dashed var(--page-guide);
+      }
+      .ed {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 18pt;
+        line-height: 1.4;
+        color: var(--page-ink);
+        outline: none;
+        min-height: 1em;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        position: relative;
+      }
+      .tint {
+        position: absolute;
+        left: 0;
+        right: 0;
+        background: var(--page-overflow-tint);
+        pointer-events: none;
+        display: none;
+      }
+      .readout {
+        margin-top: 8px;
+        font-size: 12px;
+        font-family: ui-monospace, Menlo, monospace;
+        white-space: pre-line;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Spike: 10×10in page at scale 0.55 — type into both, click mid-word to place caret</h1>
+    <div class="row">
+      <div class="cell">
+        <h2>transform: scale()</h2>
+        <div class="fit">
+          <div class="page via-transform" id="page-t">
+            <div class="safe">
+              <div class="ed" id="ed-t" contenteditable="plaintext-only"></div>
+              <div class="tint" id="tint-t"></div>
+            </div>
+          </div>
+        </div>
+        <div class="readout" id="ro-t"></div>
+      </div>
+      <div class="cell">
+        <h2>zoom</h2>
+        <div class="fit">
+          <div class="page via-zoom" id="page-z">
+            <div class="safe">
+              <div class="ed" id="ed-z" contenteditable="plaintext-only"></div>
+              <div class="tint" id="tint-z"></div>
+            </div>
+          </div>
+        </div>
+        <div class="readout" id="ro-z"></div>
+      </div>
+    </div>
+
+    <script>
+      const PPI = 96;
+      const safeH = (10 - 0.5 - 0.625) * PPI; // trim-h − top − bottom, native px
+      const SAMPLE =
+        'The fox looked back over her shoulder. Snow was falling on the bridge, ' +
+        'and the lanterns were already lit. She counted them twice — seven, then ' +
+        'seven again — and decided the eighth must be hiding.';
+
+      function wire(edId: string, tintId: string, roId: string) {
+        const ed = document.getElementById(edId)!;
+        const tint = document.getElementById(tintId)!;
+        const ro = document.getElementById(roId)!;
+        ed.textContent = SAMPLE;
+        const measure = () => {
+          const h = (ed as HTMLElement).offsetHeight;
+          const over = Math.max(0, h - safeH);
+          tint.style.display = over > 0 ? 'block' : 'none';
+          tint.style.top = `${safeH}px`;
+          tint.style.height = `${over}px`;
+          const r = ed.getBoundingClientRect();
+          ro.textContent =
+            `offsetHeight (layout px): ${h}\n` +
+            `safe height (native px):  ${safeH}\n` +
+            `overflow (native px):     ${over}\n` +
+            `boundingRect h (visual):  ${r.height.toFixed(1)}`;
+        };
+        new ResizeObserver(() => requestAnimationFrame(measure)).observe(ed);
+        ed.addEventListener('input', measure);
+        measure();
+      }
+      wire('ed-t', 'tint-t', 'ro-t');
+      wire('ed-z', 'tint-z', 'ro-z');
+    </script>
+  </body>
+</html>

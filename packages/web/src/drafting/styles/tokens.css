@@ -1,0 +1,138 @@
+/**
+ * Design tokens for the drafting surface — three tiers:
+ *   0. primitives (--p-*, --font-*, --text-*, --space-*, --radius-*): raw
+ *      values, never referenced by components.
+ *   1. semantic roles (--bg-*, --ink-*, --accent, --focus, …): the only tier
+ *      components use. Redefined per theme.
+ *   2. component tokens: defined sparingly where indirection earns its keep.
+ *
+ * Themes switch via data-theme on <html> ("studio" default | "evening" |
+ * "paper"). Book-page rendering tokens live in page.css and are NEVER themed.
+ */
+
+:root {
+  /* --- tier 0: primitives --- */
+  /* warm-neutral ramps, extending the existing folio cream/ink/ochre hues */
+  --p-cream-050: #fbf8f1;
+  --p-cream-100: #f7f1e6;
+  --p-cream-200: #ece2cf;
+  --p-cream-300: #d9cdb4;
+  --p-stone-100: #efece6;
+  --p-stone-200: #e6e2da;
+  --p-stone-300: #d4cfc5;
+  --p-ink-950: #211d18;
+  --p-ink-900: #2c2620;
+  --p-ink-700: #4c443a;
+  --p-taupe-500: #8a7c66;
+  --p-taupe-300: #b7a988;
+  --p-ochre-500: #a37828;
+  --p-ochre-600: #8a6420;
+  --p-ochre-300: #d9a84e;
+  --p-rust-500: #9a4a2a;
+  --p-night-950: #141210;
+  --p-night-900: #1b1815;
+  --p-night-800: #242019;
+  --p-night-700: #302a22;
+
+  --font-ui: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-serif: 'Libre Caslon Text', ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+
+  --shadow-1: 0 1px 3px var(--shadow-color);
+  --shadow-2: 0 4px 14px var(--shadow-color);
+  --shadow-page:
+    0 2px 6px var(--shadow-color),
+    0 12px 32px var(--shadow-color);
+}
+
+/* --- tier 1: semantic roles, per theme --- */
+
+:root,
+:root[data-theme='studio'] {
+  color-scheme: only light; /* 'only' opts out of Chrome Android Auto Dark */
+  --bg-app: var(--p-stone-100);
+  --bg-surface: #fbfaf7;
+  --bg-raised: #ffffff;
+  --bg-inset: var(--p-stone-200);
+  --ink-1: var(--p-ink-900);
+  --ink-2: var(--p-ink-700);
+  --ink-3: var(--p-taupe-500);
+  --rule: var(--p-stone-300);
+  --hairline: var(--p-stone-200);
+  --accent: var(--p-ochre-600);
+  --accent-ink: #ffffff;
+  --focus: var(--p-ochre-500);
+  --selection-bg: rgba(163, 120, 40, 0.22);
+  --warn-soft: rgba(154, 74, 42, 0.12);
+  --shadow-color: rgba(44, 38, 32, 0.14);
+  --font-display: var(--font-ui);
+}
+
+:root[data-theme='evening'] {
+  color-scheme: only dark;
+  --bg-app: var(--p-night-950);
+  --bg-surface: var(--p-night-900);
+  --bg-raised: var(--p-night-800);
+  --bg-inset: #100e0c;
+  --ink-1: #ece7de;
+  --ink-2: #c4bcae;
+  --ink-3: #8f8776;
+  --rule: var(--p-night-700);
+  --hairline: #2a251e;
+  --accent: var(--p-ochre-300);
+  --accent-ink: var(--p-night-950);
+  --focus: var(--p-ochre-300);
+  --selection-bg: rgba(217, 168, 78, 0.28);
+  --warn-soft: rgba(217, 133, 92, 0.16);
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  --font-display: var(--font-ui);
+}
+
+:root[data-theme='paper'] {
+  color-scheme: only light;
+  --bg-app: var(--p-cream-100);
+  --bg-surface: #fffdf7;
+  --bg-raised: #ffffff;
+  --bg-inset: var(--p-cream-200);
+  --ink-1: var(--p-ink-900);
+  --ink-2: #6b5f4e;
+  --ink-3: var(--p-taupe-500);
+  --rule: var(--p-cream-300);
+  --hairline: #eee4d0;
+  --accent: var(--p-ochre-500);
+  --accent-ink: #fffdf7;
+  --focus: var(--p-ochre-600);
+  --selection-bg: rgba(163, 120, 40, 0.2);
+  --warn-soft: rgba(154, 74, 42, 0.1);
+  --shadow-color: rgba(76, 64, 48, 0.16);
+  /* the bookish serif accent: headings, labels, book titles */
+  --font-display: var(--font-serif);
+}
+
+/* --- tier 2: component tokens --- */
+
+:root {
+  --counter-ink: var(--ink-3);
+  --panel-bg: var(--bg-surface);
+  --chip-bg: var(--bg-inset);
+  --thumb-ring-active: var(--accent);
+}
