@@ -874,28 +874,8 @@ select {
   color: var(--ink-3);
 }
 
-/* ---- page layout popover ---- */
-
-.ed-layout-anchor {
-  position: relative;
-  display: inline-flex;
-}
-
-.layout-pop {
-  position: absolute;
-  bottom: calc(100% + var(--space-2));
-  left: 50%;
-  transform: translateX(-50%);
-  top: auto;
-  right: auto;
-  width: 300px;
-  z-index: 40;
-}
-.ed-pagecaption[data-side='recto'] .layout-pop {
-  left: auto;
-  right: 0;
-  transform: none;
-}
+/* ---- page layout panel (F6: docked in the right rail, shares .specs-panel
+   geometry so the spread stays visible while a page's layout is adjusted) ---- */
 
 .layout-grid {
   display: grid;

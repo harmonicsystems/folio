@@ -78,10 +78,14 @@ export function EditorShell({
     [book.pageCount, construction],
   );
 
-  const defaultUnit = useMemo(
-    () => map.units.find((u) => u.pages.some((p) => p.editable))?.index ?? 0,
-    [map],
-  );
+  // F7: a new book opens on the first STORY spread, not the title/copyright
+  // front matter — that's where a writer actually starts. Front matter is one
+  // turn back. Falls back to the first editable unit if a format had no story.
+  const defaultUnit = useMemo(() => {
+    const story = map.units.find((u) => u.pages.some((p) => p.role === 'story'));
+    const editable = map.units.find((u) => u.pages.some((p) => p.editable));
+    return (story ?? editable)?.index ?? 0;
+  }, [map]);
   const clamped = Math.max(0, Math.min(unitIndex ?? defaultUnit, map.units.length - 1));
   const unit = map.units[clamped];
 
@@ -129,6 +133,11 @@ export function EditorShell({
   });
   const [specsOpen, setSpecsOpen] = useState(false);
   const [layoutFor, setLayoutFor] = useState<number | null>(null);
+
+  // The layout panel edits one page; close it when the spread changes.
+  useEffect(() => {
+    setLayoutFor(null);
+  }, [unit.index]);
 
   const contentFor = useCallback(
     (slot: PageSlot): DraftPageContent =>
@@ -335,34 +344,22 @@ export function EditorShell({
                 <span className="ed-overflow-note">past the safe area</span>
               )}
               {target && (
-                <span className="ed-layout-anchor">
-                  <button
-                    type="button"
-                    className="app-iconbtn ed-break"
-                    aria-pressed={layoutFor === slot.pageNumber}
-                    title="Text position, type size, and illustration space for this page"
-                    onClick={() =>
-                      setLayoutFor((v) =>
-                        v === slot.pageNumber ? null : slot.pageNumber,
-                      )
-                    }
-                  >
-                    ⊞ Text & art
-                  </button>
-                  {layoutFor === slot.pageNumber && (
-                    <LayoutControls
-                      target={target}
-                      page={content}
-                      format={format}
-                      canSpreadBleed={
-                        slot.role === 'story' &&
-                        slot.side === 'verso' &&
-                        unit.kind === 'spread'
-                      }
-                      onClose={() => setLayoutFor(null)}
-                    />
-                  )}
-                </span>
+                <button
+                  type="button"
+                  className="app-iconbtn ed-break"
+                  aria-pressed={layoutFor === slot.pageNumber}
+                  title="Text position, type size, and illustration space for this page"
+                  onClick={() => {
+                    // F6: opens the docked panel in the right rail (not over
+                    // the page); mutually exclusive with the Specs panel.
+                    setSpecsOpen(false);
+                    setLayoutFor((v) =>
+                      v === slot.pageNumber ? null : slot.pageNumber,
+                    );
+                  }}
+                >
+                  ⊞ Text & art
+                </button>
               )}
               {slot.role === 'story' && (
                 <button
@@ -443,7 +440,11 @@ export function EditorShell({
           className="app-iconbtn ed-break"
           aria-pressed={specsOpen}
           title="Trim, pages, construction, font"
-          onClick={() => setSpecsOpen((v) => !v)}
+          onClick={() => {
+            // One panel in the right rail at a time.
+            setLayoutFor(null);
+            setSpecsOpen((v) => !v);
+          }}
         >
           Specs
         </button>
@@ -458,6 +459,31 @@ export function EditorShell({
         </button>
       </div>
       <SpecsPanel book={book} open={specsOpen} onClose={() => setSpecsOpen(false)} />
+      {/* F6: the layout controls dock in the right rail (like SpecsPanel) so
+          the spread stays visible while you adjust the current page. */}
+      {(() => {
+        if (layoutFor === null) return null;
+        const slot = unit.pages.find((p) => p.pageNumber === layoutFor);
+        if (!slot || !slot.editable) return null;
+        const target: PageTarget =
+          slot.role === 'story'
+            ? { kind: 'story', ordinal: slot.storyOrdinal ?? 0 }
+            : { kind: 'front-matter', role: slot.role as FrontMatterRole };
+        return (
+          <LayoutControls
+            target={target}
+            page={contentFor(slot)}
+            pageLabel={`p. ${slot.pageNumber} · ${ROLE_CAPTION[slot.role]}`}
+            format={format}
+            canSpreadBleed={
+              slot.role === 'story' &&
+              slot.side === 'verso' &&
+              unit.kind === 'spread'
+            }
+            onClose={() => setLayoutFor(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -40,12 +40,15 @@ const KIND_OPTIONS: Array<{ kind: PlaceholderKind; label: string }> = [
 export function LayoutControls({
   target,
   page,
+  pageLabel,
   format,
   canSpreadBleed,
   onClose,
 }: {
   target: PageTarget;
   page: DraftPageContent;
+  /** Which page the panel is editing, e.g. "p. 5 · story". */
+  pageLabel: string;
   format: BookFormat;
   /** Spread-bleed is offered only on verso story pages facing a recto. */
   canSpreadBleed: boolean;
@@ -54,6 +57,9 @@ export function LayoutControls({
   const { store } = useBookStore();
   const wrapRef = useRef<HTMLDivElement>(null);
 
+  // Docked in the right rail (F6): the spread stays fully visible while you
+  // change this page's layout. Persists until closed or you switch pages —
+  // no outside-click dismissal, unlike the old over-page popover.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -61,15 +67,8 @@ export function LayoutControls({
         onClose();
       }
     };
-    const onDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) onClose();
-    };
     document.addEventListener('keydown', onKey, true);
-    document.addEventListener('pointerdown', onDown);
-    return () => {
-      document.removeEventListener('keydown', onKey, true);
-      document.removeEventListener('pointerdown', onDown);
-    };
+    return () => document.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   const verticals = allowedVerticals(page);
@@ -79,7 +78,18 @@ export function LayoutControls({
   );
 
   return (
-    <div className="layout-pop app-popover" role="dialog" aria-label="Page layout" ref={wrapRef}>
+    <div
+      className="specs-panel layout-panel"
+      role="dialog"
+      aria-label="Page layout"
+      ref={wrapRef}
+    >
+      <div className="specs-panel-head">
+        <span className="app-popover-label">Text &amp; art · {pageLabel}</span>
+        <button type="button" className="app-iconbtn" onClick={onClose}>
+          Close
+        </button>
+      </div>
       <div className="nb-field">
         <label>Text block</label>
         <div className="layout-grid" role="group" aria-label="Text block position">
