@@ -27,9 +27,10 @@ export function SpreadNav({
       </button>
       <span className="ed-nav-label">
         {noun} {unit.label}
+        {/* F2: physical pages + story-spread ordinal only — the absolute
+            render-unit index was an internal coordinate and read as noise. */}
         <span className="ed-nav-sub">
-          {unit.storyLabel ? ` · ${unit.storyLabel}` : ''} · {unit.index + 1} of{' '}
-          {unitCount}
+          {unit.storyLabel ? ` · ${unit.storyLabel}` : ''}
         </span>
       </span>
       <button

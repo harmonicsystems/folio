@@ -5,31 +5,24 @@
 
 import type { BookFormat } from '../../formats.js';
 import type { DraftBook } from '../../model.js';
-import type { PageMap, RenderUnit } from '../../pageMap.js';
-import {
-  bookWordBand,
-  bookWordCount,
-  budgetUsage,
-  unitWordCount,
-} from '../../counts.js';
+import type { PageMap } from '../../pageMap.js';
+import { bookWordBand, bookWordCount, budgetUsage } from '../../counts.js';
 
 export function CountersBar({
   book,
   map,
   format,
-  unit,
 }: {
   book: DraftBook;
   map: PageMap;
   format: BookFormat;
-  /** Current unit, when a spread is open in the editor. */
-  unit?: RenderUnit;
 }) {
   const total = bookWordCount(book);
   const band = bookWordBand(book, format);
   const usage = budgetUsage(book, map);
-  const here = unit ? unitWordCount(book, unit) : null;
 
+  // F3: two whole-book facts only. The per-spread "here" count duplicated
+  // what the page captions already sum to, tipping the bar toward a readout.
   return (
     <div className="counters" role="status" aria-label="Manuscript counts">
       <span className="counters-item">
@@ -39,12 +32,6 @@ export function CountersBar({
           · target {band.min}–{band.max}, around {band.target}
         </span>
       </span>
-      {here !== null && unit && (
-        <span className="counters-item">
-          <strong>{here}</strong> on{' '}
-          {unit.kind === 'single' ? 'page' : 'pages'} {unit.label}
-        </span>
-      )}
       <span className="counters-item">
         <strong>{usage.used}</strong> of {usage.budget} story pages
         {usage.overflowCount > 0 && (

@@ -433,18 +433,23 @@ export function EditorShell({
           onNext={goNext}
         />
         <div className="app-topbar-spacer" />
-        <CountersBar book={book} map={map} format={format} unit={unit} />
+        <CountersBar book={book} map={map} format={format} />
+        {/* F9: a hairline sets the tools apart from the counts. */}
+        <span className="ed-tools-divider" aria-hidden="true" />
+        {/* F4: Specs/Guides carry the same pill as the caption actions so
+            they read as controls, not two more words in the sentence. */}
         <button
           type="button"
-          className="app-iconbtn"
+          className="app-iconbtn ed-break"
           aria-pressed={specsOpen}
+          title="Trim, pages, construction, font"
           onClick={() => setSpecsOpen((v) => !v)}
         >
           Specs
         </button>
         <button
           type="button"
-          className="app-iconbtn"
+          className="app-iconbtn ed-break"
           aria-pressed={showGuides}
           onClick={toggleGuides}
           title="Safe-area guides (⌘;)"

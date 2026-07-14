@@ -20,11 +20,15 @@ export function PresetCard({
       aria-pressed={selected}
       onClick={onSelect}
     >
-      <TrimSilhouette
-        width={format.trim.width}
-        height={format.trim.height}
-        box={64}
-      />
+      {/* F5: seat the silhouette in an inset well (parity with the library
+          card) so the white-on-white trim shape actually reads. */}
+      <span className="nb-preset-well">
+        <TrimSilhouette
+          width={format.trim.width}
+          height={format.trim.height}
+          box={64}
+        />
+      </span>
       <span className="nb-preset-name">{format.name}</span>
       <span className="nb-preset-age">ages {format.ageRange}</span>
       <span className="nb-preset-desc">{format.description}</span>

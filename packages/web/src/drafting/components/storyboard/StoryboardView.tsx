@@ -124,9 +124,10 @@ export function StoryboardView({
             +
           </button>
         </div>
+        <span className="ed-tools-divider" aria-hidden="true" />
         <button
           type="button"
-          className="app-iconbtn"
+          className="app-iconbtn ed-break"
           onClick={() =>
             navigate({ kind: 'book', bookId: book.id, view: 'illustrations' })
           }

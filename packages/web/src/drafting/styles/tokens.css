@@ -23,6 +23,7 @@
   --p-ink-950: #211d18;
   --p-ink-900: #2c2620;
   --p-ink-700: #4c443a;
+  --p-taupe-600: #786a53; /* ~4.7:1 tertiary ink on light surfaces (WCAG AA) */
   --p-taupe-500: #8a7c66;
   --p-taupe-300: #b7a988;
   --p-ochre-500: #a37828;
@@ -75,7 +76,7 @@
   --bg-inset: var(--p-stone-200);
   --ink-1: var(--p-ink-900);
   --ink-2: var(--p-ink-700);
-  --ink-3: var(--p-taupe-500);
+  --ink-3: var(--p-taupe-600); /* F1: was --p-taupe-500 (3.9:1) → 4.7:1 */
   --rule: var(--p-stone-300);
   --hairline: var(--p-stone-200);
   --accent: var(--p-ochre-600);
@@ -96,7 +97,7 @@
   --bg-inset: #100e0c;
   --ink-1: #ece7de;
   --ink-2: #c4bcae;
-  --ink-3: #8f8776;
+  --ink-3: #988f7c; /* F8: was #8f8776 → ~5.0:1 on raised surfaces */
   --rule: var(--p-night-700);
   --hairline: #2a251e;
   --accent: var(--p-ochre-300);
@@ -117,7 +118,7 @@
   --bg-inset: var(--p-cream-200);
   --ink-1: var(--p-ink-900);
   --ink-2: #6b5f4e;
-  --ink-3: var(--p-taupe-500);
+  --ink-3: var(--p-taupe-600); /* F1: was --p-taupe-500 (4.0:1) → 4.7:1 */
   --rule: var(--p-cream-300);
   --hairline: #eee4d0;
   --accent: var(--p-ochre-500);
