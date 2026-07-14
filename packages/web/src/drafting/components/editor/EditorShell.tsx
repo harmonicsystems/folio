@@ -14,6 +14,7 @@ import {
   splitStoryPageAt,
   withFrontMatterPage,
   withStoryPage,
+  type PageTarget,
 } from '../../model.js';
 import type { FrontMatterRole } from '../../formats.js';
 import { buildPageMap, unitForOrdinal, type PageSlot } from '../../pageMap.js';
@@ -24,6 +25,7 @@ import { useBookStore } from '../../hooks/useBookStore.js';
 import { useKeyboardNav } from '../../hooks/useKeyboardNav.js';
 import { SpreadFrame } from '../page/SpreadFrame.js';
 import { CountersBar } from './CountersBar.js';
+import { LayoutControls } from './LayoutControls.js';
 import { SpecsPanel } from './SpecsPanel.js';
 import { SpreadCanvas } from './SpreadCanvas.js';
 import { SpreadNav } from './SpreadNav.js';
@@ -112,6 +114,7 @@ export function EditorShell({
     onEscape: zoomOut,
   });
   const [specsOpen, setSpecsOpen] = useState(false);
+  const [layoutFor, setLayoutFor] = useState<number | null>(null);
 
   const contentFor = useCallback(
     (slot: PageSlot): DraftPageContent =>
@@ -234,6 +237,11 @@ export function EditorShell({
           const content = contentFor(slot);
           const words = slot.role === 'story' ? countWords(content.text) : null;
           const over = overflows[slot.pageNumber] ?? 0;
+          const target: PageTarget | null = !slot.editable
+            ? null
+            : slot.role === 'story'
+              ? { kind: 'story', ordinal: slot.storyOrdinal ?? 0 }
+              : { kind: 'front-matter', role: slot.role as FrontMatterRole };
           return (
             <div
               key={slot.pageNumber}
@@ -247,6 +255,35 @@ export function EditorShell({
               </span>
               {over > 0 && slot.editable && (
                 <span className="ed-overflow-note">past the safe area</span>
+              )}
+              {target && (
+                <span className="ed-layout-anchor">
+                  <button
+                    type="button"
+                    className="app-iconbtn ed-break"
+                    aria-pressed={layoutFor === slot.pageNumber}
+                    onClick={() =>
+                      setLayoutFor((v) =>
+                        v === slot.pageNumber ? null : slot.pageNumber,
+                      )
+                    }
+                  >
+                    layout
+                  </button>
+                  {layoutFor === slot.pageNumber && (
+                    <LayoutControls
+                      target={target}
+                      page={content}
+                      format={format}
+                      canSpreadBleed={
+                        slot.role === 'story' &&
+                        slot.side === 'verso' &&
+                        unit.kind === 'spread'
+                      }
+                      onClose={() => setLayoutFor(null)}
+                    />
+                  )}
+                </span>
               )}
               {slot.role === 'story' && (
                 <button

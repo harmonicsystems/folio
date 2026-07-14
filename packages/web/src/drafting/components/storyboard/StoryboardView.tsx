@@ -74,6 +74,16 @@ export function StoryboardView({
       )}
       <div className="ed-statusrow">
         <CountersBar book={book} map={map} format={format} />
+        <div className="app-topbar-spacer" />
+        <button
+          type="button"
+          className="app-iconbtn"
+          onClick={() =>
+            navigate({ kind: 'book', bookId: book.id, view: 'illustrations' })
+          }
+        >
+          Illustration list
+        </button>
       </div>
     </div>
   );

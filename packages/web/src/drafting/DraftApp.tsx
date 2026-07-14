@@ -15,6 +15,7 @@ import { LibraryView } from './components/library/LibraryView.js';
 import { NewBookFlow } from './components/newbook/NewBookFlow.js';
 import { EditorShell } from './components/editor/EditorShell.js';
 import { StoryboardView } from './components/storyboard/StoryboardView.js';
+import { IllustrationList } from './components/storyboard/IllustrationList.js';
 
 export default function DraftApp() {
   const route = useRoute();
@@ -82,6 +83,8 @@ export default function DraftApp() {
           (book && book.id === route.bookId ? (
             route.view === 'storyboard' ? (
               <StoryboardView book={book} />
+            ) : route.view === 'illustrations' ? (
+              <IllustrationList book={book} />
             ) : (
               <EditorShell
                 book={book}

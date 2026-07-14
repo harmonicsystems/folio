@@ -382,6 +382,140 @@ export function applyLevel(
   return touched({ ...book, readerLevel: level }, now);
 }
 
+// ---- page-level layout + placeholders -------------------------------------
+
+export type PageTarget =
+  | { kind: 'story'; ordinal: number }
+  | { kind: 'front-matter'; role: FrontMatterRole };
+
+export function withPage(
+  book: DraftBook,
+  target: PageTarget,
+  update: (page: DraftPageContent) => DraftPageContent,
+  now?: number,
+): DraftBook {
+  return target.kind === 'story'
+    ? withStoryPage(book, target.ordinal, update, now)
+    : withFrontMatterPage(book, target.role, update, now);
+}
+
+/**
+ * Which vertical text positions a page's placeholder leaves open: a half-page
+ * illustration owns its half, so the text block takes the other one. Full-page
+ * and spread illustrations don't constrain — text over art is the norm.
+ */
+export function allowedVerticals(
+  page: DraftPageContent,
+): Array<TextLayout['position']['v']> {
+  const kinds = page.placeholders.map((p) => p.kind);
+  if (kinds.includes('half-page-top')) return ['bottom'];
+  if (kinds.includes('half-page-bottom')) return ['top'];
+  return ['top', 'middle', 'bottom'];
+}
+
+/**
+ * Keep the persisted `placement` string meaningful to main-branch semantics,
+ * derived from placeholders + layout (ADR 0016 §5 / flatten path).
+ */
+export function derivePlacement(page: DraftPageContent): PagePlacement {
+  const kinds = page.placeholders.map((p) => p.kind);
+  const fullArt = kinds.includes('full-page') || kinds.includes('spread-bleed');
+  if (fullArt && page.text.length === 0) return 'illustration-only';
+  if (kinds.includes('half-page-top')) return 'text-bottom';
+  if (kinds.includes('half-page-bottom')) return 'text-top';
+  if (page.layout.position.v === 'top') return 'text-top';
+  if (page.layout.position.v === 'bottom') return 'text-bottom';
+  return 'text-only';
+}
+
+/** Clamp layout to what placeholders allow, then refresh placement. */
+export function normalizePage(page: DraftPageContent): DraftPageContent {
+  const verticals = allowedVerticals(page);
+  const v = verticals.includes(page.layout.position.v)
+    ? page.layout.position.v
+    : verticals[0];
+  const normalized =
+    v === page.layout.position.v
+      ? page
+      : { ...page, layout: { ...page.layout, position: { ...page.layout.position, v } } };
+  const placement = derivePlacement(normalized);
+  return placement === normalized.placement
+    ? normalized
+    : { ...normalized, placement };
+}
+
+export function setPageLayout(
+  book: DraftBook,
+  target: PageTarget,
+  patch: Omit<Partial<TextLayout>, 'position'> & {
+    position?: Partial<TextLayout['position']>;
+  },
+  now?: number,
+): DraftBook {
+  return withPage(
+    book,
+    target,
+    (page) =>
+      normalizePage({
+        ...page,
+        layout: {
+          align: patch.align ?? page.layout.align,
+          typeStep: patch.typeStep ?? page.layout.typeStep,
+          position: { ...page.layout.position, ...patch.position },
+        },
+      }),
+    now,
+  );
+}
+
+/**
+ * Set (or clear, with null) the page's illustration space. One placeholder
+ * per page — few and beautiful. The note survives a kind change.
+ */
+export function setPagePlaceholder(
+  book: DraftBook,
+  target: PageTarget,
+  kind: PlaceholderKind | null,
+  now?: number,
+): DraftBook {
+  return withPage(
+    book,
+    target,
+    (page) => {
+      const existing = page.placeholders[0];
+      if (kind === null) return normalizePage({ ...page, placeholders: [] });
+      if (existing?.kind === kind) return page;
+      return normalizePage({
+        ...page,
+        placeholders: [
+          { id: existing?.id ?? newId(), kind, note: existing?.note ?? '' },
+        ],
+      });
+    },
+    now,
+  );
+}
+
+export function setPlaceholderNote(
+  book: DraftBook,
+  target: PageTarget,
+  note: string,
+  now?: number,
+): DraftBook {
+  return withPage(
+    book,
+    target,
+    (page) =>
+      page.placeholders.length === 0
+        ? page
+        : {
+            ...page,
+            placeholders: [{ ...page.placeholders[0], note }],
+          },
+    now,
+  );
+}
+
 const LAYOUT_V = ['top', 'middle', 'bottom'] as const;
 const LAYOUT_H = ['left', 'center', 'right'] as const;
 const TYPE_STEPS = [-1, 0, 1, 2] as const;

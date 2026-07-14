@@ -80,6 +80,9 @@
   flex-direction: column;
   inset: calc(var(--m-top) * 1in) calc(var(--m-inside) * 1in)
     calc(var(--m-bottom) * 1in) calc(var(--m-outside) * 1in);
+  /* Text paints above placeholder frames — including a neighbor's
+     spread-bleed frame spanning under this page. */
+  z-index: 2;
 }
 .pg-page[data-side='recto'] .pg-safe {
   inset: calc(var(--m-top) * 1in) calc(var(--m-outside) * 1in)
@@ -185,8 +188,14 @@
 .pg-ph[data-kind='full-page'] {
   inset: 0;
 }
+/* Stored on the verso page; the frame spans across the facing recto and
+   bleeds on the three outer edges (never past the spine it straddles). */
 .pg-ph[data-kind='spread-bleed'] {
-  inset: calc(var(--bleed, 0.125) * -1in);
+  top: calc(var(--bleed, 0.125) * -1in);
+  bottom: calc(var(--bleed, 0.125) * -1in);
+  left: calc(var(--bleed, 0.125) * -1in);
+  right: calc((var(--trim-w) * -1in) - (var(--bleed, 0.125) * 1in));
+  z-index: 1;
 }
 .pg-ph[data-kind='half-page-top'] {
   inset: 0 0 50% 0;
