@@ -6,13 +6,7 @@
  */
 
 import { useEffect, useRef } from 'react';
-import {
-  findConstruction,
-  getFormat,
-  sameTrim,
-  trimLabel,
-  type Trim,
-} from '../../formats.js';
+import { getFormat, sameTrim, trimLabel, type Trim } from '../../formats.js';
 import type { DraftBook } from '../../model.js';
 import { applyConstruction, applyLevel, applyPageCount } from '../../model.js';
 import { useBookStore } from '../../hooks/useBookStore.js';

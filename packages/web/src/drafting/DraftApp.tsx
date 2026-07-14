@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import './styles/tokens.css';
 import './styles/page.css';
+import './styles/submission.css';
 import './styles/app.css';
 import { useRoute } from './hooks/useRoute.js';
 import { useBookStore } from './hooks/useBookStore.js';
@@ -16,6 +17,7 @@ import { NewBookFlow } from './components/newbook/NewBookFlow.js';
 import { EditorShell } from './components/editor/EditorShell.js';
 import { StoryboardView } from './components/storyboard/StoryboardView.js';
 import { IllustrationList } from './components/storyboard/IllustrationList.js';
+import { SubmissionView } from './components/submission/SubmissionView.js';
 
 export default function DraftApp() {
   const route = useRoute();
@@ -65,6 +67,15 @@ export default function DraftApp() {
             >
               Storyboard
             </button>
+            <button
+              type="button"
+              aria-pressed={route.view === 'submission'}
+              onClick={() =>
+                navigate({ kind: 'book', bookId: book.id, view: 'submission' })
+              }
+            >
+              Submission
+            </button>
           </div>
         )}
       </TopBar>
@@ -85,6 +96,8 @@ export default function DraftApp() {
               <StoryboardView book={book} />
             ) : route.view === 'illustrations' ? (
               <IllustrationList book={book} />
+            ) : route.view === 'submission' ? (
+              <SubmissionView book={book} />
             ) : (
               <EditorShell
                 book={book}

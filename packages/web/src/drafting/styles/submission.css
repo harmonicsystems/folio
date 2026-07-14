@@ -1,0 +1,171 @@
+/**
+ * Submission view — deliberately UN-THEMED (ADR 0016 §5). These --ms-*
+ * tokens are fixed on :root and never redefined under any [data-theme]:
+ * the manuscript is white paper, black ink, 12pt Times New Roman,
+ * double-spaced, 1" margins. The deliberate blandness is the point.
+ */
+
+:root {
+  --ms-paper: #ffffff;
+  --ms-ink: #000000;
+  --ms-font: 'Times New Roman', 'Liberation Serif', Times, serif;
+}
+
+.ms-root {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.ms-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ms-toolbar .app-toggle-row {
+  gap: var(--space-2);
+}
+
+.ms-sheets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* One US-Letter sheet at CSS-true size: 8.5×11in, 1in padding. */
+.ms-sheet {
+  width: 8.5in;
+  height: 11in;
+  background: var(--ms-paper);
+  color: var(--ms-ink);
+  box-shadow: var(--shadow-2);
+  position: relative;
+  padding: 1in;
+  box-sizing: border-box;
+  flex: none;
+}
+
+.ms-sheet,
+.ms-sheet * {
+  font-family: var(--ms-font);
+  font-size: 12pt;
+}
+
+.ms-running-header {
+  position: absolute;
+  top: 0.5in;
+  right: 1in;
+  line-height: 1;
+}
+
+/* Manuscript blocks: double-spaced (line-height 2), no margins — spacing IS
+   the line height, exactly as the .docx renders it. */
+.ms-block {
+  line-height: 2;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.ms-block[data-kind='text'] {
+  text-indent: 0.5in;
+}
+.ms-block[data-kind='contact'] {
+  line-height: 1.15;
+}
+.ms-block[data-kind='count'] {
+  line-height: 1.15;
+  text-align: right;
+}
+.ms-block[data-kind='title'] {
+  text-align: center;
+  margin-top: 2.2in;
+}
+.ms-block[data-kind='byline'] {
+  text-align: center;
+}
+
+/* The hidden measurer: identical metrics, laid out off-screen. */
+.ms-measurer {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  width: 6.5in; /* 8.5 − 2×1in margins */
+  left: -9999px;
+  top: 0;
+}
+
+/* Quarantine + author form share the app chrome look. */
+.ms-side {
+  width: min(8.5in, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ms-quarantine {
+  background: var(--warn-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.ms-quarantine ul {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-6);
+}
+
+.ms-author {
+  background: var(--bg-surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ms-author input,
+.ms-author textarea {
+  border: 1px solid var(--rule);
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
+@media print {
+  /* Print exactly the sheets: our pagination IS the PDF. */
+  .app-topbar,
+  .app-banner,
+  .ms-toolbar,
+  .ms-side {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .ms-root {
+    padding: 0;
+    overflow: visible;
+  }
+  .ms-sheets {
+    gap: 0;
+  }
+  .ms-sheet {
+    box-shadow: none;
+    break-after: page;
+  }
+}
+
+@page {
+  size: letter;
+  margin: 0;
+}

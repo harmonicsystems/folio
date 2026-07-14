@@ -905,7 +905,9 @@ select {
   }
   .ill-root {
     width: 100%;
-    padding: 0;
+    /* @page margin is 0 globally (the submission sheets carry their own
+       margins), so this artifact brings its own. */
+    padding: 1in;
     color: #000;
   }
   .ill-list li {
