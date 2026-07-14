@@ -11,6 +11,7 @@ import type { DraftBook, DraftPageContent } from '../../model.js';
 import { getFrontMatterPage, getStoryPage } from '../../model.js';
 import type { FrontMatterRole } from '../../formats.js';
 import type { PageSlot, RenderUnit } from '../../pageMap.js';
+import { chapterAt } from '../../model.js';
 import { countWords } from '../../counts.js';
 import { SpreadFrame } from '../page/SpreadFrame.js';
 
@@ -65,9 +66,19 @@ export function SpreadThumbnail({
     setOverflowing(over);
   }, [book, safeH]);
 
+  const chapterFor = format.supportsChapters
+    ? (slot: PageSlot) =>
+        slot.role === 'story' && slot.storyOrdinal !== undefined
+          ? chapterAt(book, slot.storyOrdinal)?.title
+          : undefined
+    : undefined;
+
   const fmChips = unit.pages
     .map((p) => FM_CHIP[p.role])
     .filter((label): label is string => Boolean(label));
+  const chapterChips = unit.pages
+    .map((p) => chapterFor?.(p))
+    .filter((t): t is string => Boolean(t));
   const notes = unit.pages
     .flatMap((p) => contentFor(p).placeholders)
     .map((ph) => ph.note)
@@ -109,6 +120,7 @@ export function SpreadThumbnail({
             unit={unit}
             contentFor={contentFor}
             mode="thumb"
+            chapterFor={chapterFor}
           />
         </div>
       </div>
@@ -118,6 +130,9 @@ export function SpreadThumbnail({
       </span>
       {fmChips.length > 0 && (
         <span className="sb-thumb-chip">{fmChips.join(' · ')}</span>
+      )}
+      {chapterChips.length > 0 && (
+        <span className="sb-thumb-chip">{chapterChips.join(' · ')}</span>
       )}
       {notes.length > 0 && (
         <span className="sb-thumb-note">“{notes.join('” · “')}”</span>

@@ -242,3 +242,19 @@ describe('emptyPage layout defaults', () => {
     });
   });
 });
+
+describe('chapters (early reader)', () => {
+  it('sets, renames, and removes a chapter at an ordinal', async () => {
+    const { setChapterAt, chapterAt } = await import('../../src/drafting/model.js');
+    let book = newBook(EARLY_READER, { now: 1 });
+    book = setChapterAt(book, 0, 'The Wall', 2);
+    book = setChapterAt(book, 4, 'The Gap', 3);
+    expect(book.chapters?.map((c) => c.title)).toEqual(['The Wall', 'The Gap']);
+    expect(chapterAt(book, 4)?.title).toBe('The Gap');
+    const renamed = setChapterAt(book, 0, 'The Ivy Wall', 4);
+    expect(chapterAt(renamed, 0)?.title).toBe('The Ivy Wall');
+    expect(chapterAt(renamed, 0)?.id).toBe(chapterAt(book, 0)?.id);
+    const removed = setChapterAt(renamed, 4, null, 5);
+    expect(removed.chapters?.map((c) => c.title)).toEqual(['The Ivy Wall']);
+  });
+});

@@ -22,6 +22,7 @@ export function PageRenderer({
   content,
   mode,
   showGuides = false,
+  chapterTitle,
   children,
 }: {
   format: BookFormat;
@@ -30,6 +31,8 @@ export function PageRenderer({
   content: DraftPageContent;
   mode: 'edit' | 'thumb';
   showGuides?: boolean;
+  /** A chapter beginning on this page prints its title above the text. */
+  chapterTitle?: string;
   /** Edit mode: the live PageTextEditor for this page. */
   children?: ReactNode;
 }) {
@@ -55,6 +58,7 @@ export function PageRenderer({
       ))}
       {slot.role !== 'self-end' && (
         <div className="pg-safe" data-v={content.layout.position.v}>
+          {chapterTitle && <div className="pg-chapter">{chapterTitle}</div>}
           {mode === 'edit' && children
             ? children
             : !hideText && <TextBlock text={content.text} layout={content.layout} />}

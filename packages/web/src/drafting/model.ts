@@ -382,6 +382,33 @@ export function applyLevel(
   return touched({ ...book, readerLevel: level }, now);
 }
 
+// ---- chapters (named text divisions; early reader) -------------------------
+
+export function chapterAt(book: DraftBook, ordinal: number): Chapter | undefined {
+  return book.chapters?.find((c) => c.startOrdinal === ordinal);
+}
+
+/**
+ * Set, rename, or remove (title === null) the chapter starting at a story
+ * ordinal. Chapters are markers over ordinals — page-count changes renumber
+ * them with the text they name.
+ */
+export function setChapterAt(
+  book: DraftBook,
+  ordinal: number,
+  title: string | null,
+  now?: number,
+): DraftBook {
+  const chapters = book.chapters ?? [];
+  const rest = chapters.filter((c) => c.startOrdinal !== ordinal);
+  const next =
+    title === null
+      ? rest
+      : [...rest, { id: chapterAt(book, ordinal)?.id ?? newId(), title, startOrdinal: ordinal }];
+  next.sort((a, b) => a.startOrdinal - b.startOrdinal);
+  return touched({ ...book, chapters: next }, now);
+}
+
 // ---- page-level layout + placeholders -------------------------------------
 
 export type PageTarget =

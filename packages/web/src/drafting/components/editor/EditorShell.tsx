@@ -9,8 +9,10 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { findConstruction, getFormat } from '../../formats.js';
 import type { DraftBook, DraftPageContent } from '../../model.js';
 import {
+  chapterAt,
   getFrontMatterPage,
   getStoryPage,
+  setChapterAt,
   splitStoryPageAt,
   withFrontMatterPage,
   withStoryPage,
@@ -198,6 +200,13 @@ export function EditorShell({
     );
   };
 
+  const chapterFor = format.supportsChapters
+    ? (slot: PageSlot) =>
+        slot.role === 'story' && slot.storyOrdinal !== undefined
+          ? chapterAt(book, slot.storyOrdinal)?.title
+          : undefined
+    : undefined;
+
   const renderPageFrame = (slot: PageSlot, page: React.ReactNode) => (
     <div
       key={slot.pageNumber}
@@ -227,6 +236,7 @@ export function EditorShell({
           contentFor={contentFor}
           mode="edit"
           showGuides={showGuides}
+          chapterFor={chapterFor}
           renderEditor={renderEditor}
           renderPageFrame={renderPageFrame}
         />
@@ -296,6 +306,51 @@ export function EditorShell({
                   break ↵
                 </button>
               )}
+              {format.supportsChapters &&
+                slot.role === 'story' &&
+                slot.storyOrdinal !== undefined &&
+                (chapterAt(book, slot.storyOrdinal) ? (
+                  <span className="ed-chapter">
+                    <input
+                      className="ed-chapter-input"
+                      aria-label={`Chapter title, page ${slot.pageNumber}`}
+                      value={chapterAt(book, slot.storyOrdinal)?.title ?? ''}
+                      onChange={(e) =>
+                        store.updateBook((b) =>
+                          setChapterAt(b, slot.storyOrdinal ?? 0, e.target.value),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="app-iconbtn ed-break"
+                      aria-label="Remove chapter"
+                      onClick={() =>
+                        store.updateBook((b) =>
+                          setChapterAt(b, slot.storyOrdinal ?? 0, null),
+                        )
+                      }
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="app-iconbtn ed-break"
+                    onClick={() =>
+                      store.updateBook((b) =>
+                        setChapterAt(
+                          b,
+                          slot.storyOrdinal ?? 0,
+                          `Chapter ${(b.chapters?.length ?? 0) + 1}`,
+                        ),
+                      )
+                    }
+                  >
+                    + chapter
+                  </button>
+                ))}
             </div>
           );
         })}

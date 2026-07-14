@@ -141,6 +141,18 @@
   background: rgba(163, 120, 40, 0.25);
 }
 
+/* A chapter title printed above the text block (early readers). */
+.pg-chapter {
+  font-family: var(--page-font);
+  font-size: calc(var(--pg-font-pt, 16) * 1pt * 1.15);
+  line-height: 1.2;
+  color: var(--page-ink);
+  text-align: center;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35in;
+  flex: none;
+}
+
 /* Quiet hint on empty front-matter pages (whisper-gray, not printed ink). */
 .pg-text[data-placeholder]:empty::before {
   content: attr(data-placeholder);

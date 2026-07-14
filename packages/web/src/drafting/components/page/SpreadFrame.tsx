@@ -18,6 +18,7 @@ export function SpreadFrame({
   contentFor,
   mode,
   showGuides = false,
+  chapterFor,
   renderEditor,
   renderPageFrame,
 }: {
@@ -27,6 +28,8 @@ export function SpreadFrame({
   contentFor: (slot: PageSlot) => DraftPageContent;
   mode: 'edit' | 'thumb';
   showGuides?: boolean;
+  /** A chapter beginning on a page prints its title above the text. */
+  chapterFor?: (slot: PageSlot) => string | undefined;
   /** Edit mode: produce the live editor for an editable page. */
   renderEditor?: (slot: PageSlot) => ReactNode;
   /** Optional wrapper around each page (focus frame etc.). */
@@ -47,6 +50,7 @@ export function SpreadFrame({
         content={contentFor(slot)}
         mode={mode}
         showGuides={showGuides && slot.role !== 'self-end'}
+        chapterTitle={chapterFor?.(slot)}
       >
         {mode === 'edit' && slot.editable ? renderEditor?.(slot) : undefined}
       </PageRenderer>
