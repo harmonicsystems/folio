@@ -19,7 +19,12 @@ import {
   type PageTarget,
 } from '../../model.js';
 import type { FrontMatterRole } from '../../formats.js';
-import { buildPageMap, unitForOrdinal, type PageSlot } from '../../pageMap.js';
+import {
+  buildPageMap,
+  unitForOrdinal,
+  unitForPage,
+  type PageSlot,
+} from '../../pageMap.js';
 import { countWords } from '../../counts.js';
 import { loadPrefs, savePrefs } from '../../persistence.js';
 import { navigate } from '../../router.js';
@@ -174,6 +179,30 @@ export function EditorShell({
   const safeHeightPx =
     (book.trim.height - format.margins.top - format.margins.bottom) * PPI;
 
+  /** Arrow past a page edge: the caret flows to the neighboring editable
+   *  page, crossing spreads when needed. */
+  const handleBoundary = useCallback(
+    (slot: PageSlot, direction: 'prev' | 'next'): boolean => {
+      const editable = map.pages.filter((p) => p.editable);
+      const at = editable.findIndex((p) => p.pageNumber === slot.pageNumber);
+      if (at < 0) return false;
+      const neighbor = editable[direction === 'next' ? at + 1 : at - 1];
+      if (!neighbor) return false;
+      const key =
+        neighbor.role === 'story'
+          ? `story:${neighbor.storyOrdinal}`
+          : `fm:${neighbor.role}`;
+      const targetUnit = unitForPage(map, neighbor.pageNumber);
+      if (targetUnit.index !== unit.index) goTo(targetUnit.index);
+      setPendingFocus({
+        key,
+        req: { offset: direction === 'next' ? 0 : -1, token: Date.now() },
+      });
+      return true;
+    },
+    [map, unit.index, goTo],
+  );
+
   const renderEditor = (slot: PageSlot) => {
     const content = contentFor(slot);
     const key = slotKey(slot);
@@ -188,6 +217,7 @@ export function EditorShell({
         onPageBreak={
           slot.role === 'story' ? (offset) => handlePageBreak(slot, offset) : undefined
         }
+        onBoundary={(direction) => handleBoundary(slot, direction)}
         onOverflowChange={(px) =>
           setOverflows((prev) =>
             prev[slot.pageNumber] === px

@@ -19,6 +19,8 @@ Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–5 compl
 
 Next phase is **user signal**, not the next feature. See [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) for the full picture and the open decisions ladder.
 
+**This branch (`explore/drafting-first`)** additionally carries a purely-for-creation drafting surface at `/draft` — engine-free by rule (nothing under `packages/web/src/drafting/` may import the engine, even type-only). See [`docs/drafting-first/PLAN.md`](docs/drafting-first/PLAN.md), [`docs/drafting-first/SUMMARY.md`](docs/drafting-first/SUMMARY.md), and ADR 0016.
+
 ## Tech stack
 
 - TypeScript (engine, CLI, web alpha)

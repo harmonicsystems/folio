@@ -85,6 +85,12 @@ export function SubmissionView({ book }: { book: DraftBook }) {
 
       <div className="ms-side">
         {!doc.authorName && <AuthorBlockEditor book={book} />}
+        {doc.blocks.length === 0 && (
+          <p className="ill-empty">
+            The manuscript is empty — the words you write on the pages in
+            Write view flow here as the plain submission document.
+          </p>
+        )}
         <ArtNotesPanel doc={doc} />
       </div>
 

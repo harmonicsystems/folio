@@ -32,6 +32,7 @@ export function PageTextEditor({
   onChange,
   onPageBreak,
   onOverflowChange,
+  onBoundary,
   autoFocus,
   ariaLabel,
 }: {
@@ -42,6 +43,8 @@ export function PageTextEditor({
   onChange: (text: string) => void;
   onPageBreak?: (caretOffset: number) => void;
   onOverflowChange?: (overflowPx: number) => void;
+  /** Arrow past the text's edge: move the caret to the neighboring page. */
+  onBoundary?: (direction: 'prev' | 'next') => boolean;
   autoFocus?: AutoFocusRequest | null;
   ariaLabel: string;
 }) {
@@ -87,6 +90,19 @@ export function PageTextEditor({
       const el = ref.current;
       if (el && onPageBreak) {
         onPageBreak(getCaretOffset(el) ?? serializeEditable(el).length);
+      }
+      return;
+    }
+    if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && onBoundary) {
+      const el = ref.current;
+      const sel = document.getSelection();
+      if (!el || !sel || !sel.isCollapsed || e.shiftKey) return;
+      const offset = getCaretOffset(el);
+      const length = serializeEditable(el).length;
+      const atEdge =
+        e.key === 'ArrowRight' ? offset === length : offset === 0;
+      if (atEdge && onBoundary(e.key === 'ArrowRight' ? 'next' : 'prev')) {
+        e.preventDefault();
       }
     }
   };
