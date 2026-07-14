@@ -23,6 +23,8 @@ import { navigate } from '../../router.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
 import { useKeyboardNav } from '../../hooks/useKeyboardNav.js';
 import { SpreadFrame } from '../page/SpreadFrame.js';
+import { CountersBar } from './CountersBar.js';
+import { SpecsPanel } from './SpecsPanel.js';
 import { SpreadCanvas } from './SpreadCanvas.js';
 import { SpreadNav } from './SpreadNav.js';
 import {
@@ -99,7 +101,17 @@ export function EditorShell({
   );
   const goPrev = useCallback(() => goTo(unit.index - 1), [goTo, unit.index]);
   const goNext = useCallback(() => goTo(unit.index + 1), [goTo, unit.index]);
-  useKeyboardNav({ onPrev: goPrev, onNext: goNext, onToggleGuides: toggleGuides });
+  const zoomOut = useCallback(
+    () => navigate({ kind: 'book', bookId: book.id, view: 'storyboard' }),
+    [book.id],
+  );
+  useKeyboardNav({
+    onPrev: goPrev,
+    onNext: goNext,
+    onToggleGuides: toggleGuides,
+    onEscape: zoomOut,
+  });
+  const [specsOpen, setSpecsOpen] = useState(false);
 
   const contentFor = useCallback(
     (slot: PageSlot): DraftPageContent =>
@@ -260,13 +272,15 @@ export function EditorShell({
           onNext={goNext}
         />
         <div className="app-topbar-spacer" />
-        {book.overflow.length > 0 && (
-          <span className="ed-overflow-note">
-            {book.overflow.length} unplaced{' '}
-            {book.overflow.length === 1 ? 'page' : 'pages'} — no room in the
-            page budget
-          </span>
-        )}
+        <CountersBar book={book} map={map} format={format} unit={unit} />
+        <button
+          type="button"
+          className="app-iconbtn"
+          aria-pressed={specsOpen}
+          onClick={() => setSpecsOpen((v) => !v)}
+        >
+          Specs
+        </button>
         <button
           type="button"
           className="app-iconbtn"
@@ -277,6 +291,7 @@ export function EditorShell({
           Guides
         </button>
       </div>
+      <SpecsPanel book={book} open={specsOpen} onClose={() => setSpecsOpen(false)} />
     </div>
   );
 }

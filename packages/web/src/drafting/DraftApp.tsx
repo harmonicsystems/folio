@@ -14,6 +14,7 @@ import { TopBar } from './components/shell/TopBar.js';
 import { LibraryView } from './components/library/LibraryView.js';
 import { NewBookFlow } from './components/newbook/NewBookFlow.js';
 import { EditorShell } from './components/editor/EditorShell.js';
+import { StoryboardView } from './components/storyboard/StoryboardView.js';
 
 export default function DraftApp() {
   const route = useRoute();
@@ -42,7 +43,30 @@ export default function DraftApp() {
         }
         saveState={state.saveState}
         lastSavedAt={state.lastSavedAt}
-      />
+      >
+        {route.kind === 'book' && book && (
+          <div className="theme-switch" role="group" aria-label="View">
+            <button
+              type="button"
+              aria-pressed={route.view === 'editor'}
+              onClick={() =>
+                navigate({ kind: 'book', bookId: book.id, view: 'editor' })
+              }
+            >
+              Write
+            </button>
+            <button
+              type="button"
+              aria-pressed={route.view === 'storyboard'}
+              onClick={() =>
+                navigate({ kind: 'book', bookId: book.id, view: 'storyboard' })
+              }
+            >
+              Storyboard
+            </button>
+          </div>
+        )}
+      </TopBar>
       {state.externalChange && (
         <div className="app-banner" role="status">
           This library changed in another tab — newest write wins.
@@ -56,10 +80,14 @@ export default function DraftApp() {
         {route.kind === 'new' && <NewBookFlow />}
         {route.kind === 'book' &&
           (book && book.id === route.bookId ? (
-            <EditorShell
-              book={book}
-              unitIndex={route.view === 'editor' ? route.unit : undefined}
-            />
+            route.view === 'storyboard' ? (
+              <StoryboardView book={book} />
+            ) : (
+              <EditorShell
+                book={book}
+                unitIndex={route.view === 'editor' ? route.unit : undefined}
+              />
+            )
           ) : null)}
       </main>
     </div>
