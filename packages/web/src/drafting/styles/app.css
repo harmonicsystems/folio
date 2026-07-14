@@ -580,8 +580,16 @@ select {
   font-size: var(--text-xs);
 }
 
+/* Caption actions read as quiet buttons, not stray words. */
 .ed-break {
   font-size: var(--text-xs);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  padding: 1px var(--space-2);
+  white-space: nowrap;
+}
+.ed-break:hover {
+  border-color: var(--rule);
 }
 
 .ed-chapter {
@@ -602,7 +610,8 @@ select {
 .ed-statusrow {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   border-top: 1px solid var(--hairline);
   padding-top: var(--space-2);
 }
@@ -611,6 +620,7 @@ select {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex: none;
 }
 .ed-nav button:disabled {
   opacity: 0.35;
@@ -619,10 +629,12 @@ select {
 .ed-nav-label {
   font-size: var(--text-sm);
   color: var(--ink-2);
+  white-space: nowrap;
 }
 .ed-nav-sub {
   color: var(--ink-3);
   font-size: var(--text-xs);
+  white-space: nowrap;
 }
 
 .app-iconbtn[aria-pressed='true'] {
