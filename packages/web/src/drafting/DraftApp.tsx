@@ -56,7 +56,10 @@ export default function DraftApp() {
         {route.kind === 'new' && <NewBookFlow />}
         {route.kind === 'book' &&
           (book && book.id === route.bookId ? (
-            <EditorShell book={book} />
+            <EditorShell
+              book={book}
+              unitIndex={route.view === 'editor' ? route.unit : undefined}
+            />
           ) : null)}
       </main>
     </div>

@@ -26,7 +26,44 @@
   --page-scale: 1;
 }
 
-/* One physical page at native inch size. --trim-w/--trim-h set per book. */
+/* ---- spread frame: 1–2 pages at native size ---- */
+
+/* Always two pages wide; single pages get a ghost slot so page 1 sits
+   right-of-center (recto) and the last page left-of-center (verso). */
+.pg-spread {
+  width: calc(var(--trim-w) * 2in);
+  height: calc(var(--trim-h) * 1in);
+  display: flex;
+  position: relative;
+  flex: none;
+}
+
+.pg-ghost {
+  width: calc(var(--trim-w) * 1in);
+  height: calc(var(--trim-h) * 1in);
+  flex: none;
+}
+
+/* Facing pages abut at the spine; the fold is a narrow gradient. */
+.pg-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0.5in;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--page-spine),
+    transparent
+  );
+}
+
+/* ---- one physical page ---- */
+
 .pg-page {
   width: calc(var(--trim-w) * 1in);
   height: calc(var(--trim-h) * 1in);
@@ -35,9 +72,12 @@
   flex: none;
 }
 
-/* Safe area: margins in real inches; the gutter is the spine-side inset. */
+/* Safe area: margins in real inches; the gutter is the spine-side inset.
+   Verso pages have the spine on their right, rectos on their left. */
 .pg-safe {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   inset: calc(var(--m-top) * 1in) calc(var(--m-inside) * 1in)
     calc(var(--m-bottom) * 1in) calc(var(--m-outside) * 1in);
 }
@@ -46,7 +86,19 @@
     calc(var(--m-bottom) * 1in) calc(var(--m-inside) * 1in);
 }
 
-/* Optional guides (toggle): scale-compensated hairline + whisper shading. */
+/* Text-block vertical position via auto margins, not justify-content: when
+   the block outgrows the safe box, auto margins collapse to zero, so the
+   text pins to the top and overflow only ever extends DOWNWARD — never above
+   the trim. Overflow stays visible; it is never clipped or reflowed. */
+.pg-safe[data-v='middle'] > .pg-text {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+.pg-safe[data-v='bottom'] > .pg-text {
+  margin-top: auto;
+}
+
+/* Optional guides (toggle): scale-compensated hairline. */
 .pg-safe-guide {
   position: absolute;
   inset: 0;
@@ -54,7 +106,8 @@
   outline: calc(1px / var(--page-scale)) dashed var(--page-guide);
 }
 
-/* Text block: font size arrives in pt via --pg-font-pt (data-driven). */
+/* ---- the text block (shared by the editor and static thumbnails) ---- */
+
 .pg-text {
   font-family: var(--page-font);
   font-size: calc(var(--pg-font-pt, 18) * 1pt);
@@ -62,21 +115,88 @@
   color: var(--page-ink);
   white-space: pre-wrap;
   overflow-wrap: break-word;
-  min-height: 1em;
+  min-height: 1.2em;
+  min-width: 2ch;
+  max-width: 100%;
+  width: fit-content;
+  /* Never shrink to fit the safe box: the box keeps its natural height and
+     visibly overflows — offsetHeight vs safe height IS the overflow signal. */
+  flex: none;
   outline: none;
+  caret-color: var(--page-ink);
+}
+.pg-text[data-h='left'] {
+  align-self: flex-start;
+}
+.pg-text[data-h='center'] {
+  align-self: center;
+}
+.pg-text[data-h='right'] {
+  align-self: flex-end;
+}
+.pg-text::selection {
+  background: rgba(163, 120, 40, 0.25);
 }
 
-/* Spine fold: a narrow gradient straddling the join of facing pages. */
-.pg-spine {
+/* Quiet hint on empty front-matter pages (whisper-gray, not printed ink). */
+.pg-text[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--page-guide);
+}
+
+/* Overflow past the safe area: a quiet wash over exactly the region that
+   doesn't fit, plus a soft rule at the crossed edge. Never a reflow. */
+.pg-overflow-tint {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 0.5in;
+  left: 0;
+  right: 0;
   pointer-events: none;
-  background: linear-gradient(
-    to right,
-    transparent,
-    var(--page-spine),
-    transparent
-  );
+  background: var(--page-overflow-tint);
+  z-index: 1;
+}
+.pg-overflow-tint {
+  top: 100%;
+  border-top: calc(1px / var(--page-scale)) solid rgba(154, 74, 42, 0.35);
+}
+
+/* ---- illustration placeholders (frames only; notes edit in chrome) ---- */
+
+.pg-ph {
+  position: absolute;
+  background: var(--page-placeholder-bg);
+  outline: calc(1px / var(--page-scale)) dashed var(--page-placeholder-ink);
+  outline-offset: calc(-6px / var(--page-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.25in;
+  color: var(--page-placeholder-ink);
+  font-family: var(--page-font);
+  font-style: italic;
+  z-index: 0;
+}
+.pg-ph .pg-ph-label {
+  font-size: 10pt;
+  opacity: 0.75;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+.pg-ph[data-kind='full-page'] {
+  inset: 0;
+}
+.pg-ph[data-kind='spread-bleed'] {
+  inset: calc(var(--bleed, 0.125) * -1in);
+}
+.pg-ph[data-kind='half-page-top'] {
+  inset: 0 0 50% 0;
+}
+.pg-ph[data-kind='half-page-bottom'] {
+  inset: 50% 0 0 0;
+}
+.pg-ph[data-kind='spot'] {
+  width: 30%;
+  height: 30%;
+  right: calc(var(--m-outside) * 1in);
+  bottom: calc(var(--m-bottom) * 1in);
 }

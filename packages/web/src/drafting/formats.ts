@@ -242,6 +242,15 @@ export function findConstruction(
   );
 }
 
+/**
+ * Resolve a page's font size from the preset typography and its type-scale
+ * step: round(defaultFontPt * 1.2^step), never below the preset minimum.
+ */
+export function fontPtFor(format: BookFormat, typeStep: number): number {
+  const raw = Math.round(format.typography.defaultFontPt * 1.2 ** typeStep);
+  return Math.max(format.typography.minFontPt, raw);
+}
+
 export function wordBandFor(format: BookFormat, level?: 1 | 2 | 3): WordBand {
   if (format.levels && level) {
     const found = format.levels.find((l) => l.level === level);

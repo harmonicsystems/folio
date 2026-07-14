@@ -35,6 +35,12 @@ body {
   outline-offset: 2px;
 }
 
+/* The page editor's focus indicator is the ring on .ed-pagewrap (chrome),
+   never a box on the paper itself. */
+.pg-text:focus-visible {
+  outline: none;
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -506,6 +512,107 @@ select {
   display: flex;
   align-items: center;
   gap: var(--space-4);
+}
+
+/* ---- editor ---- */
+
+.ed-root {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4) var(--space-8) var(--space-3);
+  gap: var(--space-3);
+}
+
+.ed-canvas {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Paper elevation is chrome (presentation), so it may theme. */
+.ed-canvas-native .pg-page {
+  box-shadow: var(--shadow-page);
+}
+
+.ed-pagewrap {
+  position: relative;
+  border-radius: 1px;
+}
+/* The focus ring lives on the frame around the page, never on the paper. */
+.ed-pagewrap:focus-within {
+  outline: calc(2px / var(--page-scale, 1)) solid var(--focus);
+  outline-offset: calc(4px / var(--page-scale, 1));
+}
+
+.ed-pagerow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  max-width: 900px;
+  width: 100%;
+  margin: 0 auto;
+}
+.ed-pagerow[data-single='true'] {
+  grid-template-columns: 1fr;
+}
+
+.ed-pagecaption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--counter-ink);
+  min-height: 24px;
+}
+.ed-pagecaption[data-side='recto'] {
+  justify-content: flex-end;
+}
+.ed-pagerow[data-single='true'] .ed-pagecaption {
+  justify-content: center;
+}
+
+.ed-overflow-note {
+  color: var(--p-rust-500);
+  font-size: var(--text-xs);
+}
+
+.ed-break {
+  font-size: var(--text-xs);
+}
+
+.ed-statusrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--space-2);
+}
+
+.ed-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.ed-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ed-nav-label {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+.ed-nav-sub {
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+
+.app-iconbtn[aria-pressed='true'] {
+  color: var(--ink-1);
+  background: var(--bg-inset);
 }
 
 /* ---- spec sheet ---- */
