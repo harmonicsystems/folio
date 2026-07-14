@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { findConstruction, getFormat } from '../../formats.js';
 import type { DraftBook } from '../../model.js';
 import { buildPageMap } from '../../pageMap.js';
-import { loadPrefs, savePrefs } from '../../persistence.js';
+import { lastUnitFor, loadPrefs, savePrefs } from '../../persistence.js';
 import { navigate } from '../../router.js';
 import { useKeyboardNav } from '../../hooks/useKeyboardNav.js';
 import { CountersBar } from '../editor/CountersBar.js';
@@ -35,6 +35,9 @@ export function StoryboardView({
   const format = getFormat(book.formatId);
   const map = buildPageMap(book.pageCount, findConstruction(format, book.binding));
 
+  // Highlight (and Esc-return to) the spread the writer was last editing.
+  const activeUnit = currentUnit ?? lastUnitFor(book.id);
+
   const [zoom, setZoom] = useState(() =>
     nearestStop(loadPrefs().storyboardZoom ?? DEFAULT_ZOOM),
   );
@@ -59,7 +62,7 @@ export function StoryboardView({
     onPrev: () => {},
     onNext: () => {},
     onToggleGuides: () => {},
-    onEscape: () => open(currentUnit ?? 0),
+    onEscape: () => open(activeUnit ?? 0),
   });
 
   return (
@@ -76,7 +79,7 @@ export function StoryboardView({
             trim={book.trim}
             unit={unit}
             width={zoom}
-            selected={unit.index === currentUnit}
+            selected={unit.index === activeUnit}
             onOpen={() => open(unit.index)}
           />
         ))}

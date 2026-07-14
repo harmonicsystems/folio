@@ -1,12 +1,19 @@
 /**
- * The quiet author form — surfaces inline when the submission head is
- * missing its name. Never a modal; the manuscript preview updates live.
+ * The quiet author form for the submission head. Rendered once in a fixed
+ * slot; `highlight` emphasizes it while the name is still missing rather than
+ * relocating it (moving it mid-type would drop focus). Preview updates live.
  */
 
 import { useBookStore } from '../../hooks/useBookStore.js';
 import type { DraftBook } from '../../model.js';
 
-export function AuthorBlockEditor({ book }: { book: DraftBook }) {
+export function AuthorBlockEditor({
+  book,
+  highlight = false,
+}: {
+  book: DraftBook;
+  highlight?: boolean;
+}) {
   const { store } = useBookStore();
   const setAuthor = (patch: Partial<NonNullable<DraftBook['author']>>) =>
     store.updateBook((b) => ({
@@ -16,8 +23,11 @@ export function AuthorBlockEditor({ book }: { book: DraftBook }) {
     }));
 
   return (
-    <div className="ms-author">
-      <span className="app-popover-label">Author block · top of page one</span>
+    <div className="ms-author" data-highlight={highlight}>
+      <span className="app-popover-label">
+        Author block · top of page one
+        {highlight && ' · add your name to complete the manuscript'}
+      </span>
       <input
         type="text"
         placeholder="Your name (as it should appear)"

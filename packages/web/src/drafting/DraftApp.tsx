@@ -10,6 +10,7 @@ import './styles/submission.css';
 import './styles/app.css';
 import { useRoute } from './hooks/useRoute.js';
 import { useBookStore } from './hooks/useBookStore.js';
+import { lastUnitFor } from './persistence.js';
 import { navigate } from './router.js';
 import { TopBar } from './components/shell/TopBar.js';
 import { LibraryView } from './components/library/LibraryView.js';
@@ -48,12 +49,22 @@ export default function DraftApp() {
         lastSavedAt={state.lastSavedAt}
       >
         {route.kind === 'book' && book && (
-          <div className="theme-switch" role="group" aria-label="View">
+          <div
+            className="theme-switch app-viewswitch"
+            role="group"
+            aria-label="View"
+          >
             <button
               type="button"
               aria-pressed={route.view === 'editor'}
+              title="Write on the book's pages"
               onClick={() =>
-                navigate({ kind: 'book', bookId: book.id, view: 'editor' })
+                navigate({
+                  kind: 'book',
+                  bookId: book.id,
+                  view: 'editor',
+                  unit: lastUnitFor(book.id),
+                })
               }
             >
               Write
@@ -61,6 +72,7 @@ export default function DraftApp() {
             <button
               type="button"
               aria-pressed={route.view === 'storyboard'}
+              title="See the whole book at a glance"
               onClick={() =>
                 navigate({ kind: 'book', bookId: book.id, view: 'storyboard' })
               }
@@ -70,6 +82,7 @@ export default function DraftApp() {
             <button
               type="button"
               aria-pressed={route.view === 'submission'}
+              title="Plain manuscript to send a publisher"
               onClick={() =>
                 navigate({ kind: 'book', bookId: book.id, view: 'submission' })
               }

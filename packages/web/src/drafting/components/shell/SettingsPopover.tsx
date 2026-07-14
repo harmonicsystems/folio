@@ -41,6 +41,10 @@ export function SettingsPopover({ children }: { children?: ReactNode }) {
         <div className="app-popover" role="dialog" aria-label="Settings">
           <span className="app-popover-label">Theme</span>
           <ThemeSwitcher />
+          <span className="app-popover-note">
+            Sets the studio around your book. The pages and the submission
+            manuscript always stay ink-on-paper.
+          </span>
           {children}
         </div>
       )}

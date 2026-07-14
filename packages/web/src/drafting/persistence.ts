@@ -59,6 +59,22 @@ export interface DraftingPrefs {
   showSafeArea?: boolean;
   /** Storyboard thumbnail width in px. */
   storyboardZoom?: number;
+  /** Last-edited render-unit index, per book id — so view switches return you there. */
+  lastUnit?: Record<string, number>;
+}
+
+/** Read the remembered spread for a book (undefined if never visited). */
+export function lastUnitFor(bookId: string): number | undefined {
+  return loadPrefs().lastUnit?.[bookId];
+}
+
+/** Remember which spread a book was last on. */
+export function rememberUnit(bookId: string, unitIndex: number): void {
+  const prefs = loadPrefs();
+  savePrefs({
+    ...prefs,
+    lastUnit: { ...prefs.lastUnit, [bookId]: unitIndex },
+  });
 }
 
 function storageAvailable(): boolean {

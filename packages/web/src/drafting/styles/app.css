@@ -131,7 +131,7 @@ select {
 }
 .app-save-status[data-state='error'],
 .app-save-status[data-state='unavailable'] {
-  color: var(--p-rust-500);
+  color: var(--warn-ink);
 }
 
 .app-main {
@@ -200,6 +200,12 @@ select {
   color: var(--ink-3);
 }
 
+.app-popover-note {
+  font-size: var(--text-xs);
+  color: var(--ink-3);
+  line-height: 1.4;
+}
+
 .theme-switch {
   display: flex;
   background: var(--bg-inset);
@@ -218,6 +224,18 @@ select {
   background: var(--bg-raised);
   color: var(--ink-1);
   box-shadow: var(--shadow-1);
+}
+
+/* The view switcher is primary navigation between the three faces of the
+   book — give its active tab a firmer "you are here" than the cosmetic
+   theme pills: heavier weight + an accent underline inside the pill. */
+.app-viewswitch button {
+  font-weight: 500;
+}
+.app-viewswitch button[aria-pressed='true'] {
+  color: var(--ink-1);
+  font-weight: 600;
+  box-shadow: var(--shadow-1), inset 0 -2px 0 var(--accent);
 }
 
 .app-toggle-row {
@@ -259,7 +277,7 @@ select {
 }
 
 .btn-danger-quiet {
-  color: var(--p-rust-500);
+  color: var(--warn-ink);
 }
 .btn-danger-quiet:hover {
   background: var(--warn-soft);
@@ -608,7 +626,7 @@ select {
 }
 
 .ed-overflow-note {
-  color: var(--p-rust-500);
+  color: var(--warn-ink);
   font-size: var(--text-xs);
 }
 
@@ -789,7 +807,7 @@ select {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--p-rust-500);
+  background: var(--warn-ink);
   display: inline-block;
 }
 

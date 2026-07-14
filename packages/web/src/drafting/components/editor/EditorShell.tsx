@@ -5,7 +5,7 @@
  * The book is the hero; everything else recedes.
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { findConstruction, getFormat } from '../../formats.js';
 import type { DraftBook, DraftPageContent } from '../../model.js';
 import {
@@ -27,7 +27,7 @@ import {
 } from '../../pageMap.js';
 import { countWords } from '../../counts.js';
 import { pageFontStyle } from '../../fonts.js';
-import { loadPrefs, savePrefs } from '../../persistence.js';
+import { loadPrefs, rememberUnit, savePrefs } from '../../persistence.js';
 import { navigate } from '../../router.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
 import { useKeyboardNav } from '../../hooks/useKeyboardNav.js';
@@ -90,10 +90,16 @@ export function EditorShell({
   );
   const toggleGuides = useCallback(() => {
     setShowGuides((v) => {
-      savePrefs({ version: 1, showSafeArea: !v });
+      savePrefs({ ...loadPrefs(), showSafeArea: !v });
       return !v;
     });
   }, []);
+
+  // Remember the open spread so switching to Storyboard/Submission and back
+  // returns the writer here instead of to spread 1.
+  useEffect(() => {
+    rememberUnit(book.id, unit.index);
+  }, [book.id, unit.index]);
 
   const [pendingFocus, setPendingFocus] = useState<{
     key: string;
@@ -207,12 +213,19 @@ export function EditorShell({
   const renderEditor = (slot: PageSlot) => {
     const content = contentFor(slot);
     const key = slotKey(slot);
+    // Front-matter pages self-label; the first story page gets a gentle
+    // "start here" so a first-run book doesn't land on unlabeled blanks.
+    const placeholder =
+      ROLE_PLACEHOLDER[slot.role] ??
+      (slot.role === 'story' && slot.storyOrdinal === 0
+        ? 'Begin the story…'
+        : undefined);
     return (
       <PageTextEditor
         value={content.text}
         layout={content.layout}
         safeHeightPx={safeHeightPx}
-        placeholder={ROLE_PLACEHOLDER[slot.role]}
+        placeholder={placeholder}
         ariaLabel={`Page ${slot.pageNumber}, ${ROLE_CAPTION[slot.role]}`}
         onChange={(text) => handleChange(slot, text)}
         onPageBreak={

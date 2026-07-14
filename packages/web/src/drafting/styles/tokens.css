@@ -83,6 +83,7 @@
   --focus: var(--p-ochre-500);
   --selection-bg: rgba(163, 120, 40, 0.22);
   --warn-soft: rgba(154, 74, 42, 0.12);
+  --warn-ink: #9a4a2a; /* ≥4.5:1 on light surfaces */
   --shadow-color: rgba(44, 38, 32, 0.14);
   --font-display: var(--font-ui);
 }
@@ -103,6 +104,7 @@
   --focus: var(--p-ochre-300);
   --selection-bg: rgba(217, 168, 78, 0.28);
   --warn-soft: rgba(217, 133, 92, 0.16);
+  --warn-ink: #e5966b; /* lightened rust — ≥4.5:1 on the near-black ground */
   --shadow-color: rgba(0, 0, 0, 0.5);
   --font-display: var(--font-ui);
 }
@@ -123,6 +125,7 @@
   --focus: var(--p-ochre-600);
   --selection-bg: rgba(163, 120, 40, 0.2);
   --warn-soft: rgba(154, 74, 42, 0.1);
+  --warn-ink: #9a4a2a; /* ≥4.5:1 on cream */
   --shadow-color: rgba(76, 64, 48, 0.16);
   /* the bookish serif accent: headings, labels, book titles */
   --font-display: var(--font-serif);

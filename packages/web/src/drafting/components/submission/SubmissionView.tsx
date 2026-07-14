@@ -83,8 +83,10 @@ export function SubmissionView({ book }: { book: DraftBook }) {
         </button>
       </div>
 
+      {/* Rendered once, in a fixed slot — never relocated as the name is
+          typed (which would drop focus mid-word). */}
       <div className="ms-side">
-        {!doc.authorName && <AuthorBlockEditor book={book} />}
+        <AuthorBlockEditor book={book} highlight={!doc.authorName} />
         {doc.blocks.length === 0 && (
           <p className="ill-empty">
             The manuscript is empty — the words you write on the pages in
@@ -93,6 +95,11 @@ export function SubmissionView({ book }: { book: DraftBook }) {
         )}
         <ArtNotesPanel doc={doc} />
       </div>
+
+      <p className="ms-eyebrow">
+        Standard manuscript format — deliberately plain. This is the file an
+        editor receives.
+      </p>
 
       <div className="ms-sheets">
         {pages.map((lines, i) => (
@@ -104,12 +111,6 @@ export function SubmissionView({ book }: { book: DraftBook }) {
           />
         ))}
       </div>
-
-      {doc.authorName && (
-        <div className="ms-side">
-          <AuthorBlockEditor book={book} />
-        </div>
-      )}
     </div>
   );
 }
