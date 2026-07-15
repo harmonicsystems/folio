@@ -60,6 +60,8 @@ export function budgetUsage(book: DraftBook, map: PageMap): BudgetUsage {
   return {
     used: book.storyPages.filter((p) => !isEmptyPage(p)).length,
     budget: map.storyBudget,
-    overflowCount: book.overflow.length,
+    // The queue keeps empty slots for positional fidelity; only pages with
+    // actual writing count as "unplaced."
+    overflowCount: book.overflow.filter((p) => !isEmptyPage(p)).length,
   };
 }

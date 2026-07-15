@@ -306,8 +306,11 @@ function reconcileBudget(
   let overflow = book.overflow.slice();
 
   if (storyPages.length > budget) {
-    // Trailing non-empty pages queue in overflow, in order; empties drop.
-    const excess = storyPages.slice(budget).filter((p) => !isEmptyPage(p));
+    // ALL trailing pages queue in overflow — including empties — so a later
+    // grow restores every page to its exact original ordinal and chapter
+    // markers reattach to the text they name. (Counters and the tray display
+    // skip empty entries; positional fidelity is worth the invisible slots.)
+    const excess = storyPages.slice(budget);
     storyPages = storyPages.slice(0, budget);
     overflow = [...excess, ...overflow];
   }
@@ -317,6 +320,31 @@ function reconcileBudget(
     storyPages.push(next ?? emptyPage(book.formatId));
   }
 
+  // Fully-empty tail of the queue serves no one — drop it.
+  while (overflow.length > 0 && isEmptyPage(overflow[overflow.length - 1])) {
+    overflow.pop();
+  }
+
+  return touched({ ...book, storyPages, overflow }, now);
+}
+
+/**
+ * Restore one overflow page into the first empty story slot (the tray's
+ * "place in book" action). Returns the book unchanged when the tray index is
+ * invalid or no empty slot exists — the caller disables the affordance then.
+ */
+export function placeOverflowPage(
+  book: DraftBook,
+  overflowIndex: number,
+  now?: number,
+): DraftBook {
+  const page = book.overflow[overflowIndex];
+  if (!page) return book;
+  const slot = book.storyPages.findIndex((p) => isEmptyPage(p));
+  if (slot < 0) return book;
+  const storyPages = book.storyPages.slice();
+  storyPages[slot] = page;
+  const overflow = book.overflow.filter((_, i) => i !== overflowIndex);
   return touched({ ...book, storyPages, overflow }, now);
 }
 
@@ -682,24 +710,26 @@ export function validateBook(raw: unknown): DraftBook | null {
     overflow: Array.isArray(b.overflow)
       ? b.overflow.map((p) => validatePage(p, format.id))
       : [],
-    chapters:
-      format.supportsChapters && Array.isArray(b.chapters)
-        ? b.chapters
-            .filter(
-              (c): c is Record<string, unknown> =>
-                typeof c === 'object' && c !== null,
-            )
-            .map((c) => ({
-              id: typeof c.id === 'string' ? c.id : newId(),
-              title: typeof c.title === 'string' ? c.title : 'Chapter',
-              startOrdinal:
-                typeof c.startOrdinal === 'number' && c.startOrdinal >= 0
-                  ? Math.floor(c.startOrdinal)
-                  : 0,
-            }))
-        : format.supportsChapters
-          ? []
-          : undefined,
+    // Chapters are KEPT even when the current format doesn't render them —
+    // applyFormat promises retention (switch away and back loses nothing),
+    // so the load-time guard must not strip them either.
+    chapters: Array.isArray(b.chapters)
+      ? b.chapters
+          .filter(
+            (c): c is Record<string, unknown> =>
+              typeof c === 'object' && c !== null,
+          )
+          .map((c) => ({
+            id: typeof c.id === 'string' ? c.id : newId(),
+            title: typeof c.title === 'string' ? c.title : 'Chapter',
+            startOrdinal:
+              typeof c.startOrdinal === 'number' && c.startOrdinal >= 0
+                ? Math.floor(c.startOrdinal)
+                : 0,
+          }))
+      : format.supportsChapters
+        ? []
+        : undefined,
     createdAt: typeof b.createdAt === 'number' ? b.createdAt : Date.now(),
     updatedAt: typeof b.updatedAt === 'number' ? b.updatedAt : Date.now(),
   };

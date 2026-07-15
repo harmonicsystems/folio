@@ -134,23 +134,25 @@ describe('mergeWithNext — break deletion', () => {
 });
 
 describe('applyPageCount', () => {
-  it('shrink queues trailing non-empty pages in overflow; empties drop', () => {
+  it('shrink queues ALL trailing pages (positional fidelity); empty tail trimmed', () => {
     let book = newBook(PICTURE_BOOK, { now: 1 }); // 26 story pages
     book = withStoryPage(book, 24, (p) => ({ ...p, text: 'late page' }), 2);
     const shrunk = applyPageCount(book, PICTURE_BOOK, 24, 3); // budget 18
     expect(budgetOf(shrunk)).toBe(18);
     expect(shrunk.storyPages).toHaveLength(18);
-    expect(shrunk.overflow).toHaveLength(1);
-    expect(shrunk.overflow[0].text).toBe('late page');
+    // Ordinals 18..24 queue (empties kept as spacers so a later grow puts
+    // every page back where it was); the empty tail (25) is trimmed.
+    expect(shrunk.overflow).toHaveLength(7);
+    expect(shrunk.overflow[6].text).toBe('late page');
   });
 
-  it('grow re-places overflow in order', () => {
+  it('grow re-places overflow at its ORIGINAL ordinals', () => {
     let book = newBook(PICTURE_BOOK, { now: 1 });
     book = withStoryPage(book, 24, (p) => ({ ...p, text: 'late page' }), 2);
     const shrunk = applyPageCount(book, PICTURE_BOOK, 24, 3);
     const grown = applyPageCount(shrunk, PICTURE_BOOK, 32, 4);
     expect(grown.overflow).toHaveLength(0);
-    expect(grown.storyPages[18].text).toBe('late page');
+    expect(grown.storyPages[24].text).toBe('late page'); // back where it lived
   });
 
   it('snaps illegal counts to the nearest legal', () => {

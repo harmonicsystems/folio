@@ -5,13 +5,45 @@
  * visible overflow tray.
  */
 
-import { useEffect, useRef } from 'react';
-import { getFormat, sameTrim, trimLabel, type Trim } from '../../formats.js';
+import { useEffect, useRef, useState } from 'react';
+import {
+  findConstruction,
+  getFormat,
+  sameTrim,
+  trimLabel,
+  type Trim,
+} from '../../formats.js';
 import { PAGE_FONTS, getPageFont } from '../../fonts.js';
 import type { DraftBook } from '../../model.js';
-import { applyConstruction, applyLevel, applyPageCount } from '../../model.js';
+import {
+  applyConstruction,
+  applyLevel,
+  applyPageCount,
+  isEmptyPage,
+} from '../../model.js';
+import { buildPageMap } from '../../pageMap.js';
+import { saveSnapshot } from '../../versions.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
 import { SpecSheet } from '../newbook/SpecSheet.js';
+
+type PendingChange =
+  | { kind: 'pages'; value: number; displaced: number }
+  | { kind: 'binding'; value: DraftBook['binding']; displaced: number };
+
+/** How many written pages the change would move to the overflow tray. */
+function displacedBy(
+  book: DraftBook,
+  format: ReturnType<typeof getFormat>,
+  next: { pageCount?: number; binding?: DraftBook['binding'] },
+): number {
+  const map = buildPageMap(
+    next.pageCount ?? book.pageCount,
+    findConstruction(format, next.binding ?? book.binding),
+  );
+  return book.storyPages
+    .slice(map.storyBudget)
+    .filter((p) => !isEmptyPage(p)).length;
+}
 
 export function SpecsPanel({
   book,
@@ -25,6 +57,7 @@ export function SpecsPanel({
   const { store } = useBookStore();
   const format = getFormat(book.formatId);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [pending, setPending] = useState<PendingChange | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -49,12 +82,37 @@ export function SpecsPanel({
 
   const setTrim = (trim: Trim) =>
     store.updateBook((b) => ({ ...b, trim, updatedAt: Date.now() }));
-  const setPageCount = (n: number) =>
-    store.updateBook((b) => applyPageCount(b, format, n));
-  const setBinding = (binding: DraftBook['binding']) =>
-    store.updateBook((b) => applyConstruction(b, format, binding));
   const setLevel = (level: 1 | 2 | 3) =>
     store.updateBook((b) => applyLevel(b, level));
+
+  /** Structural changes checkpoint a version first; a change that would
+   *  displace written pages asks before it moves anything. */
+  const applyStructural = (change: PendingChange) => {
+    saveSnapshot(
+      book,
+      change.kind === 'pages' ? 'page-count change' : 'construction change',
+    );
+    if (change.kind === 'pages') {
+      store.updateBook((b) => applyPageCount(b, format, change.value));
+    } else {
+      store.updateBook((b) => applyConstruction(b, format, change.value));
+    }
+    setPending(null);
+  };
+
+  const requestPageCount = (n: number) => {
+    if (n === book.pageCount) return;
+    const displaced = displacedBy(book, format, { pageCount: n });
+    const change: PendingChange = { kind: 'pages', value: n, displaced };
+    displaced > 0 ? setPending(change) : applyStructural(change);
+  };
+
+  const requestBinding = (binding: DraftBook['binding']) => {
+    if (binding === book.binding) return;
+    const displaced = displacedBy(book, format, { binding });
+    const change: PendingChange = { kind: 'binding', value: binding, displaced };
+    displaced > 0 ? setPending(change) : applyStructural(change);
+  };
 
   return (
     <div className="specs-panel" role="dialog" aria-label="Book specs" ref={panelRef}>
@@ -98,7 +156,7 @@ export function SpecsPanel({
               key={count}
               type="button"
               aria-pressed={book.pageCount === count}
-              onClick={() => setPageCount(count)}
+              onClick={() => requestPageCount(count)}
             >
               {count}
             </button>
@@ -115,11 +173,40 @@ export function SpecsPanel({
                 key={c.binding}
                 type="button"
                 aria-pressed={book.binding === c.binding}
-                onClick={() => setBinding(c.binding)}
+                onClick={() => requestBinding(c.binding)}
               >
                 {c.label}
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {pending && (
+        <div className="specs-confirm" role="alertdialog" aria-label="Confirm change">
+          <p>
+            This will unplace <strong>{pending.displaced}</strong> written{' '}
+            {pending.displaced === 1 ? 'page' : 'pages'}. Nothing is deleted —
+            they keep their text in the storyboard's unplaced tray, and a
+            version of the book as it is now is saved first.
+          </p>
+          <div className="nb-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => applyStructural(pending)}
+            >
+              {pending.kind === 'pages'
+                ? `Change to ${pending.value} pages`
+                : 'Change construction'}
+            </button>
+            <button
+              type="button"
+              className="btn btn-quiet"
+              onClick={() => setPending(null)}
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}

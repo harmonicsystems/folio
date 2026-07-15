@@ -27,6 +27,21 @@ export default function DraftApp() {
   // Keep the active book in sync with the route.
   const routeBookId = route.kind === 'book' ? route.bookId : null;
   useEffect(() => {
+    // A cross-tab conflict rebound our edits to a new book id — follow it
+    // (re-opening the old id here would discard the preserved copy).
+    if (
+      state.conflict &&
+      state.activeBook?.id === state.conflict.redirectToId
+    ) {
+      if (routeBookId && routeBookId !== state.conflict.redirectToId) {
+        navigate({
+          kind: 'book',
+          bookId: state.conflict.redirectToId,
+          view: route.kind === 'book' ? route.view : 'editor',
+        });
+      }
+      return;
+    }
     if (routeBookId && state.activeBook?.id !== routeBookId) {
       const opened = store.openBook(routeBookId);
       if (!opened) navigate({ kind: 'library' });
@@ -34,7 +49,7 @@ export default function DraftApp() {
     if (!routeBookId && state.activeBook) {
       store.closeBook();
     }
-  }, [routeBookId, state.activeBook, store]);
+  }, [routeBookId, state.activeBook, state.conflict, store, route]);
 
   const book = route.kind === 'book' ? state.activeBook : null;
 
@@ -92,9 +107,44 @@ export default function DraftApp() {
           </div>
         )}
       </TopBar>
-      {state.externalChange && (
+      {state.conflict && (
+        <div className="app-banner" role="alert">
+          “{state.conflict.title}” was saved in another tab while you had
+          unsaved edits here. Nothing was lost — your edits continue as
+          “{state.conflict.title} (conflicted copy)”; the other tab's version
+          is in your library.
+          <button type="button" onClick={() => store.dismissConflict()}>
+            Got it
+          </button>
+        </div>
+      )}
+      {(state.saveState === 'error' || state.saveState === 'unavailable') && (
+        <div className="app-banner" role="alert">
+          <strong>Your writing is not being saved</strong>
+          {state.saveState === 'unavailable'
+            ? ' — this browser is blocking storage (private window?). Copy your text somewhere safe before closing this tab.'
+            : ' — the browser’s storage is full or failing. Keep this tab open and download a backup from the library.'}
+        </div>
+      )}
+      {state.lastDeleted && (
         <div className="app-banner" role="status">
-          This library changed in another tab — newest write wins.
+          Deleted “{state.lastDeleted.title}”. It stays in the trash for 7
+          days.
+          <button
+            type="button"
+            onClick={() => store.undoDelete(state.lastDeleted!.id)}
+          >
+            Undo
+          </button>
+          <button type="button" onClick={() => store.dismissLastDeleted()}>
+            Dismiss
+          </button>
+        </div>
+      )}
+      {state.externalChange && !state.conflict && (
+        <div className="app-banner" role="status">
+          This book changed in another tab — this tab refreshed to the newest
+          version.
           <button type="button" onClick={() => store.dismissExternalChange()}>
             Got it
           </button>

@@ -15,7 +15,7 @@
 import type { BookFormat, Trim } from './formats.js';
 import { FORMATS, findConstruction } from './formats.js';
 import type { DraftBook, DraftPageContent, PagePlacement } from './model.js';
-import { emptyPage, newBook, validateBook } from './model.js';
+import { emptyPage, newBook, newId, validateBook } from './model.js';
 import { buildPageMap } from './pageMap.js';
 import { countWords } from './counts.js';
 
@@ -23,6 +23,12 @@ export const LIBRARY_KEY = 'folio.drafting.library.v1';
 export const BOOK_KEY_PREFIX = 'folio.drafting.book.v1.';
 export const PREFS_KEY = 'folio.drafting.prefs.v1';
 export const THEME_KEY = 'folio.drafting.theme';
+export const TRASH_KEY = 'folio.drafting.trash.v1';
+export const VERSIONS_KEY_PREFIX = 'folio.drafting.versions.v1.';
+
+export function versionsKey(bookId: string): string {
+  return `${VERSIONS_KEY_PREFIX}${bookId}`;
+}
 
 /** Main-branch keys — READ ONLY, for the one-time import. */
 const LEGACY_DRAFT_V2 = 'folio.draft.v2';
@@ -120,6 +126,9 @@ export function loadLibraryIndex(): LibraryIndexV1 {
     /* private mode etc. — an empty library is the honest fallback */
   }
   rebuilt.books.sort((a, b) => b.updatedAt - a.updatedAt);
+  // A rebuilt index for a library that already holds books must not trigger
+  // a second legacy import (which would duplicate "Imported draft").
+  if (rebuilt.books.length > 0) rebuilt.importedLegacyAt = Date.now();
   return rebuilt;
 }
 
@@ -134,10 +143,53 @@ function libraryEntry(book: DraftBook): LibraryEntry {
   };
 }
 
-export function loadBook(id: string): DraftBook | null {
+export function loadBookRecord(id: string): SavedBookV1 | null {
   const record = readJSON(bookKey(id)) as SavedBookV1 | null;
-  if (record?.version !== 1) return null;
-  return validateBook(record.book);
+  return record?.version === 1 ? record : null;
+}
+
+export function loadBook(id: string): DraftBook | null {
+  const record = loadBookRecord(id);
+  return record ? validateBook(record.book) : null;
+}
+
+// ---- trash (soft delete) -----------------------------------------------------
+
+const TRASH_CAP = 5;
+const TRASH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export interface TrashV1 {
+  version: 1;
+  items: Array<{ deletedAt: number; record: SavedBookV1 }>;
+}
+
+export function loadTrash(): TrashV1 {
+  const parsed = readJSON(TRASH_KEY) as TrashV1 | null;
+  if (parsed?.version === 1 && Array.isArray(parsed.items)) return parsed;
+  return { version: 1, items: [] };
+}
+
+function writeTrash(trash: TrashV1): void {
+  try {
+    localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
+  } catch {
+    /* the trash is a convenience layer — never let it block a delete */
+  }
+}
+
+/** Drop expired trash items and their version histories. */
+function purgeTrash(now = Date.now()): void {
+  const trash = loadTrash();
+  const keep = trash.items.filter((i) => now - i.deletedAt < TRASH_TTL_MS);
+  if (keep.length === trash.items.length) return;
+  for (const gone of trash.items.filter((i) => now - i.deletedAt >= TRASH_TTL_MS)) {
+    try {
+      localStorage.removeItem(versionsKey(gone.record.book.id));
+    } catch {
+      /* best-effort */
+    }
+  }
+  writeTrash({ version: 1, items: keep });
 }
 
 export function loadPrefs(): DraftingPrefs {
@@ -264,8 +316,16 @@ export interface StoreSnapshot {
   activeBook: DraftBook | null;
   saveState: SaveState;
   lastSavedAt: number | null;
-  /** True after another tab writes our keys — banner-worthy, last write wins. */
+  /** True after another tab writes our keys (this tab reloaded cleanly). */
   externalChange: boolean;
+  /**
+   * Another tab saved this book while we held unsaved edits; our edits were
+   * preserved under a new book id rather than clobbering theirs. The UI
+   * navigates to `redirectToId` and shows a banner until dismissed.
+   */
+  conflict: { redirectToId: string; title: string } | null;
+  /** Most recent soft-deleted book, for the Undo affordance. */
+  lastDeleted: { id: string; title: string } | null;
 }
 
 type Listener = () => void;
@@ -285,6 +345,9 @@ export class BookStore {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null;
   private maxWaitTimer: ReturnType<typeof setTimeout> | null = null;
   private dirty = false;
+  /** savedAt of the active book's record as this tab last loaded/wrote it —
+   *  the cross-tab clobber guard compares against it before overwriting. */
+  private lastKnownSavedAt = 0;
 
   constructor() {
     this.available = typeof localStorage !== 'undefined' && storageAvailable();
@@ -300,12 +363,16 @@ export class BookStore {
       this.writeIndex(library);
     }
 
+    if (this.available) purgeTrash();
+
     this.snapshot = {
       library,
       activeBook: null,
       saveState: this.available ? 'idle' : 'unavailable',
       lastSavedAt: null,
       externalChange: false,
+      conflict: null,
+      lastDeleted: null,
     };
 
     if (typeof window !== 'undefined') {
@@ -314,6 +381,9 @@ export class BookStore {
         if (document.visibilityState === 'hidden') this.flush();
       });
       window.addEventListener('pagehide', () => this.flush());
+      // Ask the browser not to evict this origin's storage under pressure
+      // (Safari ITP etc.). Best-effort; a denied request changes nothing.
+      navigator.storage?.persist?.().catch(() => {});
     }
   }
 
@@ -331,13 +401,42 @@ export class BookStore {
 
   private onStorage = (e: StorageEvent): void => {
     if (!e.key) return;
-    if (e.key === LIBRARY_KEY || e.key.startsWith(BOOK_KEY_PREFIX)) {
-      this.emit({ library: loadLibraryIndex(), externalChange: true });
+    if (e.key !== LIBRARY_KEY && !e.key.startsWith(BOOK_KEY_PREFIX)) return;
+
+    const active = this.snapshot.activeBook;
+    let nextActive = active;
+    // Another tab wrote OUR open book: if this tab holds no unsaved edits,
+    // adopt the newer copy so we never build edits on a stale base. With
+    // unsaved edits, persistNow's clobber guard handles it at write time.
+    if (
+      active &&
+      e.key === bookKey(active.id) &&
+      !this.dirty
+    ) {
+      const record = loadBookRecord(active.id);
+      const reloaded = record ? validateBook(record.book) : null;
+      if (record && reloaded) {
+        this.lastKnownSavedAt = record.savedAt;
+        nextActive = reloaded;
+      }
     }
+    this.emit({
+      library: loadLibraryIndex(),
+      activeBook: nextActive,
+      externalChange: true,
+    });
   };
 
   dismissExternalChange(): void {
     this.emit({ externalChange: false });
+  }
+
+  dismissConflict(): void {
+    this.emit({ conflict: null });
+  }
+
+  dismissLastDeleted(): void {
+    this.emit({ lastDeleted: null });
   }
 
   // -- library actions --
@@ -351,8 +450,10 @@ export class BookStore {
 
   openBook(id: string): DraftBook | null {
     this.flush();
-    const book = this.available ? loadBook(id) : null;
-    if (book) {
+    const record = this.available ? loadBookRecord(id) : null;
+    const book = record ? validateBook(record.book) : null;
+    if (record && book) {
+      this.lastKnownSavedAt = record.savedAt;
       const library = {
         ...this.snapshot.library,
         activeBookId: id,
@@ -368,7 +469,18 @@ export class BookStore {
     this.emit({ activeBook: null });
   }
 
+  /** Soft delete: the record moves to the trash (7-day TTL, capped) and an
+   *  Undo affordance surfaces. Version history survives until trash purge. */
   deleteBook(id: string): void {
+    const record = this.available ? loadBookRecord(id) : null;
+    if (record) {
+      const trash = loadTrash();
+      const items = [
+        { deletedAt: Date.now(), record },
+        ...trash.items.filter((i) => i.record.book.id !== id),
+      ].slice(0, TRASH_CAP);
+      writeTrash({ version: 1, items });
+    }
     try {
       localStorage.removeItem(bookKey(id));
     } catch {
@@ -387,7 +499,69 @@ export class BookStore {
       library,
       activeBook:
         this.snapshot.activeBook?.id === id ? null : this.snapshot.activeBook,
+      lastDeleted: record
+        ? { id, title: record.book.title }
+        : this.snapshot.lastDeleted,
     });
+  }
+
+  /** Restore a soft-deleted book from the trash. */
+  undoDelete(id: string): boolean {
+    const trash = loadTrash();
+    const item = trash.items.find((i) => i.record.book.id === id);
+    if (!item) return false;
+    try {
+      localStorage.setItem(bookKey(id), JSON.stringify(item.record));
+    } catch {
+      this.emit({ saveState: 'error' });
+      return false;
+    }
+    writeTrash({
+      version: 1,
+      items: trash.items.filter((i) => i.record.book.id !== id),
+    });
+    const book = validateBook(item.record.book);
+    const library: LibraryIndexV1 = {
+      ...this.snapshot.library,
+      books: book
+        ? [libraryEntry(book), ...this.snapshot.library.books]
+        : this.snapshot.library.books,
+    };
+    this.writeIndex(library);
+    this.emit({ library, lastDeleted: null });
+    return true;
+  }
+
+  /**
+   * Register an already-built book (restore-as-new-book, backup import):
+   * writes its record and index entry without touching the active book.
+   */
+  adoptBook(book: DraftBook): boolean {
+    if (!this.available) {
+      this.emit({ saveState: 'unavailable' });
+      return false;
+    }
+    try {
+      this.writeBookRecordOrThrow(book);
+    } catch {
+      this.emit({ saveState: 'error' });
+      return false;
+    }
+    const library: LibraryIndexV1 = {
+      ...this.snapshot.library,
+      books: [
+        libraryEntry(book),
+        ...this.snapshot.library.books.filter((b) => b.id !== book.id),
+      ],
+    };
+    this.writeIndex(library);
+    this.emit({ library });
+    return true;
+  }
+
+  /** Re-read the index from storage (after a backup import). */
+  refreshLibrary(): void {
+    this.emit({ library: loadLibraryIndex() });
   }
 
   /** Apply a pure update to the active book and schedule an autosave. */
@@ -434,13 +608,37 @@ export class BookStore {
   }
 
   private persistNow(book: DraftBook): void {
-    this.dirty = false;
     if (!this.available) {
       this.emit({ saveState: 'unavailable' });
       return;
     }
+
+    // Cross-tab clobber guard: if another tab saved this book after we last
+    // loaded/wrote it, our in-memory copy is built on a stale base. Never
+    // overwrite their words — rebind OUR edits to a new book id instead, and
+    // let the UI follow (conflict.redirectToId).
+    const stored = loadBookRecord(book.id);
+    if (stored && stored.savedAt > this.lastKnownSavedAt) {
+      const original = book;
+      book = {
+        ...book,
+        id: newId(),
+        title: `${book.title} (conflicted copy)`,
+        updatedAt: Date.now(),
+      };
+      this.emit({
+        activeBook: book,
+        conflict: { redirectToId: book.id, title: original.title },
+        library: loadLibraryIndex(),
+      });
+    }
+
     try {
-      this.writeBookRecordOrThrow(book);
+      const savedAt = this.writeBookRecordOrThrow(book);
+      // Only a successful write clears the dirty flag — a failed save must
+      // keep flush-on-close (and every later flush) live.
+      this.dirty = false;
+      this.lastKnownSavedAt = savedAt;
       const entry = libraryEntry(book);
       const books = [
         entry,
@@ -455,14 +653,18 @@ export class BookStore {
       this.emit({ library, saveState: 'saved', lastSavedAt: Date.now() });
     } catch {
       // QuotaExceededError, private-mode restrictions. The in-memory book
-      // still works — say so instead of implying the draft is safe.
+      // still works — say so instead of implying the draft is safe, and stay
+      // dirty so the next flush retries.
+      this.dirty = true;
       this.emit({ saveState: 'error' });
     }
   }
 
-  private writeBookRecordOrThrow(book: DraftBook): void {
-    const record: SavedBookV1 = { version: 1, book, savedAt: Date.now() };
+  private writeBookRecordOrThrow(book: DraftBook): number {
+    const savedAt = Date.now();
+    const record: SavedBookV1 = { version: 1, book, savedAt };
     localStorage.setItem(bookKey(book.id), JSON.stringify(record));
+    return savedAt;
   }
 
   private writeBookRecord(book: DraftBook): void {

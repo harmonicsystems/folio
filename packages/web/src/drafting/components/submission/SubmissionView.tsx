@@ -7,6 +7,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { DraftBook } from '../../model.js';
+import { isEmptyPage } from '../../model.js';
+import { navigate } from '../../router.js';
 import { buildSubmission } from '../../submission.js';
 import { buildDocxBytes, docxFileName } from '../../docx.js';
 import { useBookStore } from '../../hooks/useBookStore.js';
@@ -86,6 +88,31 @@ export function SubmissionView({ book }: { book: DraftBook }) {
       {/* Rendered once, in a fixed slot — never relocated as the name is
           typed (which would drop focus mid-word). */}
       <div className="ms-side">
+        {(() => {
+          const unplaced = book.overflow.filter((p) => !isEmptyPage(p)).length;
+          if (unplaced === 0) return null;
+          return (
+            <div className="ms-quarantine" role="alert">
+              <strong>
+                {unplaced} written {unplaced === 1 ? 'page is' : 'pages are'}{' '}
+                unplaced and will not appear in this manuscript
+              </strong>{' '}
+              (or in its word count). They're outside the current page budget —
+              place them from the storyboard's tray before submitting.
+              <div style={{ marginTop: 8 }}>
+                <button
+                  type="button"
+                  className="btn btn-quiet"
+                  onClick={() =>
+                    navigate({ kind: 'book', bookId: book.id, view: 'storyboard' })
+                  }
+                >
+                  Open the storyboard tray
+                </button>
+              </div>
+            </div>
+          );
+        })()}
         <AuthorBlockEditor book={book} highlight={!doc.authorName} />
         {doc.blocks.length === 0 && (
           <p className="ill-empty">

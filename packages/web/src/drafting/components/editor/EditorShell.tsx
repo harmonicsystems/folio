@@ -35,6 +35,7 @@ import { SpreadFrame } from '../page/SpreadFrame.js';
 import { CountersBar } from './CountersBar.js';
 import { LayoutControls } from './LayoutControls.js';
 import { SpecsPanel } from './SpecsPanel.js';
+import { VersionsPanel } from './VersionsPanel.js';
 import { SpreadCanvas } from './SpreadCanvas.js';
 import { SpreadNav } from './SpreadNav.js';
 import {
@@ -132,12 +133,28 @@ export function EditorShell({
     onEscape: zoomOut,
   });
   const [specsOpen, setSpecsOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const [layoutFor, setLayoutFor] = useState<number | null>(null);
+  /** Transient note after a page break lands in the tray. */
+  const [trayNote, setTrayNote] = useState(false);
 
   // The layout panel edits one page; close it when the spread changes.
   useEffect(() => {
     setLayoutFor(null);
   }, [unit.index]);
+
+  useEffect(() => {
+    if (!trayNote) return;
+    const t = setTimeout(() => setTrayNote(false), 8000);
+    return () => clearTimeout(t);
+  }, [trayNote]);
+
+  /** One right-rail panel at a time. */
+  const openRail = (which: 'specs' | 'versions' | null, layout?: number | null) => {
+    setSpecsOpen(which === 'specs');
+    setVersionsOpen(which === 'versions');
+    setLayoutFor(layout ?? null);
+  };
 
   const contentFor = useCallback(
     (slot: PageSlot): DraftPageContent =>
@@ -167,6 +184,7 @@ export function EditorShell({
       if (slot.role !== 'story' || slot.storyOrdinal === undefined) return;
       const result = splitStoryPageAt(book, map.storyBudget, slot.storyOrdinal, offset);
       if (result.book !== book) store.updateBook(() => result.book);
+      if (result.movedToOverflow) setTrayNote(true);
       const target = unitForOrdinal(map, result.focusOrdinal);
       if (target.index !== unit.index) goTo(target.index);
       setPendingFocus({
@@ -349,14 +367,14 @@ export function EditorShell({
                   className="app-iconbtn ed-break"
                   aria-pressed={layoutFor === slot.pageNumber}
                   title="Text position, type size, and illustration space for this page"
-                  onClick={() => {
+                  onClick={() =>
                     // F6: opens the docked panel in the right rail (not over
-                    // the page); mutually exclusive with the Specs panel.
-                    setSpecsOpen(false);
-                    setLayoutFor((v) =>
-                      v === slot.pageNumber ? null : slot.pageNumber,
-                    );
-                  }}
+                    // the page); one rail panel at a time.
+                    openRail(
+                      null,
+                      layoutFor === slot.pageNumber ? null : slot.pageNumber,
+                    )
+                  }
                 >
                   ⊞ Text & art
                 </button>
@@ -435,18 +453,29 @@ export function EditorShell({
         <span className="ed-tools-divider" aria-hidden="true" />
         {/* F4: Specs/Guides carry the same pill as the caption actions so
             they read as controls, not two more words in the sentence. */}
+        {trayNote && (
+          <span className="ed-overflow-note" role="status">
+            No room on the last page — that text is waiting in the
+            storyboard's unplaced tray.
+          </span>
+        )}
         <button
           type="button"
           className="app-iconbtn ed-break"
           aria-pressed={specsOpen}
           title="Trim, pages, construction, font"
-          onClick={() => {
-            // One panel in the right rail at a time.
-            setLayoutFor(null);
-            setSpecsOpen((v) => !v);
-          }}
+          onClick={() => openRail(specsOpen ? null : 'specs')}
         >
           Specs
+        </button>
+        <button
+          type="button"
+          className="app-iconbtn ed-break"
+          aria-pressed={versionsOpen}
+          title="Snapshot history — save, restore, branch"
+          onClick={() => openRail(versionsOpen ? null : 'versions')}
+        >
+          Versions
         </button>
         <button
           type="button"
@@ -459,6 +488,11 @@ export function EditorShell({
         </button>
       </div>
       <SpecsPanel book={book} open={specsOpen} onClose={() => setSpecsOpen(false)} />
+      <VersionsPanel
+        book={book}
+        open={versionsOpen}
+        onClose={() => setVersionsOpen(false)}
+      />
       {/* F6: the layout controls dock in the right rail (like SpecsPanel) so
           the spread stays visible while you adjust the current page. */}
       {(() => {
