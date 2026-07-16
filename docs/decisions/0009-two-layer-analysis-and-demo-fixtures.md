@@ -3,6 +3,13 @@
 Status: Accepted 2026-07-11
 Deciders: David Nyman (direction), session working-through with Claude
 
+> **Note (2026-07-12):** the "60–70% profile coverage" fixture framing below is
+> slated to be replaced by diagnostic-signal fixture design — each fixture carries
+> a small, intentional set of legible contrasts rather than a coverage target. See
+> the open item in [`docs/BACKLOG.md`](../BACKLOG.md) ("Replace 60–70% good/profile
+> coverage with diagnostic signal design"), which updates this ADR when it ships.
+> The two-register rule and everything else in this ADR stands.
+
 ## Context
 
 Two questions arrived together and turned out to be the same question.
