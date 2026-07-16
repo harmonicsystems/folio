@@ -15,11 +15,9 @@ The LLM does the boring legibility work in the background (constraint checking, 
 
 ## Status
 
-Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–5 complete (vocabulary + sight words, phonology + decodability, web alpha, prosody, syntax). Web alpha ships three routes: `/` spread-first editor with Lexical rich text + in-line reach-word / phoneme / find highlighting + persistence + .txt/.md/PDF export, `/paste` analyze-only fallback, `/about` landing page.
+Public alpha live at `folio.harmonic-systems.org`. Engine Milestones 0–5 complete (vocabulary + sight words, phonology + decodability, web alpha, prosody, syntax). Web alpha ships five routes: `/` quiet studio reader — spread carousel editor with Draft / Listen / Language lenses, reflections margin, reading-context metadata (ADRs 0012–0015); `/draft` purely-for-creation drafting surface — engine-free by rule (nothing under `packages/web/src/drafting/` may import the engine, even type-only; see [`docs/drafting-first/SUMMARY.md`](docs/drafting-first/SUMMARY.md) and ADR 0016); `/paste` analyze-only fallback; `/about` landing page; `/guide` studio guide.
 
 Next phase is **user signal**, not the next feature. See [`docs/AGENT_HANDOFF.md`](docs/AGENT_HANDOFF.md) for the full picture and the open decisions ladder.
-
-**This branch (`explore/drafting-first`)** additionally carries a purely-for-creation drafting surface at `/draft` — engine-free by rule (nothing under `packages/web/src/drafting/` may import the engine, even type-only). See [`docs/drafting-first/PLAN.md`](docs/drafting-first/PLAN.md), [`docs/drafting-first/SUMMARY.md`](docs/drafting-first/SUMMARY.md), and ADR 0016.
 
 ## Tech stack
 
