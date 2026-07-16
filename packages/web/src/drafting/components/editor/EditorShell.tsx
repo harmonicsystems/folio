@@ -1,0 +1,523 @@
+/**
+ * The editing surface for one book: the current spread rendered at true
+ * proportions with live page editors, page captions beneath (word counts,
+ * overflow whispers, the explicit page-break control), and spread navigation.
+ * The book is the hero; everything else recedes.
+ */
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { findConstruction, getFormat } from '../../formats.js';
+import type { DraftBook, DraftPageContent } from '../../model.js';
+import {
+  chapterAt,
+  getFrontMatterPage,
+  getStoryPage,
+  setChapterAt,
+  splitStoryPageAt,
+  withFrontMatterPage,
+  withStoryPage,
+  type PageTarget,
+} from '../../model.js';
+import type { FrontMatterRole } from '../../formats.js';
+import {
+  buildPageMap,
+  unitForOrdinal,
+  unitForPage,
+  type PageSlot,
+} from '../../pageMap.js';
+import { countWords } from '../../counts.js';
+import { pageFontStyle } from '../../fonts.js';
+import { loadPrefs, rememberUnit, savePrefs } from '../../persistence.js';
+import { navigate } from '../../router.js';
+import { useBookStore } from '../../hooks/useBookStore.js';
+import { useKeyboardNav } from '../../hooks/useKeyboardNav.js';
+import { SpreadFrame } from '../page/SpreadFrame.js';
+import { CountersBar } from './CountersBar.js';
+import { LayoutControls } from './LayoutControls.js';
+import { SpecsPanel } from './SpecsPanel.js';
+import { VersionsPanel } from './VersionsPanel.js';
+import { SpreadCanvas } from './SpreadCanvas.js';
+import { SpreadNav } from './SpreadNav.js';
+import {
+  PageTextEditor,
+  type AutoFocusRequest,
+} from './PageTextEditor.js';
+import { getCaretOffset, serializeEditable } from './caret.js';
+
+const PPI = 96;
+
+const ROLE_CAPTION: Record<string, string> = {
+  'half-title': 'half title',
+  title: 'title page',
+  copyright: 'copyright · dedication',
+  'self-end': 'self-end',
+  story: 'story',
+};
+
+const ROLE_PLACEHOLDER: Partial<Record<string, string>> = {
+  'half-title': 'Half title',
+  title: 'Title page',
+  copyright: 'Copyright · dedication',
+};
+
+function slotKey(slot: PageSlot): string {
+  return slot.role === 'story' ? `story:${slot.storyOrdinal}` : `fm:${slot.role}`;
+}
+
+export function EditorShell({
+  book,
+  unitIndex,
+}: {
+  book: DraftBook;
+  unitIndex?: number;
+}) {
+  const { store } = useBookStore();
+  const format = getFormat(book.formatId);
+  const construction = findConstruction(format, book.binding);
+  const map = useMemo(
+    () => buildPageMap(book.pageCount, construction),
+    [book.pageCount, construction],
+  );
+
+  // F7: a new book opens on the first STORY spread, not the title/copyright
+  // front matter — that's where a writer actually starts. Front matter is one
+  // turn back. Falls back to the first editable unit if a format had no story.
+  const defaultUnit = useMemo(() => {
+    const story = map.units.find((u) => u.pages.some((p) => p.role === 'story'));
+    const editable = map.units.find((u) => u.pages.some((p) => p.editable));
+    return (story ?? editable)?.index ?? 0;
+  }, [map]);
+  const clamped = Math.max(0, Math.min(unitIndex ?? defaultUnit, map.units.length - 1));
+  const unit = map.units[clamped];
+
+  const [showGuides, setShowGuides] = useState(
+    () => loadPrefs().showSafeArea ?? false,
+  );
+  const toggleGuides = useCallback(() => {
+    setShowGuides((v) => {
+      savePrefs({ ...loadPrefs(), showSafeArea: !v });
+      return !v;
+    });
+  }, []);
+
+  // Remember the open spread so switching to Storyboard/Submission and back
+  // returns the writer here instead of to spread 1.
+  useEffect(() => {
+    rememberUnit(book.id, unit.index);
+  }, [book.id, unit.index]);
+
+  const [pendingFocus, setPendingFocus] = useState<{
+    key: string;
+    req: AutoFocusRequest;
+  } | null>(null);
+  const [overflows, setOverflows] = useState<Record<number, number>>({});
+  const pageWraps = useRef(new Map<number, HTMLDivElement>());
+
+  const goTo = useCallback(
+    (index: number) => {
+      const next = Math.max(0, Math.min(index, map.units.length - 1));
+      navigate({ kind: 'book', bookId: book.id, view: 'editor', unit: next });
+    },
+    [book.id, map.units.length],
+  );
+  const goPrev = useCallback(() => goTo(unit.index - 1), [goTo, unit.index]);
+  const goNext = useCallback(() => goTo(unit.index + 1), [goTo, unit.index]);
+  const zoomOut = useCallback(
+    () => navigate({ kind: 'book', bookId: book.id, view: 'storyboard' }),
+    [book.id],
+  );
+  useKeyboardNav({
+    onPrev: goPrev,
+    onNext: goNext,
+    onToggleGuides: toggleGuides,
+    onEscape: zoomOut,
+  });
+  const [specsOpen, setSpecsOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const [layoutFor, setLayoutFor] = useState<number | null>(null);
+  /** Transient note after a page break lands in the tray. */
+  const [trayNote, setTrayNote] = useState(false);
+
+  // The layout panel edits one page; close it when the spread changes.
+  useEffect(() => {
+    setLayoutFor(null);
+  }, [unit.index]);
+
+  useEffect(() => {
+    if (!trayNote) return;
+    const t = setTimeout(() => setTrayNote(false), 8000);
+    return () => clearTimeout(t);
+  }, [trayNote]);
+
+  /** One right-rail panel at a time. */
+  const openRail = (which: 'specs' | 'versions' | null, layout?: number | null) => {
+    setSpecsOpen(which === 'specs');
+    setVersionsOpen(which === 'versions');
+    setLayoutFor(layout ?? null);
+  };
+
+  const contentFor = useCallback(
+    (slot: PageSlot): DraftPageContent =>
+      slot.role === 'story'
+        ? getStoryPage(book, slot.storyOrdinal ?? 0)
+        : getFrontMatterPage(book, slot.role as FrontMatterRole),
+    [book],
+  );
+
+  const handleChange = useCallback(
+    (slot: PageSlot, text: string) => {
+      if (slot.role === 'story') {
+        const ordinal = slot.storyOrdinal ?? 0;
+        store.updateBook((b) => withStoryPage(b, ordinal, (p) => ({ ...p, text })));
+      } else {
+        const role = slot.role as FrontMatterRole;
+        store.updateBook((b) =>
+          withFrontMatterPage(b, role, (p) => ({ ...p, text })),
+        );
+      }
+    },
+    [store],
+  );
+
+  const handlePageBreak = useCallback(
+    (slot: PageSlot, offset: number) => {
+      if (slot.role !== 'story' || slot.storyOrdinal === undefined) return;
+      const result = splitStoryPageAt(book, map.storyBudget, slot.storyOrdinal, offset);
+      if (result.book !== book) store.updateBook(() => result.book);
+      if (result.movedToOverflow) setTrayNote(true);
+      const target = unitForOrdinal(map, result.focusOrdinal);
+      if (target.index !== unit.index) goTo(target.index);
+      setPendingFocus({
+        key: `story:${result.focusOrdinal}`,
+        req: { offset: result.movedToOverflow ? -1 : 0, token: Date.now() },
+      });
+    },
+    [book, map, store, unit.index, goTo],
+  );
+
+  /** Page-break button: read the caret from the page's live editor. */
+  const breakFromButton = useCallback(
+    (slot: PageSlot) => {
+      const wrap = pageWraps.current.get(slot.pageNumber);
+      const editable = wrap?.querySelector<HTMLElement>('.pg-text[contenteditable]');
+      if (!editable) return;
+      const offset =
+        document.activeElement === editable
+          ? (getCaretOffset(editable) ?? serializeEditable(editable).length)
+          : serializeEditable(editable).length;
+      handlePageBreak(slot, offset);
+    },
+    [handlePageBreak],
+  );
+
+  const safeHeightPx =
+    (book.trim.height - format.margins.top - format.margins.bottom) * PPI;
+
+  /** Arrow past a page edge: the caret flows to the neighboring editable
+   *  page, crossing spreads when needed. */
+  const handleBoundary = useCallback(
+    (slot: PageSlot, direction: 'prev' | 'next'): boolean => {
+      const editable = map.pages.filter((p) => p.editable);
+      const at = editable.findIndex((p) => p.pageNumber === slot.pageNumber);
+      if (at < 0) return false;
+      const neighbor = editable[direction === 'next' ? at + 1 : at - 1];
+      if (!neighbor) return false;
+      const key =
+        neighbor.role === 'story'
+          ? `story:${neighbor.storyOrdinal}`
+          : `fm:${neighbor.role}`;
+      const targetUnit = unitForPage(map, neighbor.pageNumber);
+      if (targetUnit.index !== unit.index) goTo(targetUnit.index);
+      setPendingFocus({
+        key,
+        req: { offset: direction === 'next' ? 0 : -1, token: Date.now() },
+      });
+      return true;
+    },
+    [map, unit.index, goTo],
+  );
+
+  const renderEditor = (slot: PageSlot) => {
+    const content = contentFor(slot);
+    const key = slotKey(slot);
+    // Front-matter pages self-label; the first story page gets a gentle
+    // "start here" so a first-run book doesn't land on unlabeled blanks.
+    const placeholder =
+      ROLE_PLACEHOLDER[slot.role] ??
+      (slot.role === 'story' && slot.storyOrdinal === 0
+        ? 'Begin the story…'
+        : undefined);
+    return (
+      <PageTextEditor
+        value={content.text}
+        layout={content.layout}
+        safeHeightPx={safeHeightPx}
+        placeholder={placeholder}
+        ariaLabel={`Page ${slot.pageNumber}, ${ROLE_CAPTION[slot.role]}`}
+        onChange={(text) => handleChange(slot, text)}
+        onPageBreak={
+          slot.role === 'story' ? (offset) => handlePageBreak(slot, offset) : undefined
+        }
+        onBoundary={(direction) => handleBoundary(slot, direction)}
+        onOverflowChange={(px) =>
+          setOverflows((prev) =>
+            prev[slot.pageNumber] === px
+              ? prev
+              : { ...prev, [slot.pageNumber]: px },
+          )
+        }
+        autoFocus={pendingFocus?.key === key ? pendingFocus.req : null}
+      />
+    );
+  };
+
+  const chapterFor = format.supportsChapters
+    ? (slot: PageSlot) =>
+        slot.role === 'story' && slot.storyOrdinal !== undefined
+          ? chapterAt(book, slot.storyOrdinal)?.title
+          : undefined
+    : undefined;
+
+  const renderPageFrame = (slot: PageSlot, page: React.ReactNode) => (
+    <div
+      key={slot.pageNumber}
+      className="ed-pagewrap"
+      ref={(node) => {
+        if (node) pageWraps.current.set(slot.pageNumber, node);
+        else pageWraps.current.delete(slot.pageNumber);
+      }}
+      onClick={(e) => {
+        // Click anywhere on the paper focuses its editor.
+        const wrap = e.currentTarget;
+        const editable = wrap.querySelector<HTMLElement>('.pg-text[contenteditable]');
+        if (editable && document.activeElement !== editable) editable.focus();
+      }}
+    >
+      {page}
+    </div>
+  );
+
+  return (
+    <div className="ed-root">
+      <div className="ed-canvasrow">
+        <button
+          type="button"
+          className="ed-turn"
+          data-dir="prev"
+          onClick={goPrev}
+          disabled={unit.index === 0}
+          aria-label="Previous spread"
+        >
+          ‹
+        </button>
+        <SpreadCanvas trim={book.trim}>
+          <div style={pageFontStyle(book.pageFont)}>
+            <SpreadFrame
+              format={format}
+              trim={book.trim}
+              unit={unit}
+              contentFor={contentFor}
+              mode="edit"
+              showGuides={showGuides}
+              chapterFor={chapterFor}
+              renderEditor={renderEditor}
+              renderPageFrame={renderPageFrame}
+            />
+          </div>
+        </SpreadCanvas>
+        <button
+          type="button"
+          className="ed-turn"
+          data-dir="next"
+          onClick={goNext}
+          disabled={unit.index === map.units.length - 1}
+          aria-label="Next spread"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="ed-pagerow" data-single={unit.kind === 'single'}>
+        {unit.pages.map((slot) => {
+          const content = contentFor(slot);
+          const words = slot.role === 'story' ? countWords(content.text) : null;
+          const over = overflows[slot.pageNumber] ?? 0;
+          const target: PageTarget | null = !slot.editable
+            ? null
+            : slot.role === 'story'
+              ? { kind: 'story', ordinal: slot.storyOrdinal ?? 0 }
+              : { kind: 'front-matter', role: slot.role as FrontMatterRole };
+          return (
+            <div
+              key={slot.pageNumber}
+              className="ed-pagecaption"
+              data-side={slot.side}
+            >
+              <span>
+                p. {slot.pageNumber} · {ROLE_CAPTION[slot.role]}
+                {words !== null && words > 0 &&
+                  ` · ${words} ${words === 1 ? 'word' : 'words'}`}
+              </span>
+              {over > 0 && slot.editable && (
+                <span className="ed-overflow-note">past the safe area</span>
+              )}
+              {target && (
+                <button
+                  type="button"
+                  className="app-iconbtn ed-break"
+                  aria-pressed={layoutFor === slot.pageNumber}
+                  title="Text position, type size, and illustration space for this page"
+                  onClick={() =>
+                    // F6: opens the docked panel in the right rail (not over
+                    // the page); one rail panel at a time.
+                    openRail(
+                      null,
+                      layoutFor === slot.pageNumber ? null : slot.pageNumber,
+                    )
+                  }
+                >
+                  ⊞ Text & art
+                </button>
+              )}
+              {slot.role === 'story' && (
+                <button
+                  type="button"
+                  className="app-iconbtn ed-break"
+                  title="Push the text after the caret to the next page (⌘⏎)"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => breakFromButton(slot)}
+                >
+                  ↵ Page break
+                </button>
+              )}
+              {format.supportsChapters &&
+                slot.role === 'story' &&
+                slot.storyOrdinal !== undefined &&
+                (chapterAt(book, slot.storyOrdinal) ? (
+                  <span className="ed-chapter">
+                    <input
+                      className="ed-chapter-input"
+                      aria-label={`Chapter title, page ${slot.pageNumber}`}
+                      value={chapterAt(book, slot.storyOrdinal)?.title ?? ''}
+                      onChange={(e) =>
+                        store.updateBook((b) =>
+                          setChapterAt(b, slot.storyOrdinal ?? 0, e.target.value),
+                        )
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="app-iconbtn ed-break"
+                      aria-label="Remove chapter"
+                      onClick={() =>
+                        store.updateBook((b) =>
+                          setChapterAt(b, slot.storyOrdinal ?? 0, null),
+                        )
+                      }
+                    >
+                      ✕
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="app-iconbtn ed-break"
+                    onClick={() =>
+                      store.updateBook((b) =>
+                        setChapterAt(
+                          b,
+                          slot.storyOrdinal ?? 0,
+                          `Chapter ${(b.chapters?.length ?? 0) + 1}`,
+                        ),
+                      )
+                    }
+                  >
+                    + Chapter
+                  </button>
+                ))}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="ed-statusrow">
+        <SpreadNav
+          unit={unit}
+          unitCount={map.units.length}
+          onPrev={goPrev}
+          onNext={goNext}
+        />
+        <div className="app-topbar-spacer" />
+        <CountersBar book={book} map={map} format={format} />
+        {/* F9: a hairline sets the tools apart from the counts. */}
+        <span className="ed-tools-divider" aria-hidden="true" />
+        {/* F4: Specs/Guides carry the same pill as the caption actions so
+            they read as controls, not two more words in the sentence. */}
+        {trayNote && (
+          <span className="ed-overflow-note" role="status">
+            No room on the last page — that text is waiting in the
+            storyboard's unplaced tray.
+          </span>
+        )}
+        <button
+          type="button"
+          className="app-iconbtn ed-break"
+          aria-pressed={specsOpen}
+          title="Trim, pages, construction, font"
+          onClick={() => openRail(specsOpen ? null : 'specs')}
+        >
+          Specs
+        </button>
+        <button
+          type="button"
+          className="app-iconbtn ed-break"
+          aria-pressed={versionsOpen}
+          title="Snapshot history — save, restore, branch"
+          onClick={() => openRail(versionsOpen ? null : 'versions')}
+        >
+          Versions
+        </button>
+        <button
+          type="button"
+          className="app-iconbtn ed-break"
+          aria-pressed={showGuides}
+          onClick={toggleGuides}
+          title="Safe-area guides (⌘;)"
+        >
+          Guides
+        </button>
+      </div>
+      <SpecsPanel book={book} open={specsOpen} onClose={() => setSpecsOpen(false)} />
+      <VersionsPanel
+        book={book}
+        open={versionsOpen}
+        onClose={() => setVersionsOpen(false)}
+      />
+      {/* F6: the layout controls dock in the right rail (like SpecsPanel) so
+          the spread stays visible while you adjust the current page. */}
+      {(() => {
+        if (layoutFor === null) return null;
+        const slot = unit.pages.find((p) => p.pageNumber === layoutFor);
+        if (!slot || !slot.editable) return null;
+        const target: PageTarget =
+          slot.role === 'story'
+            ? { kind: 'story', ordinal: slot.storyOrdinal ?? 0 }
+            : { kind: 'front-matter', role: slot.role as FrontMatterRole };
+        return (
+          <LayoutControls
+            target={target}
+            page={contentFor(slot)}
+            pageLabel={`p. ${slot.pageNumber} · ${ROLE_CAPTION[slot.role]}`}
+            format={format}
+            canSpreadBleed={
+              slot.role === 'story' &&
+              slot.side === 'verso' &&
+              unit.kind === 'spread'
+            }
+            onClose={() => setLayoutFor(null)}
+          />
+        );
+      })()}
+    </div>
+  );
+}

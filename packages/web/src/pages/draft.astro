@@ -1,0 +1,61 @@
+---
+// The drafting-first surface (explore/drafting-first branch).
+// Static shell only: fonts, theme pre-hydration, and one React island.
+// The app is localStorage-backed, so SSR would only render an empty flash —
+// client:only skips it; the placeholder below paints until React mounts.
+// This page must not import the analysis engine or src/types.ts.
+import DraftApp from '../drafting/DraftApp';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Folio — drafting</title>
+    <meta
+      name="description"
+      content="A smart notebook for book-making: draft directly onto the real pages of a board book, picture book, or early reader."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Comic Neue backs the "Handwritten" page font on non-Apple devices. -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Comic+Neue:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script is:inline>
+      // Apply the stored theme before first paint — no flash of wrong theme.
+      try {
+        var t = localStorage.getItem('folio.drafting.theme');
+        if (t === 'evening' || t === 'paper' || t === 'studio') {
+          document.documentElement.dataset.theme = t;
+        }
+      } catch (e) {
+        /* default theme */
+      }
+    </script>
+    <style is:global>
+      /* Pre-hydration placeholder + background. Mirrors tokens.css --bg-app
+         per theme so the right canvas paints before any JS runs. */
+      html {
+        background: #efece6;
+      }
+      html[data-theme='evening'] {
+        background: #141210;
+      }
+      html[data-theme='paper'] {
+        background: #f7f1e6;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- No children here: passing a fallback slot sets await-children on the
+         island, and client:only never streams children — the island would
+         wait forever and never hydrate. The themed <html> background is the
+         pre-hydration placeholder. -->
+    <DraftApp client:only="react" />
+  </body>
+</html>

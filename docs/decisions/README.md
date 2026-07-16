@@ -56,3 +56,4 @@ What else did we look at? Why didn't we pick those?
 - [0013 — Quiet studio reader reflection layer](0013-quiet-studio-reader.md) — *accepted (2026-07-12)*
 - [0014 — Spread carousel editor and writer lenses](0014-spread-carousel-editor.md) — *accepted (2026-07-12)*
 - [0015 — Templates, reading context, and example isolation](0015-templates-reading-context-and-examples.md) — *accepted (2026-07-12)*
+- [0016 — Drafting-first book model: page map, presets, persistence, submission export](0016-drafting-first-book-model.md) — *accepted (2026-07-13)*

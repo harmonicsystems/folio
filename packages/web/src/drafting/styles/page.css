@@ -1,0 +1,224 @@
+/**
+ * PRINT-TRUE PAGE TOKENS + native-unit page geometry.
+ *
+ * Everything in this file renders the book itself. The --page-* tokens are
+ * defined on :root ONLY and must NEVER be redefined under any [data-theme] —
+ * book pages are ink-on-paper, true to print, in every theme (in the evening
+ * theme the book is literally the brightest object on screen).
+ *
+ * .pg-* classes may use only --page-* tokens and physical units. Pages are
+ * laid out at native CSS physical units (1in = 96px, 1pt = 4/3px exactly) and
+ * scaled to fit with transform: scale() — layout, wraps, and overflow are
+ * computed once at native size, so the editor and every thumbnail render the
+ * same book. --page-scale carries the current scale for hairline compensation
+ * (calc(1px / var(--page-scale)) stays one device pixel at any zoom).
+ */
+
+:root {
+  --page-paper: #fffdf9; /* warm-white uncoated stock */
+  --page-ink: #211f1c; /* printed black */
+  --page-guide: rgba(33, 31, 28, 0.16); /* safe-area / trim guides */
+  --page-spine: rgba(33, 31, 28, 0.1); /* fold gradient peak */
+  --page-placeholder-bg: rgba(33, 31, 28, 0.045);
+  --page-placeholder-ink: #5d574e;
+  --page-overflow-tint: rgba(154, 74, 42, 0.08);
+  --page-font: 'Libre Caslon Text', ui-serif, Georgia, serif;
+  --page-scale: 1;
+}
+
+/* ---- spread frame: 1–2 pages at native size ---- */
+
+/* Always two pages wide; single pages get a ghost slot so page 1 sits
+   right-of-center (recto) and the last page left-of-center (verso). */
+.pg-spread {
+  width: calc(var(--trim-w) * 2in);
+  height: calc(var(--trim-h) * 1in);
+  display: flex;
+  position: relative;
+  flex: none;
+}
+
+.pg-ghost {
+  width: calc(var(--trim-w) * 1in);
+  height: calc(var(--trim-h) * 1in);
+  flex: none;
+}
+
+/* Facing pages abut at the spine; the fold is a narrow gradient. */
+.pg-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 0.5in;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--page-spine),
+    transparent
+  );
+}
+
+/* ---- one physical page ---- */
+
+.pg-page {
+  width: calc(var(--trim-w) * 1in);
+  height: calc(var(--trim-h) * 1in);
+  background: var(--page-paper);
+  position: relative;
+  flex: none;
+}
+
+/* Safe area: margins in real inches; the gutter is the spine-side inset.
+   Verso pages have the spine on their right, rectos on their left. */
+.pg-safe {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  inset: calc(var(--m-top) * 1in) calc(var(--m-inside) * 1in)
+    calc(var(--m-bottom) * 1in) calc(var(--m-outside) * 1in);
+  /* Text paints above placeholder frames — including a neighbor's
+     spread-bleed frame spanning under this page. */
+  z-index: 2;
+}
+.pg-page[data-side='recto'] .pg-safe {
+  inset: calc(var(--m-top) * 1in) calc(var(--m-outside) * 1in)
+    calc(var(--m-bottom) * 1in) calc(var(--m-inside) * 1in);
+}
+
+/* Text-block vertical position via auto margins, not justify-content: when
+   the block outgrows the safe box, auto margins collapse to zero, so the
+   text pins to the top and overflow only ever extends DOWNWARD — never above
+   the trim. Overflow stays visible; it is never clipped or reflowed. */
+.pg-safe[data-v='middle'] > .pg-text {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+.pg-safe[data-v='bottom'] > .pg-text {
+  margin-top: auto;
+}
+
+/* Optional guides (toggle): scale-compensated hairline. */
+.pg-safe-guide {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  outline: calc(1px / var(--page-scale)) dashed var(--page-guide);
+}
+
+/* ---- the text block (shared by the editor and static thumbnails) ---- */
+
+.pg-text {
+  font-family: var(--page-font);
+  font-weight: var(--pg-font-weight, 400);
+  font-size: calc(var(--pg-font-pt, 18) * 1pt);
+  line-height: var(--pg-leading, 1.4);
+  color: var(--page-ink);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  min-height: 1.2em;
+  min-width: 2ch;
+  max-width: 100%;
+  width: fit-content;
+  /* Never shrink to fit the safe box: the box keeps its natural height and
+     visibly overflows — offsetHeight vs safe height IS the overflow signal. */
+  flex: none;
+  outline: none;
+  caret-color: var(--page-ink);
+}
+.pg-text[data-h='left'] {
+  align-self: flex-start;
+}
+.pg-text[data-h='center'] {
+  align-self: center;
+}
+.pg-text[data-h='right'] {
+  align-self: flex-end;
+}
+.pg-text::selection {
+  background: rgba(163, 120, 40, 0.25);
+}
+
+/* A chapter title printed above the text block (early readers). */
+.pg-chapter {
+  font-family: var(--page-font);
+  font-size: calc(var(--pg-font-pt, 16) * 1pt * 1.15);
+  line-height: 1.2;
+  color: var(--page-ink);
+  text-align: center;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35in;
+  flex: none;
+}
+
+/* Quiet hint on empty front-matter pages (whisper-gray, not printed ink). */
+.pg-text[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--page-guide);
+}
+
+/* Overflow past the safe area: a quiet wash over exactly the region that
+   doesn't fit, plus a soft rule at the crossed edge. Never a reflow. */
+.pg-overflow-tint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  background: var(--page-overflow-tint);
+  z-index: 1;
+}
+.pg-overflow-tint {
+  top: 100%;
+  border-top: calc(1px / var(--page-scale)) solid rgba(154, 74, 42, 0.35);
+}
+
+/* ---- illustration placeholders (frames only; notes edit in chrome) ---- */
+
+.pg-ph {
+  position: absolute;
+  background: var(--page-placeholder-bg);
+  outline: calc(1px / var(--page-scale)) dashed var(--page-placeholder-ink);
+  outline-offset: calc(-6px / var(--page-scale));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.25in;
+  color: var(--page-placeholder-ink);
+  font-family: var(--page-font);
+  font-style: italic;
+  z-index: 0;
+}
+.pg-ph .pg-ph-label {
+  font-size: 10pt;
+  opacity: 0.75;
+  white-space: pre-wrap;
+  max-width: 100%;
+}
+.pg-ph[data-kind='full-page'] {
+  inset: 0;
+}
+/* Stored on the verso page; the frame spans across the facing recto and
+   bleeds on the three outer edges (never past the spine it straddles). */
+.pg-ph[data-kind='spread-bleed'] {
+  top: calc(var(--bleed, 0.125) * -1in);
+  bottom: calc(var(--bleed, 0.125) * -1in);
+  left: calc(var(--bleed, 0.125) * -1in);
+  right: calc((var(--trim-w) * -1in) - (var(--bleed, 0.125) * 1in));
+  z-index: 1;
+}
+.pg-ph[data-kind='half-page-top'] {
+  inset: 0 0 50% 0;
+}
+.pg-ph[data-kind='half-page-bottom'] {
+  inset: 50% 0 0 0;
+}
+.pg-ph[data-kind='spot'] {
+  width: 30%;
+  height: 30%;
+  right: calc(var(--m-outside) * 1in);
+  bottom: calc(var(--m-bottom) * 1in);
+}
