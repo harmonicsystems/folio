@@ -87,6 +87,12 @@ describe('buildDocxBytes', () => {
     expect(styles).toContain('Times New Roman');
     expect(styles).toContain('w:line="480"'); // double-spaced
     expect(styles).toContain('<w:sz w:val="24"/>'); // 12pt
+    // Google Docs ignores docDefaults fonts, so Normal must carry the font too
+    // (round-trip check 2026-07-16: font came back dropped when it lived only
+    // in docDefaults).
+    const normalStyle = styles.match(/<w:style [^>]*w:styleId="Normal">.*?<\/w:style>/)?.[0];
+    expect(normalStyle).toContain('Times New Roman');
+    expect(normalStyle).toContain('<w:sz w:val="24"/>');
 
     const header = entries.get('word/header1.xml')!;
     expect(header).toContain('NYMAN / THE MOON GARDEN / ');

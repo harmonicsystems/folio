@@ -142,16 +142,28 @@ const DOC_RELS =
   `<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>` +
   `</Relationships>`;
 
-/** 12pt TNR; Normal is double-spaced (w:line 480/auto = 2 × 240). */
+/**
+ * 12pt TNR; Normal is double-spaced (w:line 480/auto = 2 × 240).
+ * The font lives in BOTH docDefaults and the Normal style: Word reads either,
+ * but Google Docs' importer ignores docDefaults fonts (verified 2026-07-16 —
+ * a round-tripped export came back with the font dropped), so Normal must
+ * carry it too.
+ */
+const FONT_RPR =
+  `<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>` +
+  `<w:sz w:val="24"/><w:szCs w:val="24"/>`;
+
 const STYLES =
   XML_DECL +
   `<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">` +
   `<w:docDefaults><w:rPrDefault><w:rPr>` +
-  `<w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>` +
-  `<w:sz w:val="24"/><w:szCs w:val="24"/>` +
+  FONT_RPR +
   `</w:rPr></w:rPrDefault></w:docDefaults>` +
   `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/>` +
   `<w:pPr><w:spacing w:after="0" w:line="480" w:lineRule="auto"/></w:pPr>` +
+  `<w:rPr>` +
+  FONT_RPR +
+  `</w:rPr>` +
   `</w:style>` +
   `</w:styles>`;
 
